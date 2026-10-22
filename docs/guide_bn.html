@@ -1,0 +1,948 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<title>DUBURI IVC গাইড</title>
+<style>
+@font-face { font-family: "NotoBn"; src: url("fonts/NotoSansBengali.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "NotoLat"; src: url("fonts/NotoSans.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "NotoMono"; src: url("fonts/NotoSansMono.woff2") format("woff2"); font-weight: 100 900; }
+@page { size: A4; margin: 16mm 15mm 18mm 15mm;
+  @bottom-center { content: counter(page); font-family: "NotoLat"; font-size: 9pt; color: #777; }
+  @bottom-left { content: "DUBURI IVC"; font-family: "NotoLat"; font-size: 8pt; color: #aaa; } }
+@page :first { @bottom-center { content: none; } @bottom-left { content: none; } }
+:root { --ink: #1d2433; --mute: #5b6475; --blue: #2a6fdb; --orange: #e07b39; --red: #c0392b;
+        --box: #f3f6fb; --line: #d9dee8; --green: #2e8b57; }
+html { font-family: "NotoLat", "NotoBn", sans-serif; font-size: 10.6pt; color: var(--ink); line-height: 1.62; }
+body { margin: 0; background: #fff; }
+h1, h2, h3, h4 { font-family: "NotoLat", "NotoBn", sans-serif; line-height: 1.3; color: #12203a; }
+h1 { font-size: 21pt; margin: 0 0 6pt; }
+h2 { font-size: 15.5pt; margin: 0 0 8pt; padding-bottom: 4pt; border-bottom: 2px solid var(--blue); break-before: page; }
+h2.nobreak { break-before: auto; }
+h3 { font-size: 12.3pt; margin: 14pt 0 5pt; color: #1f3d75; }
+h4 { font-size: 11pt; margin: 10pt 0 3pt; }
+p { margin: 0 0 7pt; text-align: justify; }
+ul, ol { margin: 0 0 8pt; padding-left: 18pt; }
+li { margin-bottom: 2.5pt; }
+code, .m { font-family: "NotoMono", monospace; font-size: 9.2pt; background: #eef1f6; padding: 0 3px; border-radius: 3px; }
+.f { font-family: "NotoLat", serif; background: var(--box); border-left: 4px solid var(--blue); padding: 6pt 10pt;
+     margin: 6pt 0 9pt; break-inside: avoid; }
+.f .eq { font-size: 11.6pt; font-family: "NotoMono", monospace; display: block; margin: 2pt 0; color: #0d2a5c; }
+.f .why { color: var(--mute); font-size: 9.8pt; }
+.note { background: #fff7e8; border-left: 4px solid var(--orange); padding: 6pt 10pt; margin: 8pt 0; break-inside: avoid; }
+.warn { background: #fdeceb; border-left: 4px solid var(--red); padding: 6pt 10pt; margin: 8pt 0; break-inside: avoid; }
+.ok { background: #eaf6ef; border-left: 4px solid var(--green); padding: 6pt 10pt; margin: 8pt 0; break-inside: avoid; }
+table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt; font-size: 9.8pt; break-inside: avoid; }
+th, td { border: 1px solid var(--line); padding: 3.5pt 6pt; text-align: left; vertical-align: top; }
+th { background: #e7edf8; }
+figure { margin: 8pt 0 12pt; text-align: center; break-inside: avoid; }
+figure img { max-width: 100%; }
+figcaption { font-size: 9.3pt; color: var(--mute); margin-top: 3pt; }
+.cover { height: 250mm; display: flex; flex-direction: column; justify-content: center; }
+.cover .t1 { font-size: 34pt; font-weight: 800; color: #12203a; letter-spacing: 1px; }
+.cover .t2 { font-size: 17pt; color: var(--blue); margin-top: 6pt; }
+.cover .t3 { font-size: 11.5pt; color: var(--mute); margin-top: 18pt; max-width: 150mm; }
+.cover .bar { height: 6px; width: 90mm; background: linear-gradient(90deg, var(--blue), var(--orange)); margin: 16pt 0; }
+.toc { columns: 2; column-gap: 12mm; font-size: 10.3pt; }
+.toc div { break-inside: avoid; margin-bottom: 2pt; }
+pre.code { font-family: "NotoMono", monospace; font-size: 7.1pt; line-height: 1.38; background: #f7f8fa;
+           border: 1px solid var(--line); padding: 6pt; white-space: pre-wrap; word-break: break-all; }
+pre.code .ln { color: #a3a9b5; }
+h3.code-title { font-family: "NotoMono", monospace; font-size: 10pt; break-before: page; }
+.k { display: inline-block; min-width: 18pt; font-weight: 700; color: var(--blue); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10pt; }
+.small { font-size: 9.4pt; color: var(--mute); }
+</style>
+</head>
+<body>
+
+<!-- ======================================================= COVER -->
+<section class="cover">
+  <div class="t1">DUBURI IVC</div>
+  <div class="t2">পানির নিচে দুই ROV-এর মধ্যে শব্দ দিয়ে যোগাযোগ</div>
+  <div class="bar"></div>
+  <div class="t3">
+    Acoustic Inter-Vehicle Communication: পুরো গাইড, A থেকে Z.<br>
+    কেন এভাবে করা হলো, সব formula, circuit, speaker গরম হওয়ার কারণ ও সমাধান, piezo hydrophone
+    seal করার নিয়ম, pool-এর noise filtering, ESP32-এর পুরো code আর তার ব্যাখ্যা, test করার নিয়ম
+    আর সমস্যা হলে কী করবে।<br><br>
+    Hardware: ESP32 + PAM8403 class-D amp + car speaker (TX) | piezo disc + op-amp preamp (RX)<br>
+    Firmware: Arduino-ESP32 core 3.x (3.3.12-এ compile করে দেখা)<br>
+    সব code: <span class="m">github.com/jarifalamclaude-max/DUBURI_IVC</span>
+  </div>
+</section>
+
+<!-- ======================================================= TOC -->
+<h2 class="nobreak" style="break-before: page;">সূচিপত্র</h2>
+<div class="toc">
+  <div><span class="k">1</span> এক নজরে পুরো সিস্টেম</div>
+  <div><span class="k">2</span> পানিতে শব্দ: যা জানা দরকার</div>
+  <div><span class="k">3</span> সিস্টেমের block diagram</div>
+  <div><span class="k">4</span> কী কী লাগবে (BOM ও আনুমানিক দাম)</div>
+  <div><span class="k">5</span> Power supply ও grounding</div>
+  <div><span class="k">6</span> Transmitter circuit (ESP32 → amp → speaker)</div>
+  <div><span class="k">7</span> Speaker গরম হচ্ছে কেন, আর সমাধান</div>
+  <div><span class="k">8</span> Speaker box: পানিতে শব্দ বের করা</div>
+  <div><span class="k">9</span> Piezo hydrophone: বানানো ও seal করা</div>
+  <div><span class="k">10</span> Receiver preamp circuit</div>
+  <div><span class="k">11</span> Noise filtering: তিন স্তর</div>
+  <div><span class="k">12</span> Signal design: tone, slot, hopping</div>
+  <div><span class="k">13</span> Packet, CRC, error correction</div>
+  <div><span class="k">14</span> Receiver কীভাবে decode করে (ধাপে ধাপে)</div>
+  <div><span class="k">15</span> Firmware: install, upload, ব্যবহার</div>
+  <div><span class="k">16</span> Code-এর ব্যাখ্যা (function ধরে ধরে)</div>
+  <div><span class="k">17</span> Verification: কী test করা হয়েছে</div>
+  <div><span class="k">18</span> বানানো ও test করার ধাপ</div>
+  <div><span class="k">19</span> Troubleshooting</div>
+  <div><span class="k">20</span> Safety</div>
+  <div><span class="k">A</span> সব formula এক জায়গায়</div>
+  <div><span class="k">B</span> শব্দকোষ (Glossary)</div>
+  <div><span class="k">C</span> পুরো source code</div>
+</div>
+
+<!-- ======================================================= 1 -->
+<h2>1. এক নজরে পুরো সিস্টেম</h2>
+<p>একটা ROV (sender) একটা ছোট "packet" পাঠায়। Packet মানে কয়েকটা byte: কাকে পাঠাচ্ছি, কে পাঠাচ্ছে,
+কোন command (যেমন "LED জ্বালাও"), আর command-এর একটা argument। ESP32 এই byte-গুলোকে কিছু নির্দিষ্ট
+frequency-র শব্দ (tone)-এ রূপান্তর করে। Car speaker সেই শব্দ পানিতে ছাড়ে। অন্য ROV-এর piezo hydrophone
+শব্দটা শোনে, preamp signal বড় ও পরিষ্কার করে, ESP32-এর ADC সেটা digital করে। তারপর firmware বের করে কোন
+tone বেজেছিল, সেখান থেকে byte ফিরিয়ে আনে, CRC দিয়ে যাচাই করে, তারপর কাজটা করে (LED জ্বলে)।
+চাইলে উল্টো দিকে একটা ছোট "ACK" (পেয়েছি) packet ফেরত পাঠায়।</p>
+
+<table>
+<tr><th>বিষয়</th><th>মান</th><th>কেন</th></tr>
+<tr><td>Modulation</td><td>4-FSK + frequency hopping</td><td>সহজ, amplitude-এর উপর নির্ভর করে না, echo-র মধ্যেও কাজ করে</td></tr>
+<tr><td>Tone</td><td>24টা, 3000–8750 Hz, 250 Hz পরপর</td><td>car speaker ও piezo এই band-এ ভালো কাজ করে; pump noise (নিচে) আর RoboSub pinger (25–40 kHz) এড়ায়</td></tr>
+<tr><td>Slot</td><td>20 ms, প্রতি slot-এ একটা tone = 2 bit</td><td>যথেষ্ট লম্বা যাতে echo-র মধ্যেও tone চেনা যায়</td></tr>
+<tr><td>Packet দৈর্ঘ্য</td><td>64 slot = 1.28 s (preamble 0.2 s + data 1.08 s)</td><td>command পাঠানোর জন্য যথেষ্ট দ্রুত</td></tr>
+<tr><td>Payload</td><td>4 byte (dst, src, seq+flags, cmd, arg) + CRC-16</td><td>"LED on"-এর মতো command-এর জন্য যথেষ্ট</td></tr>
+<tr><td>Error correction</td><td>Convolutional code K=7, rate 1/2 + Viterbi</td><td>যে bit ভুল আসে সেগুলো ঠিক করে ফেলে</td></tr>
+<tr><td>Receiver ADC</td><td>ESP32 ADC1, DMA, 50 kHz</td><td>কোনো CPU সময় নষ্ট না করে sample নেয়</td></tr>
+<tr><td>দূরত্ব (লক্ষ্য)</td><td>10–25 m, RoboSub-এর মতো pool</td><td>—</td></tr>
+<tr><td>Simulation-এ ফল</td><td>in-band SNR −6 dB-এ 90%, 0 dB-এ 100% packet ঠিক</td><td>অধ্যায় 17</td></tr>
+</table>
+
+<div class="note"><b>Speaker গরম হওয়ার সংক্ষিপ্ত উত্তর (বিস্তারিত অধ্যায় 7):</b> transistor বা L298N দিয়ে
+speaker-এর এক মাথা GND-এ রেখে on/off করলে অর্ধেক power DC হয়ে যায়। এতে শব্দ হয় না, শুধু coil গরম হয়।
+সমাধান হলো BTL class-D amplifier (PAM8403), amp-এর input-এ filter আর volume control, আর firmware-এর
+"heat guard" যা speaker-কে কাজের পর বিশ্রাম দেয়।</div>
+
+<div class="note"><b>Piezo seal করলে শব্দ ধরবে কি না (বিস্তারিত অধ্যায় 9):</b> ধরবে। Epoxy, silicone, তেল,
+এদের "acoustic impedance" পানির কাছাকাছি, তাই শব্দ প্রায় পুরোটাই ভেতরে ঢোকে (৮৫–৯৯%)। শব্দ আটকায়
+শুধু <b>বাতাস</b> (০.১%-এর মতো ঢোকে)। তাই নিয়ম একটাই: piezo আর পানির মাঝে কোনো air bubble বা ফাঁকা জায়গা
+থাকবে না।</div>
+
+<!-- ======================================================= 2 -->
+<h2>2. পানিতে শব্দ: যা জানা দরকার</h2>
+<h3>2.1 Radio কেন চলে না, শব্দ কেন চলে</h3>
+<p>পানি, বিশেষ করে chlorine দেওয়া pool-এর পানি, বিদ্যুৎ পরিবাহী। তাই WiFi বা Bluetooth-এর মতো radio wave
+কয়েক সেন্টিমিটারের মধ্যেই শেষ হয়ে যায়। শব্দ উল্টো: পানিতে বাতাসের চেয়ে প্রায় ৪.৫ গুণ দ্রুত যায় আর অনেক
+কম ক্ষয় হয়। তাই পানির নিচে যোগাযোগের প্রধান উপায় হলো শব্দ (acoustic)।</p>
+
+<div class="f"><span class="eq">c ≈ 1480 – 1500 m/s   (পানিতে শব্দের গতি; বাতাসে 343 m/s)</span>
+<span class="eq">λ = c / f</span>
+<span class="why">λ = wavelength। উদাহরণ: f = 5000 Hz হলে λ = 1480/5000 ≈ 0.30 m। এই সংখ্যাটা পরে
+লাগবে। যেকোনো জিনিস λ-এর তুলনায় অনেক পাতলা হলে (যেমন 2–3 mm epoxy) শব্দ সেটা প্রায় টেরই পায় না।</span></div>
+
+<div class="f"><span class="eq">t = d / c</span>
+<span class="why">শব্দ পৌঁছাতে কত সময় লাগে। 25 m হলে t = 25/1480 ≈ 17 ms। এটা একটা slot (20 ms)-এর চেয়ে
+কম, কিন্তু pool-এর দেয়ালে ধাক্কা খেয়ে আসা echo আসে আরো অনেক পরে (৫০–৩০০ ms পর্যন্ত)।</span></div>
+
+<h3>2.2 Pool-এর সবচেয়ে বড় সমস্যা: echo (reverberation)</h3>
+<p>Pool-এর দেয়াল আর মেঝে টাইলস বা কংক্রিটের, আর পানির উপরিতল প্রায় আয়নার মতো শব্দ ফেরত দেয়। তাই একটা
+tone বাজালে receiver সেটা একবার না, শত শত বার শোনে, প্রতিটা আলাদা দেরিতে আর আলাদা phase-এ। দুটো
+খারাপ ফল হয়:</p>
+<ol>
+<li><b>Fading:</b> কোনো জায়গায় কোনো একটা frequency-র echo-গুলো একে অপরকে কেটে দেয়, ফলে সেই tone খুব
+দুর্বল শোনায়। অন্য frequency আবার ঠিক থাকে।</li>
+<li><b>Inter-symbol interference:</b> আগের slot-এর tone-এর echo পরের slot-এও বাজতে থাকে।</li>
+</ol>
+<p>আমাদের design-এর প্রায় প্রতিটা সিদ্ধান্ত এই দুটো সমস্যা ঠেকানোর জন্য: frequency hopping (অধ্যায় 12),
+interleaving আর convolutional code (অধ্যায় 13)। নিচের চিত্রে simulation-এর pool model-এ echo-র শক্তি কত
+দ্রুত কমে, সেটা দেখানো হয়েছে।</p>
+<figure><img src="{{RES}}/pool_echo_decay.png" style="width:78%">
+<figcaption>চিত্র 2.1: 50×25×5 m pool model-এ echo-র অবশিষ্ট শক্তি। একই frequency set আবার ব্যবহার করার আগে
+120 ms অপেক্ষা করা হয়, ততক্ষণে echo অনেকটা কমে যায়।</figcaption></figure>
+
+<h3>2.3 RoboSub-এ বিশেষ সতর্কতা</h3>
+<p>RoboSub-এ acoustic pinger থাকে, যার frequency সাধারণত 25–40 kHz। আমাদের tone 3–8.75 kHz, অর্থাৎ অনেক
+নিচে। তার উপর ADC-র sampling rate 50 kHz নেওয়া হয়েছে যাতে pinger-এর শব্দ "alias" হয়ে আমাদের band-এ
+ঢুকে না পড়ে (অধ্যায় 11.2-এ formula)। Thruster আর pool pump-এর বেশিরভাগ শব্দ 2–3 kHz-এর নিচে থাকে,
+তাই আমাদের band সেটাও এড়িয়ে যায়।</p>
+
+<h3>2.4 Doppler: ROV চললে frequency সরে কি?</h3>
+<div class="f"><span class="eq">Δf = f · v / c</span>
+<span class="why">v = দুই ROV-এর আপেক্ষিক গতি। v = 0.5 m/s আর f = 8750 Hz হলে Δf = 8750 × 0.5 / 1480 ≈ 3 Hz।
+আমাদের receiver-এর frequency resolution 62.5 Hz আর tone 250 Hz পরপর, তাই 3 Hz কোনো সমস্যা না।</span></div>
+
+<!-- ======================================================= 3 -->
+<h2>3. সিস্টেমের block diagram</h2>
+<figure><img src="{{FIG}}/block_diagram.png" style="width:100%">
+<figcaption>চিত্র 3.1: উপরে sender, নিচে receiver। দুই ROV-এ একই hardware থাকলে দুজনেই পাঠাতে ও শুনতে পারে
+(ACK-এর জন্য)।</figcaption></figure>
+<p><b>Sender-এর কাজ:</b> packet → bit → error-correction code → interleave → প্রতি 2 bit-এ একটা tone →
+ESP32-এর LEDC peripheral দিয়ে square wave → RC filter দিয়ে মসৃণ করা ও volume ঠিক করা → PAM8403 amp →
+speaker → box-এর পাতলা জানালা → পানি।</p>
+<p><b>Receiver-এর কাজ:</b> piezo → preamp (gain + 1.5–10 kHz band-pass) → ESP32 ADC (DMA, 50 kHz) →
+DC সরানো → Goertzel দিয়ে 24টা tone-এর শক্তি মাপা → noise floor দিয়ে ভাগ (whitening) → preamble খোঁজা →
+timing ঠিক করা → প্রতি slot-এর soft bit → de-interleave → Viterbi → CRC check → command চালানো।</p>
+<p>একটা গুরুত্বপূর্ণ design সিদ্ধান্ত: modem-এর মূল code (<span class="m">am_core.c</span>) সাধারণ C-তে লেখা,
+এতে ESP32-এর কিছু নেই। তাই একই file PC-তে compile করে test আর simulation চালানো গেছে। PC-তে যেটা test
+হয়েছে, ঠিক সেটাই ROV-এ চলে।</p>
+
+<!-- ======================================================= 4 -->
+<h2>4. কী কী লাগবে (BOM ও আনুমানিক দাম)</h2>
+<p>প্রতিটা ROV-এর জন্য (দুটো ROV-এ দুই সেট)। দাম বাংলাদেশের সাধারণ অনলাইন বা দোকানের <b>আনুমানিক</b> দাম,
+দোকানভেদে কমবেশি হবে।</p>
+<table>
+<tr><th>জিনিস</th><th>সংখ্যা</th><th>আনুমানিক দাম (৳)</th><th>মন্তব্য</th></tr>
+<tr><td>ESP32 DevKit V1 (WROOM-32)</td><td>1</td><td>450–650</td><td>Uno-র চেয়ে সস্তা, অনেক দ্রুত, DMA ADC আছে</td></tr>
+<tr><td>PAM8403 class-D amp module</td><td>1</td><td>60–120</td><td>5 V, 3 W×2, BTL output</td></tr>
+<tr><td>(বিকল্প) PAM8610 amp module</td><td>(1)</td><td>250–400</td><td>12 V, বেশি জোর লাগলে; heat sink লাগবে</td></tr>
+<tr><td>Car speaker (আছে)</td><td>1</td><td>—</td><td>4 Ω</td></tr>
+<tr><td>Piezo disc 27 mm বা 35 mm</td><td>2–3</td><td>10–20 প্রতিটা</td><td>একটা নষ্ট হলে বদলানোর জন্য বাড়তি রাখো</td></tr>
+<tr><td>MCP6002 op-amp (না পেলে LM358)</td><td>1</td><td>40–80 (LM358: 10–15)</td><td>dual op-amp, DIP-8</td></tr>
+<tr><td>Buck converter (LM2596 বা MP1584)</td><td>2</td><td>80–150 প্রতিটা</td><td>একটা ESP32-এর, একটা amp-এর</td></tr>
+<tr><td>Trimmer pot 10 kΩ, 100 kΩ</td><td>1 + 1</td><td>10–20 প্রতিটা</td><td>volume ও gain</td></tr>
+<tr><td>Resistor, capacitor (তালিকা অধ্যায় 6, 10)</td><td>—</td><td>100–150</td><td>film/ceramic cap</td></tr>
+<tr><td>Shielded cable (2-core বা mic cable)</td><td>1–2 m</td><td>30–60/m</td><td>hydrophone-এর জন্য</td></tr>
+<tr><td>2-part epoxy বা liquid electrical tape</td><td>1</td><td>150–300</td><td>piezo seal</td></tr>
+<tr><td>Acrylic sheet 3–5 mm (speaker জানালা)</td><td>ছোট টুকরা</td><td>100–200</td><td>অধ্যায় 8</td></tr>
+<tr><td>Perfboard, header, fuse, তার</td><td>—</td><td>100–150</td><td>—</td></tr>
+</table>
+<p class="small">কেন Uno না: Uno-র RAM 2 KB, clock 16 MHz, ADC দ্রুত হলে noisy হয়, আর DMA নেই। ESP32-এ
+520 KB RAM, 240 MHz, float FPU আর DMA দিয়ে 50 kHz ADC sampling আছে, আর দামও Uno clone-এর মতো বা কম।
+আমাদের receiver প্রতি সেকেন্ডে প্রায় ৮০ লাখ গুণ-যোগ করে, যা Uno-তে সম্ভব না।</p>
+
+<!-- ======================================================= 5 -->
+<h2>5. Power supply ও grounding</h2>
+<figure><img src="{{FIG}}/power_schematic.svg" style="width:85%">
+<figcaption>চিত্র 5.1: দুটো আলাদা buck converter। Amp-এর supply-তে ferrite/inductor আর 1000 µF।</figcaption></figure>
+<ul>
+<li><b>দুটো buck কেন:</b> amp প্রতিবার tone বাজানোর সময় হঠাৎ ১ A-এর মতো current টানে। একই 5 V থেকে
+ESP32 চললে voltage নেমে ESP32 reset হতে পারে (brownout), আর preamp-এ শব্দ (noise) ঢোকে।</li>
+<li><b>Ferrite + 1000 µF:</b> একটা LC low-pass filter। Amp-এর switching noise buck-এ ফিরতে দেয় না, আর হঠাৎ
+current-এর সময় capacitor থেকে charge যোগায়।</li>
+<li><b>Star ground:</b> সব GND তার একটা বিন্দুতে (battery −) মিলবে। Thruster-এর বড় current যেন preamp-এর GND
+তারের মধ্য দিয়ে না যায়।</li>
+<li><b>Preamp-এর supply:</b> ESP32-এর 3V3 থেকে 10 Ω + 100 µF দিয়ে আলাদা করে "3V3A" (অধ্যায় 10)।</li>
+</ul>
+<div class="f"><span class="eq">I_battery ≈ P_out / (η · V_battery)</span>
+<span class="why">Buck converter-এর input current। η = efficiency (≈ 0.85)। উদাহরণ: amp 5 V-এ 1 A টানলে
+(5 W), 14.8 V battery থেকে লাগে 5 / (0.85 × 14.8) ≈ 0.4 A। তাই 3 A fuse যথেষ্ট।</span></div>
+<div class="f"><span class="eq">f_LC = 1 / (2π √(L·C))</span>
+<span class="why">10 µH আর 1000 µF হলে f ≈ 1.6 kHz। এর উপরের buck switching noise (সাধারণত 150 kHz+)
+অনেকটা কেটে যায়।</span></div>
+
+<!-- ======================================================= 6 -->
+<h2>6. Transmitter circuit (ESP32 → amp → speaker)</h2>
+<figure><img src="{{FIG}}/tx_schematic.svg" style="width:96%">
+<figcaption>চিত্র 6.1: Transmitter। ESP32-এর GPIO25 থেকে square wave → RC filter → volume → PAM8403 → speaker।</figcaption></figure>
+
+<h3>6.1 প্রতিটা অংশ কী করে</h3>
+<ul>
+<li><b>GPIO25 (LEDC):</b> ESP32-এর LEDC peripheral hardware দিয়েই নির্দিষ্ট frequency-র square wave বানায়
+(0 V আর 3.3 V-এর মধ্যে)। CPU কিছু করে না, তাই tone একদম স্থির থাকে। প্রতি 20 ms পরপর firmware শুধু
+frequency বদলে দেয়।</li>
+<li><b>R1 + C1 (low-pass filter):</b> square wave-এর ধারালো কিনারা কেটে নরম করে, উঁচু harmonic কমায়।</li>
+<li><b>C2 (1 µF):</b> DC আটকায়। Amp শুধু AC পায়, এটা heat কমানোর জন্যও জরুরি (অধ্যায় 7)।</li>
+<li><b>RV1 (10 kΩ trimmer):</b> volume। ESP32-এর 2.1 V peak signal amp-এর জন্য অনেক বেশি, ফলে amp
+clip করত। Clip মানে output square wave, যা বেশি গরম করে।</li>
+<li><b>PAM8403:</b> class-D, BTL (bridge-tied load) amp, ~৯০% efficient। নিজে প্রায় গরম হয় না।</li>
+</ul>
+
+<h3>6.2 Formula ও হিসাব</h3>
+<div class="f"><span class="eq">square wave (0…V) = V/2 + (2V/π)·[sin ωt + (1/3)sin 3ωt + (1/5)sin 5ωt + …]</span>
+<span class="why">Fourier series। প্রথম অংশ V/2 হলো DC। আসল tone (fundamental)-এর amplitude 2V/π; ESP32-এ
+V = 3.3 V হলে 2.10 V peak। শুধু বিজোড় harmonic (3f, 5f, …) থাকে। আমাদের সবচেয়ে নিচের tone 3000 Hz-এর
+3f = 9000 Hz, যা সবচেয়ে উঁচু tone 8750 Hz-এর উপরে। তাই harmonic কখনো অন্য tone-এর জায়গায় পড়ে না।</span></div>
+
+<div class="f"><span class="eq">f_c = 1 / (2π · R_th · C1),   R_th = R1 ∥ RV1 = (4.7k × 10k)/(4.7k + 10k) = 3.2 kΩ</span>
+<span class="eq">f_c = 1 / (2π × 3.2 kΩ × 3.3 nF) ≈ 15 kHz</span>
+<span class="why">Low-pass corner। 15 kHz-এর নিচের (আমাদের tone) প্রায় পুরোটা যায়, উপরের harmonic কমে।</span></div>
+
+<div class="f"><span class="eq">gain_divider = RV1 / (R1 + RV1) = 10 / 14.7 = 0.68  →  RV1-এর মাথায় 2.10 × 0.68 ≈ 1.43 V peak</span>
+<span class="eq">f_HP = 1 / (2π (R1 + RV1) C2) = 1 / (2π × 14.7 kΩ × 1 µF) ≈ 11 Hz</span>
+<span class="why">C2 শুধু DC আটকায়। 11 Hz-এর উপরের সব কিছু (আমাদের tone) সহজে যায়।</span></div>
+
+<div class="f"><span class="eq">PAM8403 gain ≈ 24 dB = ×15.8,   BTL max peak ≈ V_supply = 5 V</span>
+<span class="eq">P_sine = V_peak² / (2 R) = 5² / (2 × 4) ≈ 3.1 W  (clip হওয়ার ঠিক আগে)</span>
+<span class="eq">V_in দরকার = V_out / gain = 4 V / 15.8 ≈ 0.25 V peak  →  RV1 প্রায় 18% ঘুরানো</span>
+<span class="why">তাই RV1 একদম নিচ থেকে শুরু করবে, আস্তে আস্তে বাড়াবে। যেখানে শব্দ আর বাড়ে না, বরং কর্কশ হয়, সেখানে
+clip শুরু; তার একটু নিচে রাখবে। 4 V peak হলে 4²/(2×4) = 2 W।</span></div>
+
+<div class="warn"><b>BTL সতর্কতা:</b> PAM8403/PAM8610-এর output-এর দুই পাশেই signal থাকে (একটা উঠলে অন্যটা নামে)।
+Speaker-এর কোনো তার <b>কখনো GND-এ লাগাবে না</b>, আর দুটো channel-এর OUT− একসাথে জোড়া দেবে না। দিলে amp-এর
+output short হয়ে amp গরম হবে বা পুড়ে যাবে। Speaker-এর দুই তার শুধু L+ আর L−-এ যাবে।</div>
+
+<h3>6.3 বেশি জোর লাগলে: PAM8610</h3>
+<p>PAM8403 যথেষ্ট না হলে (scope-এ q &lt; 10 dB, অধ্যায় 18) PAM8610 module 12 V buck থেকে চালাও। এতে
+12 V BTL, অর্থাৎ max ≈ 12²/(2×4) = 18 W (তাত্ত্বিক)। কিন্তু মনে রাখো, power বাড়লে heat-ও বাড়ে। প্রথমে
+gain বাড়াও, transducer coupling ঠিক করো (অধ্যায় 8), তারপর power। PAM8610-এ heat sink লাগাবে। Module-এ
+MUTE/SD pin থাকলে <span class="m">PIN_AMP_ENABLE</span> দিয়ে ESP32 শুধু পাঠানোর সময় amp চালু রাখবে।</p>
+
+<!-- ======================================================= 7 -->
+<h2>7. Speaker গরম হচ্ছে কেন, আর সমাধান</h2>
+<p>Speaker-এর voice coil আসলে একটা তামার তারের কুণ্ডলী, যার resistance R (car speaker-এ ~3.2–4 Ω)।
+Coil-এ যত electrical power যায়, তার প্রায় পুরোটাই (৯৯%-এর বেশি) তাপ হয়। শব্দ হয় খুব সামান্য
+(speaker-এর efficiency ~১%)। তাই প্রশ্ন হলো, coil-এ অদরকারি power কোথা থেকে আসছে।</p>
+
+<h3>7.1 কারণ 1 (সবচেয়ে সাধারণ): DC current</h3>
+<p>অনেকে speaker-এর এক মাথা GND-এ রেখে transistor/MOSFET বা L298N-এর এক অংশ দিয়ে 0 আর V-এর মধ্যে on/off
+করে। এই signal-এর গড় মান V/2, মানে coil-এ একটা স্থায়ী DC current চলে। DC-তে cone একপাশে ঠেলে থেমে থাকে,
+কোনো শব্দ হয় না, কিন্তু I²R তাপ হয়।</p>
+<div class="f"><span class="eq">P_total = d · V² / R            (d = duty cycle = 0.5)</span>
+<span class="eq">P_DC    = (d·V)² / R            ← শুধু তাপ, কোনো শব্দ নয়</span>
+<span class="eq">P_tone  = (2V/π)² / (2R)        ← কাজের অংশ</span>
+<span class="why">12 V, 4 Ω হলে P_total = 0.5 × 144 / 4 = 18 W, P_DC = 36/4 = <b>9 W</b>, P_tone = 7.3 W, বাকি 1.7 W harmonic।
+অর্থাৎ অর্ধেক power সরাসরি তাপ। Box বন্ধ থাকলে এই তাপ বের হওয়ারও জায়গা পায় না।</span></div>
+<figure><img src="{{FIG}}/heat_power.png" style="width:82%">
+<figcaption>চিত্র 7.1: পুরনো পদ্ধতি বনাম নতুন। নতুন পদ্ধতিতে গড় power প্রায় ১৮ ভাগের এক ভাগ।</figcaption></figure>
+
+<h3>7.2 কারণ 2: সারাক্ষণ বাজানো (100% duty)</h3>
+<p>Tone একটানা বাজালে coil ঠান্ডা হওয়ার সময় পায় না। আমাদের packet মাত্র 1.28 s। Firmware-এর
+<b>heat guard</b> প্রতিবার পাঠানোর পর বাধ্যতামূলক বিশ্রাম দেয়:</p>
+<div class="f"><span class="eq">t_rest = t_on · (1 − d) / d</span>
+<span class="eq">P_avg = P_on · d</span>
+<span class="why">d = <span class="m">MAX_TX_DUTY</span> (config.h, default 0.5)। 1.28 s packet-এর পর অন্তত 1.28 s চুপ।
+P_on = 2 W হলে গড় 1 W। Speaker-এর rating সাধারণত 20–50 W, তাই এটা খুবই নিরাপদ।</span></div>
+
+<h3>7.3 কারণ 3: Amp clip করা</h3>
+<p>Input বেশি হলে amp-এর output square হয়ে যায় (clipping)। একই peak voltage-এ square wave-এর power sine-এর
+দ্বিগুণ (V²/R বনাম V²/2R), আর বাড়তি অংশটা harmonic, যা কাজে লাগে না। RV1 দিয়ে clip-এর নিচে রাখো।</p>
+
+<h3>7.4 কারণ 4: ভুল driver</h3>
+<p>L298N-এর ভেতরে transistor-এ 2–3 V voltage drop হয়। 1.5 A-তে সেটা 3–4.5 W, যা শুধু L298N-কে গরম করে।
+সাথে চলে উপরের DC সমস্যা। Class-D amp-এর efficiency ~৯০%, তাই এই সমস্যা থাকে না।</p>
+
+<h3>7.5 কারণ 5: বন্ধ box, তাপ বের হওয়ার পথ নেই</h3>
+<div class="f"><span class="eq">ΔT = P_avg × R_th</span>
+<span class="why">R_th = thermal resistance (°C/W): প্রতি watt-এ তাপমাত্রা কত বাড়ে। বাতাস ভালো insulator, তাই
+বন্ধ box-এ R_th অনেক বেশি। উদাহরণ (ধরে নেওয়া মান): R_th = 10 °C/W হলে পুরনো পদ্ধতির 9 W DC → 90 °C বেশি!
+নতুন পদ্ধতির 1 W → 10 °C। সমাধান: speaker-এর magnet থেকে একটা aluminium পাত box-এর দেয়াল পর্যন্ত লাগাও
+(চিত্র 8.1)। দেয়ালের ওপাশে পানি খুব ভালো ঠান্ডা করে।</span></div>
+
+<h3>7.6 Coil-এর তাপমাত্রা নিজে মাপার উপায়</h3>
+<div class="f"><span class="eq">R(T) = R₀ (1 + α ΔT),   α_copper = 0.00393 /°C</span>
+<span class="eq">ΔT = (R_hot / R_cold − 1) / 0.00393</span>
+<span class="why">Multimeter দিয়ে speaker-এর resistance ঠান্ডা অবস্থায় মাপো (ধরো 3.4 Ω)। কিছুক্ষণ চালিয়ে amp খুলে
+সাথে সাথে আবার মাপো (ধরো 4.1 Ω)। তাহলে ΔT = (4.1/3.4 − 1)/0.00393 ≈ 52 °C। 60–70 °C-এর বেশি বাড়লে
+<span class="m">MAX_TX_DUTY</span> বা volume কমাও।</span></div>
+
+<div class="ok"><b>Checklist:</b> (1) class-D BTL amp, speaker GND-এ নয়; (2) C2 দিয়ে DC block; (3) RV1-এ clip-এর
+নিচে; (4) MAX_TX_DUTY 0.5 বা কম; (5) magnet থেকে দেয়ালে তাপের পথ; (6) R মেপে তাপমাত্রা দেখা।</div>
+
+<!-- ======================================================= 8 -->
+<h2>8. Speaker box: পানিতে শব্দ বের করা</h2>
+<p>Speaker বন্ধ box-এ আছে। Cone নড়লে box-এর ভেতরের বাতাস নড়ে, বাতাস box-এর দেয়াল নাড়ায়, দেয়াল পানি নাড়ায়।
+বাতাস আর পানির মধ্যে impedance-এর বিশাল পার্থক্য (অধ্যায় 9.1), তাই এখানেই সবচেয়ে বেশি শক্তি হারায়। উপায়
+হলো দেয়ালের একটা অংশকে হালকা ও পাতলা "জানালা" বানানো, যা নিজে drum-এর মতো কাঁপে।</p>
+<figure><img src="{{FIG}}/speaker_box.png" style="width:92%">
+<figcaption>চিত্র 8.1: Speaker-এর মুখ পাতলা acrylic জানালার দিকে, মাঝে ফাঁক, magnet থেকে দেয়াল পর্যন্ত তাপের পথ।</figcaption></figure>
+<ul>
+<li>Speaker-এর মুখ একটা পাতলা, শক্ত জানালার দিকে রাখো (3 mm acrylic/polycarbonate)। জানালা যত পাতলা আর হালকা,
+তত ভালো শব্দ যায়, কিন্তু গভীরতায় চাপ সহ্য করতে হবে (নিচের formula)।</li>
+<li>Cone আর জানালার মাঝে অন্তত 10 mm ফাঁক রাখো, কারণ গভীরে জানালা ভেতরে বাঁকে।</li>
+<li>Box-এর বাকি দেয়াল মোটা আর শক্ত রাখো, O-ring দিয়ে seal করো।</li>
+<li>(Advanced) পুরো box তেলে ভরে rubber diaphragm দিলে coupling আর cooling দুটোই অনেক ভালো হয়। কিন্তু এটা
+বানানো কঠিন, তেল চুঁইয়ে পড়ার ঝুঁকি আছে, আর cone তেলে ভিজে যায়। প্রথম version-এ এটা কোরো না।</li>
+<li>(বিকল্প পরীক্ষা) একটা piezo disc-কেও speaker হিসেবে চালানো যায় (amp-এর output সরাসরি piezo-তে)।
+3–6 kHz-এ পানিতে এটা ভালো কাজ করে। Car speaker-এর সাথে তুলনা করতে পারো।</li>
+</ul>
+
+<h3>8.1 গভীরতায় চাপ ও জানালার পুরুত্ব</h3>
+<div class="f"><span class="eq">P = ρ · g · h</span>
+<span class="why">5 m গভীরে P = 1000 × 9.81 × 5 ≈ 49 kPa (≈ 0.49 bar)। জানালার প্রতি বর্গ সেন্টিমিটারে প্রায় 0.5 kg-এর ভার।</span></div>
+<div class="f"><span class="eq">D = E t³ / (12 (1 − ν²))</span>
+<span class="eq">w_max = P a⁴ / (64 D)          (কিনারা আটকানো গোল plate-এর মাঝখানে কতটা বাঁকে)</span>
+<span class="eq">σ_max = 3 P a² / (4 t²)        (সবচেয়ে বেশি stress, কিনারায়)</span>
+<span class="why">a = জানালার ব্যাসার্ধ, t = পুরুত্ব। Acrylic: E ≈ 3 GPa, ν ≈ 0.37, tensile strength ≈ 70 MPa।<br>
+উদাহরণ, 5 m গভীরে: 10 cm জানালা (a = 5 cm), t = 3 mm → w ≈ 0.6 mm, σ ≈ 10 MPa (safety factor ≈ 7) ✔।<br>
+15 cm জানালা (a = 7.5 cm), t = 3 mm → w ≈ 3.1 mm, σ ≈ 23 MPa (safety factor ≈ 3, একটু বেশি বাঁকে)।
+t = 5 mm হলে w ≈ 0.7 mm, σ ≈ 8 MPa ✔। তাই 3 m-এর বেশি গভীরে বড় জানালার জন্য 4–5 mm নাও। এগুলো মোটামুটি
+হিসাব (ছোট deflection ধরে), পানিতে নামানোর আগে বালতি বা অগভীর পানিতে leak test করবে।</span></div>
+
+<!-- ======================================================= 9 -->
+<h2>9. Piezo hydrophone: বানানো ও seal করা</h2>
+<h3>9.1 Seal করলে শব্দ ঢুকবে কেন (physics)</h3>
+<p>শব্দ হলো চাপের ঢেউ। এক পদার্থ থেকে অন্য পদার্থে ঢোকার সময় কতটা ঢুকবে আর কতটা ফেরত যাবে, সেটা নির্ভর
+করে দুই পদার্থের <b>acoustic impedance</b>-এর উপর:</p>
+<div class="f"><span class="eq">Z = ρ · c         (ঘনত্ব × শব্দের গতি, একক Rayl)</span>
+<span class="eq">T = 4 Z₁ Z₂ / (Z₁ + Z₂)²          (কত ভাগ শক্তি ঢোকে)</span>
+<span class="why">পানি Z ≈ 1.48 MRayl। Epoxy ≈ 3.0 → T ≈ 0.89 (৮৯% ঢোকে)। Silicone rubber ≈ 1.05 → T ≈ 0.97।
+Mineral/baby oil ≈ 1.2 → T ≈ 0.99। <b>বাতাস ≈ 0.0004 → T ≈ 0.001 (০.১%!)</b>।<br>
+তাই কোটিং কোনো সমস্যা না, সমস্যা শুধু বাতাস। আর কোটিং যেহেতু wavelength (5 kHz-এ 300 mm)-এর তুলনায় খুব
+পাতলা (2–3 mm), শব্দ তার মধ্য দিয়ে প্রায় না থেমে চলে যায়।</span></div>
+
+<h3>9.2 Piezo disc কীভাবে শব্দ ধরে</h3>
+<p>Piezo disc-এ একটা পিতলের (brass) প্লেটের উপর পাতলা ceramic লাগানো থাকে। চাপ পড়ে ceramic একটু বাঁকলে
+তার দুই পাশে voltage তৈরি হয় (piezoelectric effect)। পানির চাপের ঢেউ disc-কে বাঁকায়, তাই disc থেকে
+millivolt মাপের signal আসে। Disc বৈদ্যুতিকভাবে একটা ছোট capacitor-এর মতো (প্রায় 10–30 nF), তাই এর পরে
+high-impedance input (1 MΩ) লাগে।</p>
+
+<h3>9.3 বানানোর ধাপ</h3>
+<figure><img src="{{FIG}}/hydrophone_build.png" style="width:92%">
+<figcaption>চিত্র 9.1: দুটো পদ্ধতি। A: epoxy/silicone-এ ডুবানো (potting)। B: তেলভর্তি balloon/finger-cot।</figcaption></figure>
+<ol>
+<li><b>Cable:</b> shielded cable (mic cable)। ভেতরের তার ceramic (রুপালি) অংশে, shield/braid brass-এর কিনারায়।
+Ceramic-এ খুব দ্রুত (২–৩ সেকেন্ড) solder করো, বেশি তাপে রুপালি স্তর উঠে যায়।</li>
+<li><b>পরিষ্কার:</b> isopropyl alcohol দিয়ে তেল আর flux মুছে ফেলো, শুকাতে দাও।</li>
+<li><b>Strain relief:</b> cable-কে disc-এর কাছে একটু গিঁট দিয়ে বা heat-shrink দিয়ে আটকে দাও, যাতে টান solder-এ না পড়ে।</li>
+<li><b>পদ্ধতি A (epoxy/silicone potting):</b> একটা ছোট ছাঁচে (বোতলের ছিপি, PVC end cap) disc দাঁড় করিয়ে রাখো।
+2-part epoxy ধীরে ধীরে এক কোণ থেকে ঢালো, যাতে বাতাস বের হয়ে যেতে পারে। Disc-এর দুই পাশে 2–3 mm স্তর রাখো।
+Bubble দেখলে টুথপিক দিয়ে ফাটিয়ে দাও। হালকা গরম জায়গায় (hair dryer দূর থেকে) রাখলে epoxy পাতলা হয় আর bubble
+সহজে ওঠে। পুরো ২৪ ঘণ্টা শুকাতে দাও।<br>সস্তা বিকল্প: liquid electrical tape / Plasti Dip-এ ৩–৪ বার ডুবিয়ে
+পাতলা স্তর, প্রতিবার শুকিয়ে নিয়ে। Hot glue-ও চলে, কিন্তু bubble থাকার সম্ভাবনা বেশি।</li>
+<li><b>পদ্ধতি B (তেল):</b> finger-cot বা ছোট balloon-এ baby/mineral oil ভরে disc ডোবাও। Bubble বের করে দাও, তারপর মুখটা
+cable-এর উপর heat-shrink + epoxy দিয়ে বন্ধ করো। তেল খুব ভালো impedance match, আর disc-এর উপর কোনো শক্ত
+স্তর না থাকায় disc সবচেয়ে ভালো বাঁকে।</li>
+<li><b>Cable-এর মুখ seal:</b> cable যেখানে বের হচ্ছে সেখানে epoxy বা adhesive heat-shrink, যাতে পানি তারের ভেতর দিয়ে না ঢোকে।</li>
+<li><b>পরীক্ষা:</b> বালতির পানিতে রেখে বালতির গায়ে টোকা দাও, firmware-এর <span class="m">scope</span>-এ level লাফালে ঠিক আছে।
+একদিন পানিতে রেখে দেখো multimeter-এ disc-এর দুই তারের মধ্যে resistance অসীম আছে কি না (leak নেই)।</li>
+</ol>
+<div class="note"><b>Mounting:</b> hydrophone-কে ROV-এর frame থেকে নরম রাবার বা foam দিয়ে আলাদা করে লাগাও,
+thruster থেকে যত দূরে সম্ভব। Frame-এর মধ্য দিয়ে motor-এর কম্পন সরাসরি piezo-তে গেলে noise অনেক বাড়ে।
+নিজের speaker-এর box থেকেও দূরে রাখো।</div>
+<div class="note"><b>"Speaker-এর receiver"-এর ব্যাপারে:</b> একটা speaker-কেও উল্টো দিকে microphone হিসেবে ব্যবহার করা
+যায়, কিন্তু বন্ধ box-এর ভেতরে থাকলে পানির শব্দ খুব কম পৌঁছায় (বাতাসের ফাঁকের কারণে, 9.1)। Piezo সরাসরি
+পানির সংস্পর্শে থাকে, তাই অনেক ভালো। Receiver হিসেবে piezo-ই ব্যবহার করো।</div>
+
+<!-- ======================================================= 10 -->
+<h2>10. Receiver preamp circuit</h2>
+<figure><img src="{{FIG}}/rx_schematic.svg" style="width:100%">
+<figcaption>চিত্র 10.1: দুই stage-এর non-inverting band-pass amplifier, তারপর anti-alias RC, তারপর ESP32 GPIO34।</figcaption></figure>
+<figure><img src="{{FIG}}/vref_schematic.svg" style="width:55%">
+<figcaption>চিত্র 10.2: Preamp-এর পরিষ্কার supply (3V3A) আর VREF (≈1.34 V)।</figcaption></figure>
+
+<h3>10.1 কেন এই circuit</h3>
+<ul>
+<li>Piezo-র signal খুব ছোট (mV)। ESP32-এর ADC-তে ভালো করে মাপতে হলে কয়েকশো mV লাগে। তাই মোট gain 30–63 dB (৩০ থেকে ১৪০০ গুণ)।</li>
+<li>Single supply (শুধু 3.3 V) দিয়ে AC signal amplify করতে হলে signal-কে একটা মাঝামাঝি voltage (VREF)-এর উপর বসাতে
+হয়, যাতে signal উপরে-নিচে দুই দিকেই দুলতে পারে। Rb (1 MΩ) সেটা করে।</li>
+<li>Rg-Cg দিয়ে DC gain = 1 রাখা হয়েছে, তাই output-এর DC = VREF থাকে, gain বাড়ালেও DC সরে না।</li>
+<li>প্রতি stage নিজেই band-pass: নিচে Cg (pump hum কাটে), উপরে Cf (pinger ও ESC noise কাটে)।</li>
+<li>Ro-Caa: ADC-র আগে শেষ low-pass (anti-alias), আর op-amp-কে ADC-র input থেকে রক্ষা করে।</li>
+</ul>
+
+<h3>10.2 Formula ও মান</h3>
+<div class="f"><span class="eq">VREF = 3.3 × 6.8k / (10k + 6.8k) = 1.34 V</span>
+<span class="why">কেন 1.65 V (মাঝখান) না: ESP32 ADC (12 dB attenuation) প্রায় 0.15–2.45 V-এ সবচেয়ে সোজা (linear)
+মাপে। তার মাঝখান ≈ 1.3 V, দুই দিকে ±1.1 V জায়গা থাকে।</span></div>
+<div class="f"><span class="eq">G = 1 + Rf / Rg                     (non-inverting gain)</span>
+<span class="eq">Stage 1: G₁ = 1 + 100k/3.3k = 31.3 (29.9 dB)</span>
+<span class="eq">Stage 2: G₂ = 1 + RV2/2.2k = 1 … 46.5 (0 … 33 dB, RV2 দিয়ে বদলানো যায়)</span>
+<span class="eq">মোট: 30 dB … 63 dB</span></div>
+<div class="f"><span class="eq">f_HP = 1/(2π Rg Cg):  stage 1 → 1/(2π·3.3k·33n) = 1.46 kHz;   stage 2 → 1/(2π·2.2k·47n) = 1.54 kHz</span>
+<span class="eq">f_LP = 1/(2π Rf Cf):  stage 1 → 1/(2π·100k·150p) = 10.6 kHz;   stage 2 → 1/(2π·100k·100p) = 15.9 kHz (RV2 max)</span>
+<span class="eq">Anti-alias: 1/(2π·3.3k·4.7n) = 10.3 kHz</span>
+<span class="eq">Input HP: 1/(2π · Rb · (Cin ∥series C_piezo)) ≈ 10 Hz</span>
+<span class="why">ফলে 3–8.75 kHz-এর tone পুরো gain পায়। 100 Hz pump hum প্রায় 45 dB কমে, 35 kHz pinger প্রায় 27 dB কমে (চিত্র 10.3)।</span></div>
+<figure><img src="{{FIG}}/preamp_response.png" style="width:80%">
+<figcaption>চিত্র 10.3: Preamp-এর frequency response (RV2 মাঝামাঝি)। নীল অংশে আমাদের tone।</figcaption></figure>
+<div class="f"><span class="eq">GBW ≥ G × f_max = 46.5 × 10 kHz ≈ 0.47 MHz</span>
+<span class="why">Op-amp-এর gain-bandwidth product। MCP6002 = 1 MHz ✔। LM358 ≈ 0.7–1 MHz, চলবে।</span></div>
+
+<h3>10.3 Op-amp বাছাই ও pin</h3>
+<table>
+<tr><th></th><th>MCP6002 (ভালো)</th><th>LM358 (বিকল্প)</th></tr>
+<tr><td>Supply</td><td>3V3A (3.3 V)</td><td><b>5 V</b> (3.3 V-এ output 1.8 V-এর উপরে উঠতে পারে না)</td></tr>
+<tr><td>Output swing</td><td>rail-to-rail (0–3.3 V)</td><td>0 থেকে Vcc−1.5 V</td></tr>
+<tr><td>Pin</td><td colspan="2">দুটোরই pin এক: 1 = OUT A, 2 = −IN A, 3 = +IN A, 4 = GND, 5 = +IN B, 6 = −IN B, 7 = OUT B, 8 = V+</td></tr>
+</table>
+<p>LM358 5 V-এ চালালে output 3.5 V পর্যন্ত যেতে পারে। Ro (3.3 kΩ) current সীমিত রাখে, তাই ESP32-এর pin নিরাপদ থাকে।
+তবুও MCP6002 পেলে সেটাই ব্যবহার করো। Pin 8 আর pin 4-এর মধ্যে যত কাছে সম্ভব 100 nF লাগাও।</p>
+<div class="note"><b>GPIO34 কেন:</b> ESP32-এর DMA ADC শুধু ADC1-এ (GPIO32–39) কাজ করে। GPIO34 শুধু input pin,
+এতে কোনো internal pull-up নেই, তাই analog-এর জন্য একদম ঠিক।</div>
+
+<!-- ======================================================= 11 -->
+<h2>11. Noise filtering: তিন স্তর</h2>
+<table>
+<tr><th>Noise-এর উৎস</th><th>কেমন</th><th>কোন স্তরে আটকায়</th></tr>
+<tr><td>Pool pump/filter</td><td>নিচু frequency (&lt;1–2 kHz), 100 Hz hum</td><td>Band choice + preamp HP</td></tr>
+<tr><td>Thruster (প্রপেলার)</td><td>সব frequency জুড়ে, ঢেউয়ের মতো ওঠানামা</td><td>Narrowband Goertzel + whitening + code</td></tr>
+<tr><td>ESC/motor whine</td><td>একটা নির্দিষ্ট tone (যেমন 8 kHz)</td><td>Per-tone noise floor (whitening)</td></tr>
+<tr><td>টোকা, ধাক্কা (click)</td><td>খুব ছোট কিন্তু জোরালো</td><td>Interleaving + Viterbi</td></tr>
+<tr><td>RoboSub pinger</td><td>25–40 kHz, 4 ms pulse</td><td>Preamp LP + Fs = 50 kHz (alias বাইরে পড়ে)</td></tr>
+<tr><td>Echo (reverberation)</td><td>নিজের signal-এর দেরিতে আসা কপি</td><td>Frequency hopping + interleaving + code</td></tr>
+<tr><td>বিদ্যুতের noise (buck, ESC)</td><td>তারে ঢোকা</td><td>Shielded cable, star ground, আলাদা buck, LC filter</td></tr>
+</table>
+
+<h3>11.1 স্তর 1: Hardware</h3>
+<p>Preamp band-pass (অধ্যায় 10), anti-alias RC, shielded cable (shield শুধু preamp-এর GND-এ, এক প্রান্তে), আলাদা power,
+hydrophone-কে frame থেকে কম্পন-বিচ্ছিন্ন রাখা।</p>
+
+<h3>11.2 স্তর 2: Sampling আর aliasing</h3>
+<div class="f"><span class="eq">Fs &gt; 2 · f_max          (Nyquist)</span>
+<span class="eq">f_alias = | f − k · Fs |   (k = সবচেয়ে কাছের পূর্ণসংখ্যা)</span>
+<span class="why">ADC Fs-এর অর্ধেকের উপরের frequency ধরতে পারে না, সেগুলো ভুল করে নিচের frequency হিসেবে দেখা দেয় (alias)।
+Fs = 50 kHz হলে 35 kHz pinger → |35 − 50| = 15 kHz, আমাদের band (3–8.75 kHz)-এর বাইরে ✔।
+Fs = 40 kHz হলে একই pinger → 5 kHz, ঠিক আমাদের tone-এর উপর ✘। তাই 50 kHz বেছে নেওয়া হয়েছে।
+Band-এ alias হয়ে ঢুকতে পারে শুধু 41.25–47 kHz-এর শব্দ, যা preamp ~31–33 dB কমিয়ে দেয়।</span></div>
+
+<h3>11.3 স্তর 3: Software (DSP)</h3>
+<ul>
+<li><b>Goertzel (narrowband filter):</b> প্রতিটা tone-এর জন্য মাত্র ~94 Hz চওড়া একটা "জানালা" দিয়ে শোনে। 6 kHz band-এর noise-এর
+মাত্র 94/6000 ভাগ ঢোকে। এটাই processing gain:</li>
+</ul>
+<div class="f"><span class="eq">PG = 10 log₁₀(B_band / B_bin) = 10 log₁₀(6000 / 94) ≈ 18 dB</span>
+<span class="why">তাই wideband SNR −6 dB হলেও প্রতি tone-এ ~১০ dB SNR পাওয়া যায় (Hann window আর echo-র ক্ষতি বাদ দিয়ে)।</span></div>
+<ul>
+<li><b>Whitening (per-tone noise floor):</b> প্রতিটা tone-এর জন্য আলাদা noise floor মনে রাখা হয়। কোনো tone-এর জায়গায়
+সবসময় একটা whine থাকলে সেই tone-এর floor বেড়ে যায়, তাই whine আর "জয়ী" হয় না (অধ্যায় 14.3)।</li>
+<li><b>Ratio-ভিত্তিক সিদ্ধান্ত:</b> কোন tone বেজেছে, সেটা নির্ধারণ হয় চারটা tone-এর মধ্যে তুলনা করে, কোনো fixed threshold দিয়ে না।
+তাই signal জোরে বা আস্তে, যাই আসুক, কাজ করে।</li>
+</ul>
+
+<h3>11.4 স্তর 4: Protocol</h3>
+<ul>
+<li><b>Frequency hopping:</b> পরপর slot আলাদা frequency set ব্যবহার করে। ফলে আগের slot-এর echo পরের slot-এর হিসাবে ঢোকে না।</li>
+<li><b>Interleaving + convolutional code:</b> একটা slot নষ্ট হলে বা একটা frequency fade করলে মাত্র কয়েকটা ছড়ানো bit ভুল হয়,
+Viterbi সেগুলো ঠিক করে ফেলে।</li>
+<li><b>CRC-16:</b> ভুল packet প্রায় কখনো পাস করে না (৬৫৫৩৬-এ ১)।</li>
+<li><b>ACK + retry:</b> উত্তর না এলে firmware নিজেই আবার পাঠায় (৩ বার পর্যন্ত)।</li>
+</ul>
+
+<!-- ======================================================= 12 -->
+<h2>12. Signal design: tone, slot, hopping</h2>
+<h3>12.1 Tone-এর তালিকা</h3>
+<div class="f"><span class="eq">f_k = 3000 + 250 · k  Hz,   k = 0 … 23   →  3000, 3250, …, 8750 Hz</span></div>
+<h3>12.2 কেন 250 Hz পরপর, কেন 16 ms window</h3>
+<div class="f"><span class="eq">N = Fs × T_win = 50000 × 0.016 = 800 sample</span>
+<span class="eq">Δf_bin = Fs / N = 50000 / 800 = 62.5 Hz</span>
+<span class="eq">250 Hz = 4 × 62.5 Hz  →  প্রতিটা tone ঠিক একটা "bin"-এর উপর, পাশাপাশি tone-এর মধ্যে 4 bin ফাঁক</span>
+<span class="why">একই window-এ পূর্ণসংখ্যক bin দূরের দুটো tone একে অপরকে "দেখে" না (orthogonal)। 4 bin ফাঁক থাকায় ADC-র
+clock একটু ভুল হলেও (±1–2%) বা Hann window দিলেও tone মিশে যায় না।</span></div>
+<h3>12.3 Slot আর window</h3>
+<p>প্রতিটা slot 20 ms, কিন্তু receiver মাঝের 16 ms (800 sample) দেখে। দুই পাশে 2 ms করে margin থাকে, যাতে timing
+একটু এদিক-ওদিক হলেও পাশের slot ঢুকে না পড়ে।</p>
+<h3>12.4 Frequency hopping set</h3>
+<div class="f"><span class="eq">set s = { s, s+6, s+12, s+18 },   s = 0 … 5</span>
+<span class="eq">slot i ব্যবহার করে set (i mod 6);   2 bit মান v (0–3) → tone = s + 6v</span>
+<span class="why">উদাহরণ: set 0 = {3000, 4500, 6000, 7500 Hz}, set 1 = {3250, 4750, 6250, 7750 Hz}। একই set আবার আসে
+6 slot = 120 ms পরে, ততক্ষণে আগের echo অনেক কমে যায় (চিত্র 2.1)। Set-এর ভেতরে tone-গুলো 1500 Hz দূরে,
+তাই কোনো এক জায়গার fading একসাথে চারটাকে নষ্ট করে না।</span></div>
+<figure><img src="{{RES}}/packet_plan.png" style="width:96%">
+<figcaption>চিত্র 12.1: একটা packet-এর সময়-frequency নকশা। কমলা = preamble (10 slot), নীল = data (54 slot)।</figcaption></figure>
+<figure><img src="{{RES}}/rx_spectrogram.png" style="width:96%">
+<figcaption>চিত্র 12.2: Virtual pool-এ (echo + pump + thruster + pinger, SNR 0 dB) ADC যা দেখে তার spectrogram।</figcaption></figure>
+
+<h3>12.5 Preamble</h3>
+<p>Preamble হলো 10টা আলাদা tone-এর একটা নির্দিষ্ট ক্রম: 3000, 6500, 4500, 8500, 5250, 7250, 4000, 8250, 4250, 5750 Hz।
+Receiver সারাক্ষণ এই ক্রমটা খোঁজে। এটা বেছে নেওয়া হয়েছে তিনটা নিয়ম মেনে (code-এ test আছে):</p>
+<ol>
+<li>পাশাপাশি slot-এর tone অনেক দূরে, যাতে একটার echo পরেরটার মতো না শোনায়।</li>
+<li>অন্য packet-এর data কোনোভাবেই 10টার মধ্যে 2টার বেশি slot মেলাতে পারে না, তাই data দেখে ভুল করে
+"packet শুরু" ধরে নেওয়া হয় না।</li>
+<li>Preamble-এর কোনো tone-এর set, সেই packet-এর data অন্তত 6 slot (120 ms) পরে ব্যবহার করে। Simulation-এ
+প্রথম version-এ এই নিয়ম ছিল না, তখন preamble-এর echo প্রথম data slot নষ্ট করছিল। এটা ধরা পড়ার পর ঠিক করা হয়েছে।</li>
+</ol>
+<h3>12.6 Data rate</h3>
+<div class="f"><span class="eq">raw = 2 bit / 20 ms = 100 bit/s;  code rate ½ → 50 bit/s</span>
+<span class="eq">একটা packet = 64 slot × 20 ms = 1.28 s, এতে 4 byte payload (32 bit) → কার্যকর ≈ 25 bit/s</span>
+<span class="why">কম মনে হতে পারে, কিন্তু "LED on", "start mission 3", "আমি gate পার হয়েছি" জাতীয় command-এর জন্য যথেষ্ট,
+আর echo-ভর্তি pool-এ নির্ভরযোগ্যতা অনেক বেশি জরুরি।</span></div>
+
+<!-- ======================================================= 13 -->
+<h2>13. Packet, CRC, error correction</h2>
+<h3>13.1 Packet-এর গঠন (6 byte)</h3>
+<table>
+<tr><th>Byte</th><th>বিট 7–4</th><th>বিট 3–0</th></tr>
+<tr><td>0</td><td>dst (কাকে, 15 = সবাইকে)</td><td>src (কে পাঠাল)</td></tr>
+<tr><td>1</td><td>seq (0–15, repeat চেনার জন্য)</td><td>flags: 8 = ACK চাই, 4 = এটা ACK</td></tr>
+<tr><td>2</td><td colspan="2">cmd (0–255): 1 = LED on, 2 = LED off, 3 = toggle, 4 = ping, 10–255 তোমার নিজের</td></tr>
+<tr><td>3</td><td colspan="2">arg (0–255)</td></tr>
+<tr><td>4–5</td><td colspan="2">CRC-16 (byte 0–3-এর উপর)</td></tr>
+</table>
+<h3>13.2 CRC-16</h3>
+<div class="f"><span class="eq">g(x) = x¹⁶ + x¹² + x⁵ + 1   (0x1021),  শুরুর মান 0xFFFF  ("CRC-16/CCITT-FALSE")</span>
+<span class="why">Data-কে একটা বড় binary সংখ্যা ধরে g(x) দিয়ে ভাগ করলে যে ভাগশেষ থাকে, সেটাই CRC। Receiver নিজে আবার হিসাব
+করে মেলায়। এক-দুই bit ভুল সবসময় ধরা পড়ে, এলোমেলো ভুল ধরা পড়ে 65535/65536 বার। পরীক্ষার মান: "123456789" → 0x29B1
+(unit test-এ যাচাই করা)।</span></div>
+
+<h3>13.3 Convolutional code (K = 7, rate ½)</h3>
+<p>48 bit (6 byte)-এর পরে 6টা শূন্য ("tail") যোগ করে 54 bit বানানো হয়। প্রতিটা bit একটা 7-ঘরের shift register-এ ঢোকে,
+আর প্রতি bit-এ 2টা output bit বের হয়:</p>
+<div class="f"><span class="eq">reg = [নতুন bit, আগের 6 bit]</span>
+<span class="eq">out₀ = parity(reg AND 1111001₂)  (171 octal)</span>
+<span class="eq">out₁ = parity(reg AND 1011011₂)  (133 octal)</span>
+<span class="why">parity = কয়টা 1 আছে তা বিজোড় হলে 1। প্রতিটা output bit আগের 7টা input bit-এর উপর নির্ভর করে, তাই
+তথ্য অনেকগুলো coded bit-এ ছড়িয়ে থাকে। এই code-এর "free distance" 10: দুটো আলাদা message-এর coded রূপ
+কমপক্ষে 10টা bit-এ আলাদা। তাই কাছাকাছি নয় এমন অনেক ভুল ঠিক করা যায়। এটা NASA আর Wi-Fi-তে ব্যবহৃত বিখ্যাত code।
+প্রথমে Hamming(8,4) code দিয়ে design করা হয়েছিল। Simulation-এ দেখা গেল convolutional code
+একই noise-এ অনেক বেশি packet ঠিক আনে (−6 dB-এ ২৫% থেকে ৯০%+), তাই এটা বেছে নেওয়া হয়েছে।</span></div>
+
+<h3>13.4 Interleaver</h3>
+<div class="f"><span class="eq">slot(c) = (37 · c) mod 54;    c &lt; 54 হলে MSB, নাহলে LSB</span>
+<span class="why">c = coded bit-এর নম্বর (0–107)। পাশাপাশি coded bit (যেগুলো Viterbi-র একসাথে লাগে) অন্তত 3 slot দূরে আর
+আলাদা frequency set-এ যায়। ফলে একটা ঝাঁকুনি (click) বা একটা faded frequency শুধু ছড়ানো কয়েকটা bit নষ্ট করে, যা
+Viterbi সবচেয়ে ভালো ঠিক করতে পারে।</span></div>
+
+<!-- ======================================================= 14 -->
+<h2>14. Receiver কীভাবে decode করে (ধাপে ধাপে)</h2>
+<h3>14.1 DC সরানো</h3>
+<div class="f"><span class="eq">dc ← dc + (x − dc) / 1024;     y = x − dc</span>
+<span class="eq">f_c ≈ Fs / (2π · 1024) = 50000 / 6434 ≈ 7.8 Hz</span>
+<span class="why">ADC-র sample-এ VREF (≈1600 count)-এর DC থাকে। এই এক লাইনের high-pass filter সেটা সরায়।</span></div>
+
+<h3>14.2 Goertzel: একটা tone-এর শক্তি মাপা</h3>
+<div class="f"><span class="eq">w[n] = 0.5 − 0.5 cos(2π (n + 0.5) / N)          (Hann window)</span>
+<span class="eq">coef = 2 cos(2π f / Fs)</span>
+<span class="eq">s[n] = x[n]·w[n] + coef · s[n−1] − s[n−2]</span>
+<span class="eq">E = s[N−1]² + s[N−2]² − coef · s[N−1] · s[N−2]</span>
+<span class="why">Goertzel হলো FFT-এর একটা মাত্র bin হিসাব করার সস্তা উপায়: প্রতি sample-এ একটা গুণ আর দুটো যোগ। আমাদের
+শুধু 24টা frequency দরকার, পুরো FFT লাগে না। Hann window কিনারাগুলো নরম করে দেয়, তাই পাশের tone-এর
+"leakage" কমে (Fs একটু ভুল হলেও)।</span></div>
+<figure><img src="{{FIG}}/goertzel_demo.png" style="width:78%">
+<figcaption>চিত্র 14.1: 4500 Hz tone + noise-এর উপর 24টা Goertzel। কমলা bin স্পষ্ট জয়ী।</figcaption></figure>
+
+<h3>14.3 Whitening: প্রতিটা tone-এর নিজস্ব noise floor</h3>
+<div class="f"><span class="eq">N_k ← N_k + (min(E_k, 8·N_k) − N_k) / 256          (প্রতি 2.5 ms)</span>
+<span class="eq">z_k = E_k / N_k</span>
+<span class="eq">SNR_k ≈ z_k − 1,   q = 10 log₁₀(z − 1) dB</span>
+<span class="why">N_k হলো tone k-এর গড় noise (exponential moving average, সময় ধ্রুবক 256 × 2.5 ms = 0.64 s)। শুধু packet না থাকার
+সময় শেখে। "min(…, 8N)" মানে হঠাৎ জোরালো শব্দ (click বা নিজের signal) floor-কে বেশি টেনে তুলতে পারে না।
+z_k বলে tone k তার স্বাভাবিক noise-এর কত গুণ। ধ্রুব whine থাকলে N_k বড় হয়ে যায়, ফলে whine-এর z ≈ 1 থাকে।
+Firmware যে <b>q</b> print করে, সেটা এই SNR-এর median।</span></div>
+
+<h3>14.4 Preamble খোঁজা</h3>
+<p>প্রতি 2.5 ms (H = 125 sample) পরপর শেষ 16 ms-এর 24টা z হিসাব হয়। প্রতিটা preamble slot j-এর tone p_j কতটা "জয়ী",
+তা ভাগ হিসেবে মাপা হয়:</p>
+<div class="f"><span class="eq">frac_j(t) = z_{p_j}(t) / Σ_k z_k(t)</span>
+<span class="eq">score(t) = (1/10) Σ_{j=0..9} frac_j( t − (9 − j)·T_slot )</span>
+<span class="eq">match(t) = কয়টা j-তে p_j-ই 24টার মধ্যে সবচেয়ে জোরালো</span>
+<span class="eq">শর্ত: score ≥ 0.14  এবং  match ≥ 5</span>
+<span class="why">শুধু noise থাকলে প্রতি frac ≈ 1/24 ≈ 0.04, তাই score ≈ 0.04। Preamble থাকলে score 0.3–0.9। ভাগ ব্যবহার করায় পুরো
+band-জুড়ে হঠাৎ শব্দ (click) এলে সব z একসাথে বাড়ে, score বাড়ে না। দুই শর্ত একসাথে থাকায় 10 মিনিটের কঠিন noise-এ
+একবারও ভুল trigger হয়নি (অধ্যায় 17)।</span></div>
+<h3>14.5 Timing ঠিক করা</h3>
+<p>Score-এর চূড়া একটু চ্যাপ্টা (window slot-এর চেয়ে ছোট বলে)। Trigger-এর পরে আরো 14টা hop (35 ms)-এর score রাখা হয়।
+তারপর চূড়ার 85%-এর উপরের অংশের ভারকেন্দ্র (centroid) নেওয়া হয়:</p>
+<div class="f"><span class="eq">c = Σ i · (score_i − 0.7·max) / Σ (score_i − 0.7·max)</span>
+<span class="eq">data slot i-এর window শেষ হয়:  e_i = sync + (i + 1) · S,   S = Fs × 0.020</span></div>
+<p>Data চলার সময় <b>early/late gate</b> timing-কে আস্তে আস্তে ঠিক রাখে। জয়ী tone-এর শক্তি 1 ms আগের ও পরের window-এ
+মাপা হয়, আর যেদিকে বেশি সেদিকে একটু সরানো হয়:</p>
+<div class="f"><span class="eq">err = (E_late − E_early) / (E_late + E_early);    adj ← adj + 0.25 · D · err   (D = 1 ms, সীমা ±5 ms)</span></div>
+
+<h3>14.6 ADC-র আসল sample rate মাপা</h3>
+<div class="f"><span class="eq">Fs_measured = (মোট sample সংখ্যা) / (সময়, µs) × 10⁶</span>
+<span class="eq">timing ভুল = (Fs ভুল) × packet দৈর্ঘ্য</span>
+<span class="why">ESP32-এর ADC ঠিক 50000 না, একটু কম-বেশি দেয়। 1% ভুল হলে 1.28 s packet-এর শেষে timing 12.8 ms সরে যায়, যা slot-এর
+margin (2 ms)-এর অনেক বেশি। তাই firmware চলার সময় ক্রমাগত sample গোনে আর ESP32-এর নিজের µs timer-এর সাথে তুলনা
+করে। সময় যত বাড়ে, মাপ তত নিখুঁত হয় (20 s পরে ≈0.05% → packet-এর শেষে 0.6 ms)। Simulation-এ ADC-কে ইচ্ছা
+করে 2.4% দ্রুত চালিয়ে test করা হয়েছে।</span></div>
+
+<h3>14.7 Soft bit (LLR)</h3>
+<div class="f"><span class="eq">L_MSB = max(ln z₀, ln z₁) − max(ln z₂, ln z₃)</span>
+<span class="eq">L_LSB = max(ln z₀, ln z₂) − max(ln z₁, ln z₃)</span>
+<span class="why">L &gt; 0 মানে bit সম্ভবত 0, L &lt; 0 মানে 1, আর |L| যত বড় তত নিশ্চিত। শুধু 0/1 না দিয়ে কতটা নিশ্চিত সেটাও Viterbi-কে দেওয়া
+হয় ("soft decision")। এতে hard decision-এর চেয়ে প্রায় 2 dB বেশি noise সহ্য হয়।</span></div>
+
+<h3>14.8 Viterbi decoding</h3>
+<div class="f"><span class="eq">PM_new(s′) = max over predecessor s of [ PM(s) + (±L₀) + (±L₁) ]</span>
+<span class="why">64টা সম্ভাব্য register অবস্থার প্রতিটার জন্য এখন পর্যন্ত সবচেয়ে মানানসই পথটা মনে রাখা হয় (PM = path metric)। প্রত্যাশিত bit 0 হলে
++L, 1 হলে −L যোগ হয়। শেষে tail-এর কারণে অবস্থা 0-তে শেষ হওয়া পথটা পিছন দিকে (traceback) পড়ে 54 bit ফিরে পাওয়া যায়।
+এটাই maximum-likelihood decoding: যে message সবচেয়ে সম্ভাব্য, সেটাই বের হয়।</span></div>
+<h3>14.9 CRC আর কাজ</h3>
+<p>প্রথম 48 bit থেকে 6 byte বানিয়ে CRC মেলানো হয়। মিললে packet queue-তে যায়, main loop LED জ্বালায় বা নিভায়,
+দরকার হলে ACK পাঠায়। আর একই (src, seq) 15 s-এর মধ্যে আবার এলে command দ্বিতীয়বার চালানো হয় না (repeat),
+কিন্তু ACK আবার পাঠানো হয়, কারণ আগের ACK হয়তো হারিয়ে গিয়েছিল।</p>
+
+<!-- ======================================================= 15 -->
+<h2>15. Firmware: install, upload, ব্যবহার</h2>
+<h3>15.1 Install</h3>
+<ol>
+<li>Arduino IDE 2.x install করো।</li>
+<li>File → Preferences → "Additional boards manager URLs"-এ বসাও:<br>
+<span class="m">https://espressif.github.io/arduino-esp32/package_esp32_index.json</span></li>
+<li>Tools → Board → Boards Manager → "esp32 by Espressif Systems" <b>version 3.x</b> install করো (3.3.12-এ compile করে
+দেখা হয়েছে; 2.x চলবে না, code নিজেই error দেবে)।</li>
+<li>Repository-র <span class="m">firmware/DuburiModem</span> folder খোলো (<span class="m">DuburiModem.ino</span>)। একই folder-এ
+<span class="m">am_core.c</span>, <span class="m">am_core.h</span>, <span class="m">config.h</span> থাকতে হবে।</li>
+<li>Tools → Board → "ESP32 Dev Module"। কোনো বাড়তি library লাগে না।</li>
+<li><span class="m">config.h</span>-এ <span class="m">NODE_ID</span> বসাও: প্রথম ROV-এ 1, দ্বিতীয়টায় 2। আর <span class="m">PEER_ID</span>-এ অন্যটার ID।</li>
+<li>Upload। Serial Monitor: 115200 baud, line ending "Newline"।</li>
+</ol>
+<h3>15.2 Serial command</h3>
+<table>
+<tr><th>Command</th><th>কাজ</th></tr>
+<tr><td><span class="m">on [id]</span> / <span class="m">off [id]</span> / <span class="m">toggle [id]</span></td><td>id-এর ROV-এর LED জ্বালাও/নিভাও/উল্টাও (id না দিলে PEER_ID, 15 = সবাই)</td></tr>
+<tr><td><span class="m">ping [id]</span></td><td>উত্তর চায়; উত্তরের q দিয়ে link কেমন বোঝা যায়</td></tr>
+<tr><td><span class="m">send C A [id]</span></td><td>নিজের command C (0–255) আর argument A পাঠাও</td></tr>
+<tr><td><span class="m">sweep</span></td><td>24টা tone একটা একটা করে 0.3 s বাজায় (frequency response test)</td></tr>
+<tr><td><span class="m">tone F MS</span></td><td>F Hz, MS millisecond বাজাও</td></tr>
+<tr><td><span class="m">scope</span></td><td>প্রতি 0.25 s-এ 24টা tone-এর whitened level (dB) দেখায় (আবার লিখলে বন্ধ)</td></tr>
+<tr><td><span class="m">stats</span></td><td>কয়টা preamble, কয়টা ঠিক, কয়টা CRC fail, ADC-র মাপা Fs, level, clipping</td></tr>
+<tr><td>BOOT button</td><td>PEER_ID-কে "toggle" পাঠায় (laptop ছাড়াই test)</td></tr>
+</table>
+<h3>15.3 Output-এর format (main computer-এর জন্য)</h3>
+<pre class="code">TX to=2 seq=3 cmd=1 arg=0 (try 1/3)
+RX src=1 dst=2 seq=3 cmd=1 arg=0 flags=8 q=14.2dB      ← receiver-এ
+TX ack to=1 seq=3
+ACK src=2 seq=3 cmd=1 state=1 q=12.8dB                  ← sender-এ
+OK delivered to 2 (try 1)</pre>
+<p>Jetson বা Raspberry Pi একই USB serial port থেকে এগুলো পড়তে আর command লিখতে পারে। Python উদাহরণ:</p>
+<pre class="code">import serial                                  # pip install pyserial
+s = serial.Serial("/dev/ttyUSB0", 115200, timeout=0.1)
+s.write(b"send 10 3 2\n")                       # ROV 2-কে command 10, argument 3
+while True:
+    line = s.readline().decode(errors="ignore").strip()
+    if line.startswith("RX "):
+        f = dict(kv.split("=") for kv in line.split()[1:])
+        print("command", f["cmd"], "from", f["src"], "quality", f["q"])</pre>
+<h3>15.4 নিজের command যোগ করা</h3>
+<p><span class="m">DuburiModem.ino</span>-তে <span class="m">enum { CMD_LED_ON = 1, … }</span>-এ নতুন নাম দাও (10–255), তারপর
+<span class="m">handlePacket()</span>-এর <span class="m">switch (p.cmd)</span>-এ <span class="m">case</span> লেখো। পাঠানোর জন্য
+<span class="m">sendCommand(dst, CMD_X, arg)</span> বা serial-এ <span class="m">send</span>।</p>
+
+<!-- ======================================================= 16 -->
+<h2>16. Code-এর ব্যাখ্যা (function ধরে ধরে)</h2>
+<h3>16.1 File-এর ভাগ</h3>
+<table>
+<tr><th>File</th><th>কী আছে</th></tr>
+<tr><td><span class="m">config.h</span></td><td>শুধু এটাই সাধারণত বদলাতে হয়: ID, pin, ACK, retry, heat guard</td></tr>
+<tr><td><span class="m">am_core.h / am_core.c</span></td><td>Modem-এর মস্তিষ্ক, সাধারণ C, ESP32-এর কিছু নেই। একই file PC test-এ চলে।</td></tr>
+<tr><td><span class="m">DuburiModem.ino</span></td><td>ESP32-এর অংশ: ADC DMA, LEDC tone, FreeRTOS task, serial command, LED, ACK</td></tr>
+<tr><td><span class="m">tests/test_core.c</span></td><td>PC-তে unit test (CRC, code, interleaver, loopback, noise)</td></tr>
+<tr><td><span class="m">sim/pool_sim.py, run_sim.py</span></td><td>Virtual pool, আসল C code চালিয়ে ফল আর graph</td></tr>
+<tr><td><span class="m">docs/</span></td><td>এই PDF-এর উৎস, চিত্র, font</td></tr>
+</table>
+<h3>16.2 am_core.c</h3>
+<ul>
+<li><span class="m">am_tone_hz(k)</span>: f = 3000 + 250k।</li>
+<li><span class="m">am_crc16()</span>: bit ধরে ধরে CRC হিসাব (13.2)।</li>
+<li><span class="m">am_conv_encode()</span>: 7-ঘরের register, দুটো parity (13.3)।</li>
+<li><span class="m">am_viterbi()</span>: 64 state, প্রতি step-এ প্রতি state-এর দুটো আগের state থেকে ভালোটা বাছা, শেষে traceback (14.8)।
+<span class="m">dec[t]</span>-এর প্রতিটা bit বলে কোন আগের state বাছা হয়েছিল।</li>
+<li><span class="m">am_interleave(c)</span>: slot = 37c mod 54 (13.4)।</li>
+<li><span class="m">am_pack()/am_unpack()</span>: packet ↔ 6 byte, CRC বসানো/মেলানো।</li>
+<li><span class="m">am_tx_build()</span>: packet → bit → code → interleave → 64টা tone নম্বর (প্রথম 10টা preamble)।</li>
+<li><span class="m">rx_configure()</span>: Fs থেকে W (800), H (125), D (50), S (1000), Hann window, Goertzel coef, preamble offset।</li>
+<li><span class="m">am_rx_process()</span>: প্রতি sample-এ clipping গোনা, DC সরানো, ring buffer-এ রাখা। পরের "event"-এর সময় হলে
+<span class="m">rx_hop()</span> (খোঁজা) বা <span class="m">rx_decode_slot()</span> (data) ডাকা।</li>
+<li><span class="m">rx_energies()</span>: ring buffer থেকে W sample নিয়ে window গুণ করে, যতগুলো tone দরকার তাদের Goertzel।</li>
+<li><span class="m">rx_hop()</span>: 24 tone-এর E, noise floor update, z, frac, score, match। Trigger হলে PEAK অবস্থা।</li>
+<li><span class="m">rx_finish_peak()</span>: চূড়ার centroid → sync সময়, DECODE অবস্থা শুরু।</li>
+<li><span class="m">rx_decode_slot()</span>: slot-এর set-এর 4টা tone, z, LLR, quality, early/late।</li>
+<li><span class="m">rx_finish_packet()</span>: de-interleave, Viterbi, byte, CRC, quality median, queue-তে রাখা, আবার খোঁজা শুরু।</li>
+<li><span class="m">am_rx_mute()</span>: নিজে পাঠানোর সময় শোনা বন্ধ (নিজের জোরালো শব্দ যেন ভুল কিছু না ঘটায়)।</li>
+<li><span class="m">am_rx_set_fs()</span>: মাপা Fs বসানো, শুধু খোঁজার অবস্থায় (packet চলার মাঝে না)।</li>
+</ul>
+<h3>16.3 DuburiModem.ino</h3>
+<ul>
+<li><span class="m">startAdc()</span>: ESP-IDF-এর <span class="m">adc_continuous</span> driver। GPIO34 → ADC1 channel, 12 dB attenuation, 50 kHz,
+DMA frame 512 sample, overflow হলে গোনা হয়।</li>
+<li><span class="m">rxTask()</span> (core 0, priority 5): DMA থেকে sample পড়া, level মাপা, mutex নিয়ে <span class="m">am_rx_process()</span>,
+packet হলে queue-তে পাঠানো। প্রতি 2 s-এ Fs মাপা আর দরকার হলে বসানো।</li>
+<li><span class="m">playTones()</span>: heat guard, RX mute, amp চালু, তারপর প্রতি slot-এ <span class="m">ledcWriteTone()</span>।
+সময় মাপা হয় <span class="m">esp_timer</span> (µs) দিয়ে, প্রতি slot-এর শেষ "absolute" সময়ে, তাই drift জমে না।</li>
+<li><span class="m">heatGuard()/heatGuardUpdate()</span>: 7.2-এর formula।</li>
+<li><span class="m">sendCommand()</span>: seq বাড়ানো, পাঠানো, ACK-এর জন্য 2.6 s অপেক্ষা, না এলে আবার (মোট 3 বার)।</li>
+<li><span class="m">handlePacket()</span>: আমার জন্য কি না দেখা, ACK চেনা, repeat চেনা, command চালানো, ACK পাঠানো।</li>
+<li><span class="m">loop()</span>: serial line পড়া, BOOT button, scope print, packet poll।</li>
+</ul>
+<div class="note"><b>Thread safety:</b> modem-এর state (<span class="m">g_rx</span>) দুই task ব্যবহার করে, তাই প্রতিবার mutex (<span class="m">g_rx_lock</span>)
+নেওয়া হয়। Packet main loop-এ যায় FreeRTOS queue দিয়ে। Heavy DSP core 0-তে চলে, serial আর TX core 1-এ।</div>
+
+<!-- ======================================================= 17 -->
+<h2>17. Verification: কী test করা হয়েছে</h2>
+<h3>17.1 Compile</h3>
+<p>Firmware Arduino-ESP32 core 3.3.12 (ESP-IDF 5.5) দিয়ে "ESP32 Dev Module"-এর জন্য compile করা হয়েছে, সব warning চালু
+রেখে। কোনো warning বা error নেই। Flash-এর ~23% আর RAM-এর ~17% লাগে।</p>
+<h3>17.2 Unit test (PC-তে, <span class="m">make -C tests &amp;&amp; tests/test_core</span>)</h3>
+<ul>
+<li>CRC-16-এর মান "123456789" → 0x29B1।</li>
+<li>Convolutional code + Viterbi: 3000 বার এলোমেলো data, 0–4টা ছড়ানো ভুল, সবই ঠিক হয়েছে। এক bit বদলালে ≥10 coded bit বদলায়।</li>
+<li>Interleaver একটা permutation, পাশাপাশি bit আলাদা slot আর set-এ।</li>
+<li>Pack/unpack 2000 packet, প্রতিটায় 1 bit উল্টালে CRC ধরে।</li>
+<li>Preamble-এর তিনটা নিয়ম (12.5)।</li>
+<li>Loopback: পরিষ্কার signal, square wave, 1-sample-করে input, ADC 1.5% দ্রুত, Fs মাপায় 0.05% ভুল, 48 kHz, প্রায় 0 dB noise।</li>
+<li>60 s শুধু noise: একটাও ভুল packet নেই।</li>
+</ul>
+<h3>17.3 Virtual pool simulation</h3>
+<p>ROV-এর আসল C code-কে একটা কম্পিউটার-বানানো pool-এর signal খাওয়ানো হয়েছে। Model-এ ছিল: ESP32 LEDC-এর আসল frequency ধাপ,
+slot-এর সময় ±30 µs কাঁপা, RC filter, speaker-এর অজানা response (1.5–7 kHz band, এলোমেলো ±5 dB ঢেউ), 50×25×5 m
+pool-এ image-method echo (দেয়াল/মেঝে reflection 0.85, পানির উপরিতল −0.9), 10–25 m এলোমেলো অবস্থান, pump hum,
+thruster noise (ওঠানামা সহ), click, 30 kHz pinger, preamp-এর filter, ADC (2.4% দ্রুত clock, 12 bit, noise)।
+প্রতি বিন্দুতে 40টা packet।</p>
+<figure><img src="{{RES}}/success_vs_snr.png" style="width:80%">
+<figcaption>চিত্র 17.1: SNR অনুযায়ী কত packet ঠিক এসেছে। SNR = ADC-তে 3–9 kHz band-এর signal power / noise power।</figcaption></figure>
+<table>
+<tr><th>In-band SNR</th><th>Preamble পাওয়া গেছে</th><th>Packet একদম ঠিক</th><th>Firmware-এর q (median)</th></tr>
+{{SNR_TABLE}}
+</table>
+<div class="two">
+<div><table><tr><th>Echo-র মাত্রা (SNR −3 dB)</th><th>ঠিক</th></tr>{{REVERB_TABLE}}</table></div>
+<div><table><tr><th>Interference (SNR −3 dB)</th><th>ঠিক</th></tr>{{INTF_TABLE}}</table></div>
+</div>
+<table><tr><th>ADC clock 2.4% দ্রুত, SNR 0 dB</th><th>ঠিক</th></tr>{{CLOCK_TABLE}}</table>
+<div class="ok"><b>False alarm:</b> {{FA_SECONDS}} s শুধু noise (pump + thruster + 5.5 kHz whine + click + 35 kHz pinger):
+preamble trigger {{FA_TRIG}}, ভুল packet {{FA_PKTS}}।</div>
+<figure><img src="{{RES}}/q_vs_snr.png" style="width:72%">
+<figcaption>চিত্র 17.2: Firmware যে q print করে বনাম আসল SNR। মাঠে q দেখে বোঝা যায় link কতটা নিরাপদ।</figcaption></figure>
+<div class="note"><b>মাঠের নিয়ম:</b> q ≥ 10 dB → নিশ্চিন্ত। q 7–10 dB → চলবে, কিছু retry হবে। q &lt; 7 dB → সীমানায়, volume/gain/অবস্থান
+ঠিক করো। Fs-এর মাপ 1% ভুল হলে (16/20) ক্ষতি হয়, তাই firmware-এর ক্রমাগত Fs মাপা জরুরি। চালুর পর প্রথম ~10 s
+মাপ স্থির হতে দাও।</div>
+<h3>17.4 Simulation-এ পাওয়া আর ঠিক করা সমস্যা</h3>
+<ol>
+<li>Preamble-এর শেষ tone-এর echo প্রথম data slot নষ্ট করছিল। নিয়ম 3 (12.5) যোগ করে ঠিক করা হয়েছে।</li>
+<li>প্রথম interleaver একটা codeword-এর সব bit একই frequency set-এ পাঠাচ্ছিল। এক frequency fade করলে পুরো codeword নষ্ট হতো।
+নতুন interleaver দিয়ে ঠিক করা হয়েছে।</li>
+<li>Hamming(8,4)-এর বদলে convolutional code: −6 dB-এ সফলতা প্রায় ২৫% থেকে ৯০%।</li>
+<li>Detection threshold 0.17 থেকে 0.14: −9 dB-এ preamble পাওয়া 75% থেকে 100%, false alarm-ও শূন্য।</li>
+</ol>
+<h3>17.5 কী test করা <u>হয়নি</u> (সৎভাবে)</h3>
+<ul>
+<li>আসল ESP32, আসল speaker, আসল পানি। Code compile হয়েছে আর logic simulation-এ test হয়েছে, কিন্তু board-এ চালানো হয়নি।
+অধ্যায় 18-এর ধাপ ধরে নিজেরা test করবে।</li>
+<li>Car speaker-এর box থেকে পানিতে আসলে কত জোরে শব্দ যায়, আর pool-এর আসল noise কত। Simulation-এ SNR-কে চলক রাখা হয়েছে।
+মাঠে <span class="m">scope</span> আর <span class="m">q</span> দিয়ে মাপবে।</li>
+<li>Component-এর মান datasheet-এর সাধারণ মান থেকে, আর thermal ও plate হিসাব আনুমানিক।</li>
+</ul>
+<p>এর বাইরে, আলাদা AI reviewer agent দিয়ে code, circuit আর এই document স্বাধীনভাবে যাচাই করানো হয়েছে।
+ফলাফল repository-র <span class="m">docs/VERIFICATION.md</span>-এ আছে।</p>
+
+<!-- ======================================================= 18 -->
+<h2>18. বানানো ও test করার ধাপ</h2>
+<h3>ধাপ 1: Bench (পানি ছাড়া)</h3>
+<ol>
+<li>দুটো ESP32-এ firmware দাও (NODE_ID 1 আর 2)। Serial-এ "ready" দেখাবে।</li>
+<li>শুধু preamp: piezo লাগিয়ে <span class="m">stats</span> দেখো। LEVEL-এর mean ≈ 1500–1800, rms ছোট (5–30)।
+Piezo-তে আঙুলের টোকা দিলে max লাফাবে।</li>
+<li><b>Wire loopback:</b> node 1-এর RV1-এর wiper থেকে signal নিয়ে 100 kΩ আর 1 kΩ-এর divider দিয়ে ১০০ ভাগের ১ ভাগ করো
+(wiper → 100 kΩ → বিন্দু → 1 kΩ → GND)। সেই বিন্দু থেকে node 2-এর preamp input-এ (piezo-র জায়গায়) দাও। RV2 কম রাখো।
+দুই board-এর GND জোড়া দাও, আর speaker খুলে রাখো। Node 1-এ <span class="m">on</span> লিখলে node 2-এর LED জ্বলবে। (ACK-এর জন্য
+উল্টো দিকেও একই তার লাগবে। না দিলে "no reply" দেখাবে, কিন্তু LED জ্বলবে।) এতে পুরো DSP chain পানি ছাড়াই পরীক্ষা হয়।</li>
+<li>Amp + speaker বাতাসে, RV1 একদম কম। <span class="m">tone 5000 500</span> দিয়ে শব্দ শোনো। আস্তে বাড়াও, কর্কশ হওয়ার আগে থামো।</li>
+</ol>
+<h3>ধাপ 2: বালতি</h3>
+<ol>
+<li>Speaker box আর hydrophone বালতিতে, 30–50 cm দূরে। Volume কম।</li>
+<li>RX-এ <span class="m">scope</span> চালু, TX-এ <span class="m">sweep</span>। কোন tone-এ level কম আসে দেখো।</li>
+<li><span class="m">stats</span>-এ clipped বাড়লে RV2 (gain) কমাও। rms খুব কম হলে বাড়াও।</li>
+<li><span class="m">ping</span> ১০ বার। সবগুলো OK আর q বড় (&gt;20 dB) হওয়া উচিত।</li>
+</ol>
+<h3>ধাপ 3: Pool</h3>
+<ol>
+<li>5, 10, 15, 20, 25 m-এ প্রতিবার ২০টা <span class="m">ping</span>। কয়টা OK আর q-এর মান লিখে রাখো।</li>
+<li>Thruster বন্ধ আর চালু, দুইভাবেই। চালু অবস্থায় RX-এর <span class="m">scope</span>-এ কোনো tone-এ স্থায়ী উঁচু level থাকলে বুঝবে
+সেখানে whine আছে (whitening সামলাবে, কিন্তু জেনে রাখা ভালো)।</li>
+<li>প্রতি ১০ মিনিট পর speaker-এর resistance মেপে তাপমাত্রা দেখো (7.6)।</li>
+<li>q &lt; 7 dB হলে: (ক) volume একটু বাড়াও (clip না করে); (খ) hydrophone-কে thruster থেকে দূরে নাও; (গ) speaker জানালা পাতলা বা
+বড় করো; (ঘ) দরকার হলে PAM8610।</li>
+</ol>
+<h3>ধাপ 4: ROV-এ লাগানো</h3>
+<ul>
+<li>Hydrophone নিচের দিকে, frame থেকে কম্পন-বিচ্ছিন্ন। Speaker-এর জানালা খোলা পানির দিকে।</li>
+<li>Main computer-এর সাথে serial (15.3), অথবা শুধু BOOT button/LED দিয়ে।</li>
+</ul>
+
+<!-- ======================================================= 19 -->
+<h2>19. Troubleshooting</h2>
+<table>
+<tr><th>লক্ষণ</th><th>সম্ভাব্য কারণ</th><th>কী করবে</th></tr>
+<tr><td>Serial-এ "ADC start failed"</td><td>ভুল pin বা core 2.x</td><td>PIN_HYDROPHONE 32–39-এর একটা হতে হবে, core 3.x</td></tr>
+<tr><td>preambles = 0, কিছুই আসে না</td><td>signal খুব কম, বা gain কম, বা ADC saturate</td><td>scope দেখো; stats-এ LEVEL; RV1/RV2 ঠিক করো; wire loopback দিয়ে DSP check</td></tr>
+<tr><td>preambles বাড়ে কিন্তু crc_fail-ও বাড়ে</td><td>SNR সীমানায়, echo বেশি, বা clipping</td><td>q দেখো; clipped শূন্য রাখো; দূরত্ব কমিয়ে দেখো; hydrophone-এর অবস্থান বদলাও</td></tr>
+<tr><td>clipped দ্রুত বাড়ে</td><td>gain বেশি বা thruster noise খুব জোরালো</td><td>RV2 কমাও; hydrophone thruster থেকে দূরে</td></tr>
+<tr><td>overflows বাড়ে</td><td>CPU সময় পাচ্ছে না</td><td>loop()-এ লম্বা কাজ যোগ করোনি তো? WiFi/BT চালু করোনি তো?</td></tr>
+<tr><td>fs_measured 49000–51500-এর বাইরে</td><td>ADC বা driver সমস্যা</td><td>board বদলে দেখো; issue খোলো</td></tr>
+<tr><td>TX-এর সময় ESP32 reset</td><td>brownout: amp-এর current-এ voltage নামছে</td><td>আলাদা buck, 1000 µF, মোটা তার</td></tr>
+<tr><td>Speaker গরম</td><td>অধ্যায় 7</td><td>checklist 7; MAX_TX_DUTY কমাও</td></tr>
+<tr><td>Amp গরম/বন্ধ হয়ে যায়</td><td>speaker-এর তার GND-এ, বা 2 Ω-এর কম load</td><td>BTL নিয়ম (6.2); একটাই 4 Ω speaker</td></tr>
+<tr><td>"HEAT-GUARD wait"</td><td>খুব ঘনঘন পাঠাচ্ছ</td><td>স্বাভাবিক, speaker রক্ষা করছে</td></tr>
+<tr><td>LED জ্বলে কিন্তু "no reply"</td><td>অন্য দিকের TX বা RX কাজ করছে না</td><td>উল্টো দিকে ping; দুই ROV-এ ID আলাদা কি না দেখো</td></tr>
+<tr><td>একই command দুইবার কাজ করে</td><td>seq বদলে নতুন command পাঠানো হয়েছে</td><td>স্বাভাবিক; repeat-এ seq একই থাকে, তখন দ্বিতীয়বার চলে না</td></tr>
+<tr><td>Hum বা ভনভন শব্দ (scope-এ সব tone উঁচু)</td><td>ground loop, unshielded cable</td><td>star ground, shield শুধু এক প্রান্তে, preamp-এর supply filter</td></tr>
+</table>
+
+<!-- ======================================================= 20 -->
+<h2>20. Safety</h2>
+<ul>
+<li>LiPo battery: fuse ব্যবহার করবে, short হলে আগুন লাগতে পারে। পানিতে নামানোর আগে সব সংযোগ seal করবে।</li>
+<li>Pool-এ মানুষ থাকলে সাধারণত শব্দ নিরাপদ মাত্রায় থাকে (কয়েক W), কিন্তু খুব কাছ থেকে কানে পানির নিচে জোরালো tone অস্বস্তিকর।
+Test-এর সময় ডুবুরিদের জানিয়ে রাখো।</li>
+<li>Speaker আর amp গরম হলে বন্ধ করো। Box খোলার আগে ঠান্ডা হতে দাও।</li>
+<li>Epoxy হাতে লাগলে সাবান দিয়ে ধুয়ে ফেলবে। খোলা জায়গায় কাজ করবে।</li>
+<li>Competition-এর নিয়মে acoustic emission-এর কোনো সীমা থাকলে (pinger task-এর সময় চুপ থাকা ইত্যাদি) সেটা মেনে চলবে।
+দরকার হলে firmware-এ একটা "quiet" command যোগ করো।</li>
+</ul>
+
+<!-- ======================================================= A -->
+<h2>A. সব formula এক জায়গায়</h2>
+<table>
+<tr><th>Formula</th><th>কোথায় লাগে</th><th>অধ্যায়</th></tr>
+<tr><td class="m">λ = c / f</td><td>wavelength, coating কতটা পাতলা</td><td>2.1, 9.1</td></tr>
+<tr><td class="m">t = d / c</td><td>শব্দ পৌঁছানোর সময়</td><td>2.1</td></tr>
+<tr><td class="m">Δf = f·v/c</td><td>Doppler</td><td>2.4</td></tr>
+<tr><td class="m">I = P/(η·V)</td><td>battery current</td><td>5</td></tr>
+<tr><td class="m">f = 1/(2π√(LC))</td><td>supply-র LC filter</td><td>5</td></tr>
+<tr><td class="m">x(t) = V/2 + (2V/π)Σ sin(nωt)/n</td><td>square wave-এর ভেতরে কী আছে</td><td>6.2, 7.1</td></tr>
+<tr><td class="m">f_c = 1/(2πRC)</td><td>সব RC filter</td><td>6.2, 10.2</td></tr>
+<tr><td class="m">R_th = R1∥R2, divider = R2/(R1+R2)</td><td>TX filter, volume</td><td>6.2</td></tr>
+<tr><td class="m">P = V_pk²/(2R)</td><td>amp output power</td><td>6.2</td></tr>
+<tr><td class="m">P_DC = (dV)²/R</td><td>DC-র অপচয়</td><td>7.1</td></tr>
+<tr><td class="m">t_rest = t_on(1−d)/d</td><td>heat guard</td><td>7.2</td></tr>
+<tr><td class="m">ΔT = P·R_th</td><td>তাপমাত্রা বৃদ্ধি</td><td>7.5</td></tr>
+<tr><td class="m">ΔT = (R_hot/R_cold − 1)/0.00393</td><td>coil-এর তাপ মাপা</td><td>7.6</td></tr>
+<tr><td class="m">P = ρgh</td><td>গভীরতায় চাপ</td><td>8.1</td></tr>
+<tr><td class="m">w = Pa⁴/(64D), σ = 3Pa²/(4t²)</td><td>জানালা কতটা বাঁকে</td><td>8.1</td></tr>
+<tr><td class="m">Z = ρc, T = 4Z₁Z₂/(Z₁+Z₂)²</td><td>seal করলে শব্দ ঢোকে কি না</td><td>9.1</td></tr>
+<tr><td class="m">G = 1 + Rf/Rg</td><td>op-amp gain</td><td>10.2</td></tr>
+<tr><td class="m">GBW ≥ G·f</td><td>op-amp বাছাই</td><td>10.2</td></tr>
+<tr><td class="m">Fs &gt; 2f, f_alias = |f − kFs|</td><td>sampling, pinger alias</td><td>11.2</td></tr>
+<tr><td class="m">PG = 10log(B_band/B_bin)</td><td>processing gain</td><td>11.3</td></tr>
+<tr><td class="m">f_k = 3000 + 250k</td><td>tone</td><td>12.1</td></tr>
+<tr><td class="m">Δf_bin = Fs/N</td><td>frequency resolution</td><td>12.2</td></tr>
+<tr><td class="m">set = {s, s+6, s+12, s+18}</td><td>frequency hopping</td><td>12.4</td></tr>
+<tr><td class="m">g(x) = x¹⁶+x¹²+x⁵+1</td><td>CRC-16</td><td>13.2</td></tr>
+<tr><td class="m">G = (171, 133)₈, K = 7</td><td>convolutional code</td><td>13.3</td></tr>
+<tr><td class="m">slot = 37c mod 54</td><td>interleaver</td><td>13.4</td></tr>
+<tr><td class="m">dc += (x−dc)/1024</td><td>DC blocker</td><td>14.1</td></tr>
+<tr><td class="m">s[n] = xw + coef·s[n−1] − s[n−2]</td><td>Goertzel</td><td>14.2</td></tr>
+<tr><td class="m">N += (min(E,8N) − N)/256</td><td>noise floor</td><td>14.3</td></tr>
+<tr><td class="m">score = mean frac_j</td><td>preamble detection</td><td>14.4</td></tr>
+<tr><td class="m">err = (E_L−E_E)/(E_L+E_E)</td><td>timing tracking</td><td>14.5</td></tr>
+<tr><td class="m">Fs = ΔN/Δt</td><td>ADC-র আসল rate</td><td>14.6</td></tr>
+<tr><td class="m">L = max(ln z…) − max(ln z…)</td><td>soft bit</td><td>14.7</td></tr>
+<tr><td class="m">PM′ = max(PM ± L)</td><td>Viterbi</td><td>14.8</td></tr>
+</table>
+
+<!-- ======================================================= B -->
+<h2>B. শব্দকোষ (Glossary)</h2>
+<table>
+<tr><th>শব্দ</th><th>মানে</th></tr>
+<tr><td>ADC</td><td>Analog-to-Digital Converter: voltage-কে সংখ্যায় রূপান্তর করে</td></tr>
+<tr><td>DMA</td><td>Direct Memory Access: CPU ছাড়াই hardware নিজে data memory-তে রাখে</td></tr>
+<tr><td>FSK</td><td>Frequency Shift Keying: তথ্য বোঝানো হয় কোন frequency বাজছে তা দিয়ে</td></tr>
+<tr><td>Frequency hopping</td><td>সময়ের সাথে frequency-র set বদলানো</td></tr>
+<tr><td>Slot / symbol</td><td>20 ms-এর একটা ভাগ, যাতে একটা tone বাজে</td></tr>
+<tr><td>Preamble</td><td>Packet-এর শুরুর পরিচিত নকশা, যা দিয়ে packet খুঁজে পাওয়া যায়</td></tr>
+<tr><td>Goertzel</td><td>একটা নির্দিষ্ট frequency-র শক্তি মাপার দ্রুত algorithm</td></tr>
+<tr><td>Window (Hann)</td><td>Signal-এর দুই কিনারা নরম করার গুণক</td></tr>
+<tr><td>SNR</td><td>Signal-to-Noise Ratio, dB-তে: 10·log₁₀(P_signal/P_noise)</td></tr>
+<tr><td>dB</td><td>অনুপাতের log মাপ। +3 dB ≈ ২ গুণ power, +10 dB = ১০ গুণ, +20 dB = ১০০ গুণ</td></tr>
+<tr><td>Reverberation / echo</td><td>দেয়াল ও পানির উপরিতলে প্রতিফলিত শব্দ</td></tr>
+<tr><td>Fading</td><td>Echo-গুলো একে অপরকে কেটে দিয়ে কোনো frequency দুর্বল হয়ে যাওয়া</td></tr>
+<tr><td>CRC</td><td>ভুল ধরার check-সংখ্যা</td></tr>
+<tr><td>Convolutional code / Viterbi</td><td>ভুল ঠিক করার code আর তার decoder</td></tr>
+<tr><td>Interleaver</td><td>Bit-এর ক্রম এলোমেলো করে ছড়িয়ে দেওয়া</td></tr>
+<tr><td>LLR / soft bit</td><td>Bit 0 না 1, আর কতটা নিশ্চিত</td></tr>
+<tr><td>BTL</td><td>Bridge-Tied Load: speaker-এর দুই প্রান্তেই amp-এর output</td></tr>
+<tr><td>Class-D</td><td>দ্রুত on/off switching amplifier, efficiency ~৯০%</td></tr>
+<tr><td>Acoustic impedance</td><td>Z = ρc, শব্দের জন্য পদার্থের "বাধা"</td></tr>
+<tr><td>Aliasing</td><td>Fs/2-এর উপরের frequency-র ভুল করে নিচে দেখা দেওয়া</td></tr>
+<tr><td>Buck converter</td><td>উচ্চ voltage থেকে দক্ষভাবে নিম্ন voltage বানানোর circuit</td></tr>
+<tr><td>ACK</td><td>"পেয়েছি" উত্তর</td></tr>
+</table>
+
+<!-- ======================================================= C -->
+<h2>C. পুরো source code</h2>
+<p>নিচের code repository-র file থেকে PDF বানানোর সময় সরাসরি বসানো হয়েছে, তাই হুবহু একই। নতুন version-এর জন্য
+সবসময় GitHub-এর code দেখবে।</p>
+{{CODE_CONFIG}}
+{{CODE_INO}}
+{{CODE_CORE_H}}
+{{CODE_CORE_C}}
+
+</body>
+</html>

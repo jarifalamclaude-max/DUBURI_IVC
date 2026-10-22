@@ -1,0 +1,5 @@
+__pycache__/
+*.so
+tests/test_core
+sim/results_log.txt
+docs/_build_guide.html

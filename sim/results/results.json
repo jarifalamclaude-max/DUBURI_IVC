@@ -1,0 +1,187 @@
+{
+ "snr_curve": [
+  {
+   "snr": -14,
+   "ok": 0,
+   "n": 40,
+   "detected": 2,
+   "wrong": 0,
+   "q_med": null
+  },
+  {
+   "snr": -12,
+   "ok": 1,
+   "n": 40,
+   "detected": 14,
+   "wrong": 0,
+   "q_med": 3.439563274383545
+  },
+  {
+   "snr": -10,
+   "ok": 4,
+   "n": 40,
+   "detected": 22,
+   "wrong": 0,
+   "q_med": 5.206673860549927
+  },
+  {
+   "snr": -9,
+   "ok": 15,
+   "n": 40,
+   "detected": 33,
+   "wrong": 0,
+   "q_med": 6.2429728507995605
+  },
+  {
+   "snr": -8,
+   "ok": 20,
+   "n": 40,
+   "detected": 34,
+   "wrong": 0,
+   "q_med": 5.810944318771362
+  },
+  {
+   "snr": -7,
+   "ok": 29,
+   "n": 40,
+   "detected": 38,
+   "wrong": 0,
+   "q_med": 7.357983589172363
+  },
+  {
+   "snr": -6,
+   "ok": 36,
+   "n": 40,
+   "detected": 40,
+   "wrong": 0,
+   "q_med": 7.4504101276397705
+  },
+  {
+   "snr": -5,
+   "ok": 36,
+   "n": 40,
+   "detected": 39,
+   "wrong": 0,
+   "q_med": 9.229387283325195
+  },
+  {
+   "snr": -4,
+   "ok": 39,
+   "n": 40,
+   "detected": 40,
+   "wrong": 0,
+   "q_med": 9.695116996765137
+  },
+  {
+   "snr": -2,
+   "ok": 39,
+   "n": 40,
+   "detected": 40,
+   "wrong": 0,
+   "q_med": 11.20635986328125
+  },
+  {
+   "snr": 0,
+   "ok": 40,
+   "n": 40,
+   "detected": 40,
+   "wrong": 0,
+   "q_med": 12.873071670532227
+  },
+  {
+   "snr": 3,
+   "ok": 40,
+   "n": 40,
+   "detected": 40,
+   "wrong": 0,
+   "q_med": 16.202957153320312
+  }
+ ],
+ "reverb": [
+  {
+   "r_wall": 0.5,
+   "ok": 40,
+   "n": 40
+  },
+  {
+   "r_wall": 0.7,
+   "ok": 40,
+   "n": 40
+  },
+  {
+   "r_wall": 0.85,
+   "ok": 39,
+   "n": 40
+  },
+  {
+   "r_wall": 0.93,
+   "ok": 34,
+   "n": 40
+  }
+ ],
+ "clock": [
+  {
+   "fs_err": 0.0,
+   "tracking": true,
+   "ok": 20,
+   "n": 20
+  },
+  {
+   "fs_err": 0.001,
+   "tracking": true,
+   "ok": 20,
+   "n": 20
+  },
+  {
+   "fs_err": 0.003,
+   "tracking": true,
+   "ok": 20,
+   "n": 20
+  },
+  {
+   "fs_err": 0.01,
+   "tracking": true,
+   "ok": 16,
+   "n": 20
+  },
+  {
+   "fs_err": 0.003,
+   "tracking": false,
+   "ok": 20,
+   "n": 20
+  },
+  {
+   "fs_err": 0.001,
+   "tracking": false,
+   "ok": 20,
+   "n": 20
+  }
+ ],
+ "interference": [
+  {
+   "case": "baseline",
+   "ok": 40,
+   "n": 40
+  },
+  {
+   "case": "ESC whine 5500 Hz",
+   "ok": 40,
+   "n": 40
+  },
+  {
+   "case": "pinger 35 kHz",
+   "ok": 40,
+   "n": 40
+  },
+  {
+   "case": "no thrusters",
+   "ok": 39,
+   "n": 40
+  }
+ ],
+ "false_alarm": {
+  "seconds": 600,
+  "preamble_triggers": 0,
+  "packets": 0
+ }
+}
