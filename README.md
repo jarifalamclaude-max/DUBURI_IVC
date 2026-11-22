@@ -13,6 +13,9 @@
 PC 1-এর web page-এ লেখা টাইপ করো → speaker দিয়ে tone হয়ে যায় → PC 2-এর microphone শোনে → dashboard-এ লেখা দেখায়।
 Firmware-এ দুই মোড: **AIR** (speaker → MAX9814 mic, ঘরের মধ্যে, 40 ms slot) আর **WATER** (পুল, 20 ms slot)।
 কেনাকাটার তালিকা, breadboard wiring ছবি, ব্যবহার আর পরীক্ষার ধাপ: **[`docs/TEXT_MODEM_GUIDE.md`](docs/TEXT_MODEM_GUIDE.md)**।
+**নতুনদের জন্য:** একটা অক্ষর (“L”) কীভাবে bit, packet, ভুল-সংশোধন হয়ে 64টা tone হয়, ধাপে ধাপে ছবি আর আসল সংখ্যা দিয়ে:
+[`docs/L_theke_tone_BN.pdf`](docs/L_theke_tone_BN.pdf) (তৈরি হয় `node docs/explainer/build_explainer.js` দিয়ে)।
+
 **Board ছাড়াই পরীক্ষা:** `pc/sender.html`-এ "Use this computer's speaker" আর `pc/receiver.html`-এ "Use this computer's microphone"
 চাপলে ল্যাপটপের নিজের speaker/mic দিয়েই একই modem চলে (এক ল্যাপটপে দুই window-এ, বা দুই ল্যাপটপে)। গাইডের 6.1 দেখো।
 
