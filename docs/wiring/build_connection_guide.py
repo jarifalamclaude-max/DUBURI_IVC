@@ -37,6 +37,7 @@ NODES = [
          safety=["The LM358 is powered from the ESP32 VIN pin (≈5 V from USB). VREF and the filter use 3.3 V.",
                  "Check the LM358 notch / pin-1 dot before inserting it: turned around it gets hot.",
                  "Electrolytic capacitors: the stripe (−) side goes to GND.",
+                 "Top + rail = VREF (1.34 V), not a power rail. Bottom + rail = +5 V from VIN. Both − rails = GND.",
                  "RV2 is the receiver volume: raise it if the tone bars stay low, lower it if the level shows clipping.",
                  "Keep the hydrophone cable away from the amplifier and its power wires."]),
     dict(key="tx", prefixes=("TX",), svg="tx_wiring.svg", title="Air transmitter", mode="AIR",
@@ -70,6 +71,12 @@ PIN_NAMES = {
     "SPK.+": "Speaker +", "SPK.−": "Speaker −",
     "MIC.OUT": "MAX9814 OUT (audio)", "MIC.VDD": "MAX9814 VDD (power)", "MIC.GND": "MAX9814 GND",
     "MIC.GAIN": "MAX9814 GAIN (open = 60 dB)", "MIC.AR": "MAX9814 AR (attack/release, open)",
+    "XH.IN+": "XH-M542 IN + (signal input)", "XH.IN−": "XH-M542 IN − (input ground)",
+    "XH.VCC+": "XH-M542 VCC + (12 V)", "XH.VCC−": "XH-M542 VCC − (ground)",
+    "XH.OUT+": "XH-M542 OUT + (to exciter)", "XH.OUT−": "XH-M542 OUT − (to exciter, never GND)",
+    "DC12.+": "12 V adapter + (DC jack terminal)", "DC12.−": "12 V adapter − (DC jack terminal)",
+    "EXC.+": "Exciter wire 1 (in the tube)", "EXC.−": "Exciter wire 2 (in the tube)",
+    "HYD.HOT": "Hydrophone cable core (signal)", "HYD.SHIELD": "Hydrophone cable shield (braid)",
 }
 PIN_WORD = {"1": "leg 1", "2": "leg 2", "3": "leg 3", "+": "+ leg", "-": "− leg (stripe)"}
 TRIM_WORD = {"1": "end pin", "2": "middle pin (wiper)", "3": "end pin"}
@@ -82,6 +89,16 @@ ROLE = {   # by reference, falls back to value-based text
     "C3": "Reservoir for the amplifier's 5 V supply", "R2": "With C4, filters the ESP32's 3.3 V for the mic",
     "C4": "Reservoir for the clean 3.3 V (3V3A)", "R3": "Anti-alias filter resistor; protects the ADC pin",
     "C5": "Anti-alias filter capacitor to GND",
+    "U1": "LM358 dual op-amp: stage 1 (pins 1-3) and stage 2 (pins 5-7) of the preamp",
+    "Cin": "Couples the hydrophone in, blocks DC", "Rs": "Input series resistor",
+    "Rb": "Holds the input at VREF (1.34 V)", "Rf1": "Stage 1 feedback: sets gain ×31 (with Rg1)",
+    "Cf1": "Stage 1: cuts noise above ≈10 kHz", "Rg1": "Stage 1 gain resistor",
+    "Cg1": "Stage 1: cuts low hum (pumps, motors)", "RV2": "Receiver gain knob (stage 2, ×1–46)",
+    "Cf2": "Stage 2: cuts very high noise", "Rg2": "Stage 2 gain resistor", "Cg2": "Stage 2: cuts low hum",
+    "Ro": "Output resistor: anti-alias filter + protects the ESP32 pin", "Caa": "Anti-alias filter capacitor to GND",
+    "Cd": "Decoupling for the LM358's +5 V (right at the chip)", "Rp": "With Cp, filters the ESP32's 3.3 V",
+    "Cp": "Reservoir for the clean 3.3 V (3V3A)", "Rt": "VREF divider, top (from 3V3A)",
+    "Rd": "VREF divider, bottom (to GND)", "Cv": "Keeps VREF steady",
 }
 ROLE_BY_HINT = [  # (substring in ref or value, role) for the underwater parts
     ("U1", "LM358 dual op-amp: stage 1 and stage 2 of the preamp"),
@@ -106,6 +123,21 @@ NET_INFO = [  # (a pin in the net, name, colour, what it is)
     ("R2.2", "3V3A (clean 3.3 V)", "#e5534b", "Filtered 3.3 V on the top + rail."),
     ("MIC.OUT", "Mic audio", "#c9a227", "Audio from the MAX9814 (sits at ≈1.25 V)."),
     ("ESP32.D34", "Audio to ADC", "#1d9a6c", "Filtered audio into ESP32 GPIO34."),
+    ("XH.VCC+", "+12 V amplifier power", "#d32f2f", "From the 12 V adapter straight to the XH-M542 (not through the breadboard)."),
+    ("XH.OUT+", "Exciter wire 1", "#b4479a", "Amplifier output (bridged) through the 2-core cable."),
+    ("XH.OUT−", "Exciter wire 2", "#7a4ac4", "Amplifier output (bridged): never connect to GND."),
+    ("ESP32.VIN", "+5 V for the LM358", "#d32f2f", "From the ESP32 VIN pin (USB 5 V), on the bottom + rail."),
+    ("Rp.2", "3V3A (clean 3.3 V)", "#e5534b", "ESP32 3.3 V after the 10 Ω / 100 µF filter; feeds the VREF divider."),
+    ("Rt.2", "VREF ≈ 1.34 V", "#8e44ad", "The middle voltage the audio swings around. On the top + rail: NOT a power rail."),
+    ("HYD.HOT", "Hydrophone signal", "#c9a227", "A few µV to mV from the piezo, straight from the cable core."),
+    ("Cin.2", "Input after Cin", "#d4a017", "Hydrophone signal without DC, on its way to the LM358."),
+    ("U1.3", "Stage 1 input (IN+ A)", "#e07b39", "Hydrophone signal sitting on VREF, into the first stage."),
+    ("U1.2", "Stage 1 feedback (IN− A)", "#2a6fdb", "Sets stage 1 gain (Rf1 / Rg1) and its bandwidth."),
+    ("U1.1", "Stage 1 out → stage 2 in", "#1d9a6c", "First stage output (×31), straight into the second stage."),
+    ("Rg1.2", "Stage 1 hum cut (G1)", "#5b6ad0", "Between Rg1 and Cg1: removes low hum from the gain."),
+    ("U1.6", "Stage 2 feedback (IN− B)", "#2a6fdb", "Sets stage 2 gain with RV2 / Rg2."),
+    ("U1.7", "Stage 2 output (OUT B)", "#0a7c76", "Amplified audio (30–63 dB total) before the ADC filter."),
+    ("Rg2.2", "Stage 2 hum cut (G2)", "#5b6ad0", "Between Rg2 and Cg2: removes low hum from the gain."),
 ]
 GND_COLOR = "#3b4350"
 
@@ -128,7 +160,9 @@ def module_name(ref, pins):
         return "Piezo hydrophone (sealed)"
     if u.startswith("SPK"):
         return "Speaker"
-    if u.startswith(("DC", "ADP", "PSU", "V12")):
+    if u.startswith("DC12") or u.startswith("V12"):
+        return "DC jack (12 V 3 A adapter)"
+    if u.startswith(("DC", "ADP", "PSU")):
         return "DC jack (from the adapter)"
     return ref
 
@@ -189,7 +223,8 @@ def node_data(cfg):
     kinds = {p[0]: p[1] for p in parts}
     hole_of = {}
     part_list = []
-    for ref, kind, value, mark, pins in parts:
+    for prt in parts:
+        ref, kind, value, mark, pins = prt[:5]
         bands = mark if isinstance(mark, list) else None
         marking = "-".join(mark) if isinstance(mark, list) else (mark or "")
         plist = []

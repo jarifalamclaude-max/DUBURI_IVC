@@ -5,9 +5,11 @@ text modem and checks that every drawn connection matches the circuit.
     python3 docs/wiring/wiring.py
 
 Writes (next to this file):
-    tx_wiring.svg / .png        transmitter node (PC 1 side)
-    rx_wiring.svg / .png        receiver node (PC 2 side)
+    tx_wiring.svg / .png        transmitter node (PC 1 side), AIR mode
+    rx_wiring.svg / .png        receiver node (PC 2 side), AIR mode
     system_overview.svg / .png  the whole link
+    tx_water_wiring.svg / .png  transmitter, underwater (WATER mode): XH-M542 + exciter tube
+    rx_water_wiring.svg / .png  receiver, underwater (WATER mode): piezo hydrophone + LM358
     placement.md                part-by-part hole list + wire list
 
 The PNGs are rendered with Playwright Chromium (node `require('playwright')`).
@@ -16,7 +18,8 @@ If that is not available the SVGs are still written.
 Every part leg, wire end and module pin is placed from the PLACEMENT data below.
 Before drawing, the script rebuilds the connectivity (breadboard strips, rails,
 wires, part pins) and compares it with the expected netlist of the circuit. Any
-mismatch, two legs in one hole, or a leg in a rail position that has no hole
+mismatch, two legs in one hole, a leg in a rail position that has no hole, a part
+body lying over a hole that is used, or a resistor spanning fewer than 3 holes
 stops the script with an error.
 """
 import json
@@ -44,7 +47,15 @@ BAND = {"black": "#1b1b1b", "brown": "#7a4a24", "red": "#d32f2f", "orange": "#f5
 WIRE = {"red": ("#e53935", "#9e1f1c"), "black": ("#2e2e2e", "#0d0d0d"),
         "orange": ("#f39c12", "#a86400"), "yellow": ("#f7d438", "#a68a10"),
         "green": ("#2fb35a", "#16733a"), "blue": ("#1e63c6", "#0f3a7a"),
-        "grey": ("#505860", "#24282c")}
+        "grey": ("#505860", "#24282c"), "white": ("#f4f4f4", "#9a9ea4"),
+        "violet": ("#8e44ad", "#5b2370")}
+RAILS = ("TR1", "TR2", "BR1", "BR2")
+ALL_ROWS = ROWS_TOP + ROWS_BOT
+
+# 830-point board (MB-102): 63 columns; each rail row has 50 holes in 10 groups of 5,
+# lined up with columns 3-7, 9-13, 15-19, ..., 57-61 (no rail hole at 1, 2, 8, 14, ..., 62, 63).
+NCOLS_830 = 63
+RAIL_830 = {c for g in range(10) for c in range(3 + 6 * g, 8 + 6 * g)}
 
 
 # ===========================================================================
@@ -138,9 +149,12 @@ def orth(start, moves, end=None):
 # Breadboard (400 points)
 # ===========================================================================
 class Breadboard:
-    def __init__(self, x, y):
+    def __init__(self, x, y, ncols=NCOLS, rail_cols=None):
         self.x, self.y = x, y
-        self.w = (NCOLS + 2.4) * P
+        self.ncols = ncols
+        self.rail_cols = (set(rail_cols) if rail_cols is not None
+                          else {c for c in range(1, ncols + 1) if c not in RAIL_MISSING})
+        self.w = (ncols + 2.4) * P
         self.h = 18.2 * P
         self.ry = {"TR1": 1.0, "TR2": 2.0, "BR1": 16.2, "BR2": 17.2}
         for i, r in enumerate(ROWS_TOP):
@@ -164,10 +178,10 @@ class Breadboard:
 
     def valid(self, h):
         r, c = self.parse(h)
-        if not 1 <= c <= NCOLS:
+        if not 1 <= c <= self.ncols:
             return False
-        if r in ("TR1", "TR2", "BR1", "BR2"):
-            return c not in RAIL_MISSING
+        if r in RAILS:
+            return c in self.rail_cols
         return r in ROWS_TOP + ROWS_BOT
 
     def node(self, h):
@@ -201,14 +215,14 @@ class Breadboard:
         # holes
         def hole(hx, hy):
             s.rect("board", hx - 3.6, hy - 3.6, 7.2, 7.2, "#3a3a3a", rx=1.4)
-        for c in range(1, NCOLS + 1):
+        for c in range(1, self.ncols + 1):
             for r in ROWS_TOP + ROWS_BOT:
                 hole(self.cx(c), self.rowy(r))
-            if c not in RAIL_MISSING:
+            if c in self.rail_cols:
                 for r in ("TR1", "TR2", "BR1", "BR2"):
                     hole(self.cx(c), self.rowy(r))
         # numbers and letters
-        for c in range(1, NCOLS + 1):
+        for c in range(1, self.ncols + 1):
             fs = 8.5 if c % 5 else 9.5
             wt = "normal" if c % 5 else "bold"
             s.text("board", self.cx(c), y + 3.02 * P, str(c), fs, "#8a877f", "middle", wt)
@@ -299,7 +313,7 @@ def electrolytic(s, p_plus, p_minus, label, bw=30.0, bh=52.0, side=1):
     return (cx, y0, bw, bh)
 
 
-def trimmer(s, pins):
+def trimmer(s, pins, mark="103"):
     """Blue multi-turn trimmer (3296W style); pins = [(x,y)]*3 in one row."""
     xs = [p[0] for p in pins]
     yp = pins[0][1]
@@ -315,7 +329,7 @@ def trimmer(s, pins):
     sx, sy = x0 + 10, (y0 + y1) / 2
     s.circle("parts", sx, sy, 6.5, "#d8b25a", "#8c6a1f", 1)
     s.line("parts", sx - 4.2, sy - 2, sx + 4.2, sy + 2, "#6d5014", 1.6)
-    s.text("parts", (x0 + x1) / 2 + 6, sy + 3.5, "103", 9, "#ffffff", "middle", "bold")
+    s.text("parts", (x0 + x1) / 2 + 6, sy + 3.5, mark, 9, "#ffffff", "middle", "bold")
     return (x0, y0, x1, y1)
 
 
@@ -525,13 +539,13 @@ def dc_terminal(s, x0, y_plus, y_minus):
     return {"+": (x0 - 4, y_plus), "−": (x0 - 4, y_minus), "jack": (x0 + w, (y_plus + y_minus) / 2)}
 
 
-def wall_adapter(s, x0, y0, plug_to):
+def wall_adapter(s, x0, y0, plug_to, label="5 V  2 A"):
     w, h = 110, 92
     s.rect("parts", x0 + 4, y0 + 6, w, h, "#000", rx=10, extra='opacity="0.13"')
     s.rect("parts", x0, y0, w, h, "#222428", "#0e0f11", 1.2, rx=10)
     for dy in (-16, 16):
         s.rect("parts", x0 + w, y0 + h / 2 + dy - 4, 22, 8, "#c9cdd2", "#7a8087", 1, rx=1.5)
-    s.text("parts", x0 + w / 2, y0 + 38, "5 V  2 A", 13, "#f1f1f1", "middle", "bold")
+    s.text("parts", x0 + w / 2, y0 + 38, label, 13, "#f1f1f1", "middle", "bold")
     s.text("parts", x0 + w / 2, y0 + 56, "wall adapter", 9.5, "#b8bcc2", "middle")
     s.text("parts", x0 + w / 2, y0 + 72, "(barrel plug)", 8.5, "#9aa0a8", "middle")
     # cable to barrel plug
@@ -731,14 +745,32 @@ RX_NETS = [
 ]
 
 
-def check(parts, wires, offboard, nets, label):
-    bb = Breadboard(BBX, BBY)
+def body_cover(bb, kind, pins):
+    """Holes a part body lies over. They must stay empty."""
+    hs = list(pins.values())
+    out = []
+    if kind in ("resistor", "disc", "mlcc") and len(hs) == 2:
+        (r1, c1), (r2, c2) = bb.parse(hs[0]), bb.parse(hs[1])
+        if r1 == r2 and r1 in ALL_ROWS:
+            out += [f"{r1}{c}" for c in range(min(c1, c2) + 1, max(c1, c2))]
+    elif kind == "trimmer":
+        r, _ = bb.parse(hs[0])
+        if r not in ("a", "f"):                  # body sits over the row on the rail/channel side
+            above = ALL_ROWS[ALL_ROWS.index(r) - 1]
+            out += [f"{above}{bb.parse(h)[1]}" for h in hs]
+    return out
+
+
+def check(parts, wires, offboard, nets, label, board=None, multi=None):
+    bb = board or Breadboard(BBX, BBY)
+    multi = multi or {}
     nc = Netcheck(bb)
-    for ref, kind, value, mark, pins in parts:
+    for ref, kind, value, mark, pins, *rest in parts:
         for pn, hole in pins.items():
             nc.part_pin(f"{ref}.{pn}", hole)
     for p in offboard:
         nc.offboard_pin(p)
+    nwires = {}
     for a, b, col, desc in wires:
         ea = ("pin:" + a) if "." in a else a
         eb = ("pin:" + b) if "." in b else b
@@ -746,11 +778,32 @@ def check(parts, wires, offboard, nets, label):
             if "." in e:
                 if e not in offboard:
                     raise SystemExit(f"CHECK FAILED ({label}): wire end {e} is not a known pin")
-                if e in nc.occ:
-                    raise SystemExit(f"CHECK FAILED ({label}): two wires on pin {e}")
-                nc.occ[e] = f"wire {a}->{b}"
+                nwires[e] = nwires.get(e, 0) + 1
+                if nwires[e] > multi.get(e, 1):
+                    raise SystemExit(f"CHECK FAILED ({label}): too many wires on pin {e}")
+                nc.occ.setdefault(e, f"wire {a}->{b}")
         nc.wire(ea, eb, f"wire {a}->{b}")
+    used = {h for h in nc.occ if "." not in h}
+    for ref, kind, value, mark, pins, *rest in parts:
+        opts = rest[0] if rest else {}
+        for h in body_cover(bb, kind, pins) + list(opts.get("covers", [])):
+            if h in used:
+                raise SystemExit(f"CHECK FAILED ({label}): body of {ref} lies over {h}, "
+                                 f"which is used by {nc.occ[h]}")
+        if kind == "resistor":
+            (x1, y1), (x2, y2) = (bb.xy(h) for h in pins.values())
+            if math.hypot(x2 - x1, y2 - y1) < 2.9 * P:
+                raise SystemExit(f"CHECK FAILED ({label}): {ref} spans fewer than 3 holes")
+    for a, b, col, desc in wires:                 # straight jumpers must not hide used holes
+        if "." in a or "." in b:
+            continue
+        (ra, ca), (rb, cb) = bb.parse(a), bb.parse(b)
+        if ra == rb and ra in ALL_ROWS:
+            for c in range(min(ca, cb) + 1, max(ca, cb)):
+                if f"{ra}{c}" in used:
+                    raise SystemExit(f"CHECK FAILED ({label}): jumper {a}->{b} hides {ra}{c}")
     nc.verify(nets, label)
+    return bb
 
 
 def hole_xy(bb, h):
@@ -759,7 +812,8 @@ def hole_xy(bb, h):
 
 def draw_board_parts(s, bb, parts):
     info = {}
-    for ref, kind, value, mark, pins in parts:
+    for ref, kind, value, mark, pins, *rest in parts:
+        opts = rest[0] if rest else {}
         xy = {k: bb.xy(v) for k, v in pins.items()}
         if kind == "resistor":
             resistor(s, xy["1"], xy["2"], mark)
@@ -771,11 +825,18 @@ def draw_board_parts(s, bb, parts):
             mlcc(s, xy["1"], xy["2"], mark)
             info[ref] = ((xy["1"][0] + xy["2"][0]) / 2, xy["1"][1])
         elif kind == "trimmer":
-            box = trimmer(s, [xy["1"], xy["2"], xy["3"]])
+            box = trimmer(s, [xy["1"], xy["2"], xy["3"]], mark)
             info[ref] = box
         elif kind == "elko":
             box = electrolytic(s, xy["+"], xy["-"], value)
             info[ref] = box
+        elif kind == "elko_top":
+            info[ref] = elko_top(s, xy["+"], xy["-"], off=opts.get("off", (0.0, 0.0)))
+        elif kind == "cap_off":
+            info[ref] = cap_off(s, xy["1"], xy["2"], mark, opts.get("style", "disc"),
+                                opts.get("off", (0.0, 0.0)))
+        elif kind == "dip8":
+            info[ref] = dip8(s, bb, pins, value)
     return info
 
 
@@ -1090,6 +1151,608 @@ def build_overview():
 
 
 # ===========================================================================
+# Underwater (WATER mode) parts
+# ===========================================================================
+def cap_off(s, p1, p2, mark, kind="disc", off=(0.0, 0.0)):
+    """Small ceramic whose body sits beside its holes (adjacent-hole ceramics)."""
+    (x1, y1), (x2, y2) = p1, p2
+    mx, my = (x1 + x2) / 2 + off[0], (y1 + y2) / 2 + off[1]
+    leg(s, mx - 3, my, x1, y1)
+    leg(s, mx + 3, my, x2, y2)
+    if kind == "disc":
+        s.circle("parts", mx, my, 0.5 * P, "#e1a23a", "#9a6614", 1.1)
+        s.circle("parts", mx - 3, my - 3, 0.22 * P, "#fff", extra='opacity="0.18"')
+        s.text("parts", mx, my + 3, mark, 8, "#3b2606", "middle", "bold")
+    else:
+        s.rect("parts", mx - 11, my - 8, 22, 16, "#2f6db5", "#1b4478", 1.1, rx=5)
+        s.text("parts", mx, my + 3.2, mark, 8.5, "#ffffff", "middle", "bold")
+    return mx, my
+
+
+def elko_top(s, p_plus, p_minus, r=17.0, off=(0.0, 0.0)):
+    """Radial electrolytic standing on the board, seen from above. Stripe = minus side."""
+    (xp, yp), (xm, ym) = p_plus, p_minus
+    cx, cy = (xp + xm) / 2 + off[0], (yp + ym) / 2 + off[1]
+    leg(s, cx - (xm - xp) * 0.12, cy, xp, yp)
+    leg(s, cx + (xm - xp) * 0.12, cy, xm, ym)
+    gid = "elt%d" % len(s.defs)
+    s.defs.append(f'<radialGradient id="{gid}" cx="0.4" cy="0.35"><stop offset="0" stop-color="#4a63a8"/>'
+                  f'<stop offset="1" stop-color="#18234a"/></radialGradient>')
+    s.circle("parts", cx + 2, cy + 3, r, "#000", extra='opacity="0.18"')
+    s.circle("parts", cx, cy, r, f"url(#{gid})", "#0f1730", 1.1)
+    ux, uy = xm - xp, ym - yp
+    L = math.hypot(ux, uy) or 1.0
+    ux, uy = ux / L, uy / L
+    vx, vy = -uy, ux
+    a, b = 0.42 * r, math.sqrt(1 - 0.42 ** 2) * r
+    e1 = (cx + a * ux + b * vx, cy + a * uy + b * vy)
+    e2 = (cx + a * ux - b * vx, cy + a * uy - b * vy)
+    pfar = (cx + r * ux, cy + r * uy)
+    cross = (e1[0] - cx) * (pfar[1] - cy) - (e1[1] - cy) * (pfar[0] - cx)
+    sweep = 1 if cross > 0 else 0
+    s.path("parts", f"M {e1[0]:.1f} {e1[1]:.1f} A {r:.1f} {r:.1f} 0 0 {sweep} {e2[0]:.1f} {e2[1]:.1f} Z",
+           fill="#c9ccd6")
+    s.text("parts", cx + 0.7 * r * ux, cy + 0.7 * r * uy + 3.5, "−", 10, "#16213f", "middle", "bold")
+    s.circle("parts", cx - 0.05 * r, cy, 0.42 * r, "none", "#9fb0d8", 1.0)
+    s.text("parts", cx - 0.62 * r * ux, cy - 0.62 * r * uy + 3.5, "+", 9.5, "#f2f2f2", "middle", "bold")
+    return cx, cy
+
+
+def dip8(s, bb, pins, name="LM358"):
+    """DIP-8 straddling the centre channel. pins: {'1': hole, ... '8': hole}."""
+    xy = {k: bb.xy(v) for k, v in pins.items()}
+    xs = [p[0] for p in xy.values()]
+    ytop = min(p[1] for p in xy.values())
+    ybot = max(p[1] for p in xy.values())
+    x0, x1 = min(xs) - 0.55 * P, max(xs) + 0.55 * P
+    y0, y1 = ytop + 0.42 * P, ybot - 0.42 * P
+    ym = (y0 + y1) / 2
+    for k, (x, y) in xy.items():
+        if y < ym:
+            s.rect("legs", x - 4, y - 2, 8, y0 - y + 4, "#c9ced4", "#7d838a", 0.8, rx=1)
+        else:
+            s.rect("legs", x - 4, y1 - 2, 8, y - y1 + 4, "#c9ced4", "#7d838a", 0.8, rx=1)
+        s.circle("legs", x, y, 2.6, "#c7ccd1", "#6f757b", 0.8)
+    s.rect("parts", x0 + 2, y0 + 3, x1 - x0, y1 - y0, "#000", rx=3, extra='opacity="0.18"')
+    s.rect("parts", x0, y0, x1 - x0, y1 - y0, "#232528", "#0b0c0e", 1.2, rx=3)
+    s.rect("parts", x0 + 3, y0 + 2, x1 - x0 - 6, 2.5, "#fff", rx=1, extra='opacity="0.10"')
+    p1x, p1y = xy["1"]
+    right = p1x > (x0 + x1) / 2
+    nx = x1 if right else x0
+    s.path("parts", f"M {nx:.1f} {ym - 7:.1f} A 7 7 0 0 {0 if right else 1} {nx:.1f} {ym + 7:.1f} Z",
+           fill="#0b0c0e")
+    dx = -9 if right else 9
+    dy = 8 if p1y < ym else -8
+    s.circle("parts", nx + dx, (y0 if p1y < ym else y1) + dy, 2.8, "#a7adb4")
+    s.text("parts", (x0 + x1) / 2 - (5 if right else -5), ym + 4, name, 11, "#d6dade", "middle", "bold")
+    for k, (x, y) in xy.items():
+        yy = y0 + 9.5 if y < ym else y1 - 3.5
+        s.text("parts", x, yy, k, 7, "#9aa0a8", "middle")
+    return (x0, y0, x1, y1)
+
+
+def hydrophone(s, cx, cy):
+    """Brass piezo disc sealed in a translucent epoxy / liquid-tape blob. Returns cable exit."""
+    gid = "blob%d" % len(s.defs)
+    s.defs.append(f'<radialGradient id="{gid}" cx="0.4" cy="0.35"><stop offset="0" stop-color="#fff6dc"/>'
+                  f'<stop offset="1" stop-color="#e2c27a"/></radialGradient>')
+    rx, ry = 86, 70
+    d = (f"M {cx - rx:.1f} {cy:.1f} C {cx - rx:.1f} {cy - ry * 0.75:.1f} {cx - rx * 0.45:.1f} {cy - ry:.1f} "
+         f"{cx + 6:.1f} {cy - ry:.1f} C {cx + rx * 0.62:.1f} {cy - ry * 1.02:.1f} {cx + rx:.1f} {cy - ry * 0.55:.1f} "
+         f"{cx + rx * 1.02:.1f} {cy + 2:.1f} C {cx + rx * 1.04:.1f} {cy + ry * 0.62:.1f} {cx + rx * 0.5:.1f} "
+         f"{cy + ry:.1f} {cx - 4:.1f} {cy + ry * 0.98:.1f} C {cx - rx * 0.62:.1f} {cy + ry * 0.96:.1f} "
+         f"{cx - rx:.1f} {cy + ry * 0.66:.1f} {cx - rx:.1f} {cy:.1f} Z")
+    s.path("parts", d, fill="#000", extra=f'opacity="0.10" transform="translate(4 6)"')
+    # brass disc + ceramic, seen through the clear blob
+    bgid = "brass%d" % len(s.defs)
+    s.defs.append(f'<radialGradient id="{bgid}" cx="0.4" cy="0.35"><stop offset="0" stop-color="#f3d58a"/>'
+                  f'<stop offset="1" stop-color="#b98a2e"/></radialGradient>')
+    s.circle("parts", cx, cy, 52, f"url(#{bgid})", "#8a6418", 1.2)
+    s.circle("parts", cx, cy, 34, "#f1efe8", "#c9c3b2", 1)
+    s.circle("parts", cx, cy, 29, "#d9dde2", "#b3b9c0", 0.8)
+    hot, gnd = (cx + 8, cy - 4), (cx + 43, cy + 22)
+    ex = (cx + rx - 8, cy + 36)
+    s.path("parts", f"M {hot[0]:.1f} {hot[1]:.1f} C {cx + 40:.1f} {cy - 10:.1f} {ex[0] - 22:.1f} {ex[1] - 18:.1f} "
+                    f"{ex[0]:.1f} {ex[1] - 3:.1f}", stroke="#f4f4f4", sw=2.6)
+    s.path("parts", f"M {hot[0]:.1f} {hot[1]:.1f} C {cx + 40:.1f} {cy - 10:.1f} {ex[0] - 22:.1f} {ex[1] - 18:.1f} "
+                    f"{ex[0]:.1f} {ex[1] - 3:.1f}", stroke="#d6403a", sw=1.2)
+    s.path("parts", f"M {gnd[0]:.1f} {gnd[1]:.1f} Q {ex[0] - 14:.1f} {ex[1] + 4:.1f} {ex[0]:.1f} {ex[1] + 3:.1f}",
+           stroke="#6b7078", sw=2.2)
+    for p in (hot, gnd):
+        s.circle("parts", p[0], p[1], 4.2, "#c9ccd1", "#80868e", 0.8)
+    s.path("parts", d, fill=f"url(#{gid})", stroke="#b8954a", sw=1.4, extra='fill-opacity="0.50"')
+    s.path("parts", f"M {cx - rx * 0.62:.1f} {cy - ry * 0.42:.1f} Q {cx - rx * 0.35:.1f} {cy - ry * 0.85:.1f} "
+                    f"{cx + 10:.1f} {cy - ry * 0.82:.1f}", stroke="#ffffff", sw=4, extra='opacity="0.55"')
+    return ex
+
+
+def coax(s, pts, strip_len=16.0):
+    """Shielded cable along pts; the last strip_len px show the braid. Returns braid end point."""
+    d = rounded_path(pts, 20)
+    s.path("wires", d, stroke="#1c1e21", sw=11)
+    s.path("wires", d, stroke="#45494f", sw=8)
+    (xa, ya), (xb, yb) = pts[-2], pts[-1]
+    L = math.hypot(xb - xa, yb - ya)
+    ux, uy = (xb - xa) / L, (yb - ya) / L
+    bx, by = xb + ux * strip_len, yb + uy * strip_len
+    s.line("wires", xb, yb, bx, by, "#8f959c", 8)
+    for k in range(4):
+        t = (k + 0.5) / 4
+        px, py = xb + ux * strip_len * t, yb + uy * strip_len * t
+        s.line("wires", px - 3.5, py - 3.5, px + 3.5, py + 3.5, "#5d636a", 1.1)
+    return bx, by
+
+
+def xh_m542(s, x0, y0, w, h, in_xs, out_ys, vcc_ys):
+    """XH-M542 (TPA3116D2 mono) amplifier board. IN on the bottom edge, OUT and VCC on the right."""
+    s.rect("parts", x0 + 4, y0 + 6, w, h, "#000", rx=8, extra='opacity="0.13"')
+    s.rect("parts", x0, y0, w, h, "#1f5fbf", "#123d7a", 1.4, rx=8)
+    for hx, hy in ((x0 + 10, y0 + 10), (x0 + w - 10, y0 + 10), (x0 + 10, y0 + h - 10),
+                   (x0 + w - 10, y0 + h - 10)):
+        s.circle("parts", hx, hy, 4.6, "#e9e2c4", "#b9ae80", 1)
+    s.text("parts", x0 + 22, y0 + 30, "XH-M542", 15, "#ffffff", "start", "bold")
+    s.text("parts", x0 + 22, y0 + 46, "TPA3116D2 mono", 9.5, "#d4e3fa", "start")
+    # heatsink
+    hx0, hx1, hy0, hy1 = x0 + 150, x0 + 300, y0 + 14, y0 + h - 24
+    s.rect("parts", hx0 + 3, hy0 + 4, hx1 - hx0, hy1 - hy0, "#000", rx=3, extra='opacity="0.25"')
+    s.rect("parts", hx0, hy0, hx1 - hx0, hy1 - hy0, "#1b1d20", "#050506", 1.2, rx=3)
+    for k in range(1, 12):
+        xx = hx0 + k * (hx1 - hx0) / 12
+        s.line("parts", xx, hy0 + 4, xx, hy1 - 4, "#3d4146", 2.2)
+    s.text("parts", (hx0 + hx1) / 2, hy1 + 12, "heatsink", 8, "#d4e3fa", "middle")
+    # caps and inductor
+    for (cx_, cy_) in ((x0 + w - 70, y0 + 44), (x0 + w - 70, y0 + h - 46)):
+        s.circle("parts", cx_, cy_, 15, "#2a2d33", "#0c0d0f", 1)
+        s.circle("parts", cx_, cy_, 10, "#4a4f57")
+        s.path("parts", f"M {cx_ - 15:.1f} {cy_:.1f} A 15 15 0 0 1 {cx_:.1f} {cy_ - 15:.1f}", stroke="#c9ccd6", sw=3)
+    s.rect("parts", x0 + w - 104, y0 + h / 2 - 15, 30, 30, "#2b2e33", "#0c0d0f", 1, rx=4)
+    s.text("parts", x0 + w - 89, y0 + h / 2 + 3.5, "220", 8, "#a3a9b0", "middle", "bold")
+    # VOL knob (small blue pot)
+    kx, ky = x0 + 58, y0 + h - 58
+    s.circle("parts", kx, ky, 15, "#1b4fa0", "#0d2c5e", 1.2)
+    s.circle("parts", kx, ky, 10, "#2f78e0", "#1b4fa0", 1)
+    s.line("parts", kx, ky, kx - 6, ky + 6, "#ffffff", 2.4)
+    s.text("parts", kx, ky - 21, "VOL", 9, "#ffffff", "middle", "bold")
+    pins = {}
+
+    def screw(x, y):
+        s.circle("parts", x, y, 7, "#cfd3d8", "#7a8087", 1)
+        s.line("parts", x - 4.5, y - 4.5, x + 4.5, y + 4.5, "#5b6168", 1.6)
+
+    # IN terminal on the bottom edge (entries face down)
+    bx0, bx1 = min(in_xs) - 19, max(in_xs) + 19
+    s.rect("parts", bx0, y0 + h - 14, bx1 - bx0, 36, "#1f9e57", "#11633a", 1.2, rx=3)
+    s.text("parts", (bx0 + bx1) / 2, y0 + h - 22, "IN", 10, "#ffffff", "middle", "bold")
+    for nm, x in zip(("IN+", "IN−"), in_xs):
+        screw(x, y0 + h - 1)
+        s.rect("parts", x - 6, y0 + h + 14, 12, 8, "#0f3d24", rx=1.5)
+        s.text("parts", x + (-13 if nm == "IN+" else 13), y0 + h + 13, nm[-1], 11, "#ffffff", "middle",
+               "bold")
+        pins[nm] = (x, y0 + h + 22)
+    # OUT and VCC terminals on the right edge (entries face right)
+    for tname, ys in (("OUT", out_ys), ("VCC", vcc_ys)):
+        by0, by1 = min(ys) - 14, max(ys) + 14
+        s.rect("parts", x0 + w - 14, by0, 36, by1 - by0, "#1f9e57", "#11633a", 1.2, rx=3)
+        s.text("parts", x0 + w - 22, (by0 + by1) / 2 + 4, tname, 10, "#ffffff", "end", "bold")
+        for sign, y in zip(("+", "−"), ys):
+            screw(x0 + w - 1, y)
+            s.rect("parts", x0 + w + 14, y - 6, 8, 12, "#0f3d24", rx=1.5)
+            s.text("parts", x0 + w + 13, y - 9, sign, 10.5, "#ffffff", "middle", "bold")
+            pins[f"{tname}{sign}"] = (x0 + w + 22, y)
+    return pins
+
+
+def water_lines(s, x0, x1, y0, y1):
+    s.rect("under", x0, y0, x1 - x0, y1 - y0, "#d9ecfb", rx=10, extra='opacity="0.75"')
+    n = int((y1 - y0) // 16)
+    for k in range(n):
+        y = y0 + 12 + k * 16
+        d = f"M {x0 + 6:.1f} {y:.1f}"
+        x = x0 + 6
+        while x < x1 - 14:
+            d += f" q 5 -5 10 0 q 5 5 10 0"
+            x += 20
+        s.path("under", d, stroke="#5aa3df", sw=1.6, extra='opacity="0.85"')
+
+
+def pvc_transducer(s, xw, cy, length=400.0, ro=85.0):
+    """3-inch PVC tube, side cut-away. Left: 4 mm acrylic window with the exciter glued inside.
+    Right: end cap with cable gland. Returns key points."""
+    wall = 9.0
+    xt0, xt1 = xw + 10, xw + 10 + length
+    # tube walls (cut-away: hatched)
+    hid = "hatch%d" % len(s.defs)
+    s.defs.append(f'<pattern id="{hid}" width="7" height="7" patternUnits="userSpaceOnUse" '
+                  f'patternTransform="rotate(45)"><rect width="7" height="7" fill="#9aa4ae"/>'
+                  f'<line x1="0" y1="0" x2="0" y2="7" stroke="#6f7983" stroke-width="2"/></pattern>')
+    s.rect("parts", xt0 + 3, cy - ro + 5, length, 2 * ro, "#000", extra='opacity="0.10"')
+    s.rect("parts", xt0, cy - ro + wall, length, 2 * (ro - wall), "#f5f8fb")
+    s.rect("parts", xt0, cy - ro, length, wall, f"url(#{hid})", "#5f6973", 1)
+    s.rect("parts", xt0, cy + ro - wall, length, wall, f"url(#{hid})", "#5f6973", 1)
+    # end cap (over the tube end) + gland
+    cx0, cx1 = xt1 - 22, xt1 + 14
+    s.rect("parts", cx0, cy - ro - 8, cx1 - cx0, 2 * ro + 16, f"url(#{hid})", "#5f6973", 1, rx=4)
+    s.rect("parts", cx0, cy - ro - 8 + 10, 22 - 4, 2 * ro + 16 - 20, "#f5f8fb")
+    gx0 = cx1
+    s.rect("parts", gx0, cy - 15, 12, 30, "#2a2d31", "#0d0e10", 1, rx=2)
+    s.rect("parts", gx0 + 12, cy - 11, 14, 22, "#3a3e44", "#0d0e10", 1, rx=6)
+    s.rect("parts", cx0 - 10, cy - 10, 10, 20, "#2a2d31", "#0d0e10", 1, rx=2)
+    # acrylic window
+    s.rect("parts", xw, cy - ro - 7, 10, 2 * ro + 14, "#cfe9ff", "#7fb3dc", 1.2, rx=2,
+           extra='fill-opacity="0.85"')
+    s.line("parts", xw + 3, cy - ro, xw + 3, cy + ro, "#ffffff", 1.6, 'opacity="0.9"')
+    # glue + exciter
+    s.rect("parts", xw + 10, cy - 38, 4, 76, "#f0c75e", "#c9a03a", 0.6)
+    s.rect("parts", xw + 14, cy - 40, 7, 80, "#a9b0b8", "#6f767e", 1, rx=1.5)
+    egid = "exc%d" % len(s.defs)
+    s.defs.append(f'<linearGradient id="{egid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4f57"/>'
+                  f'<stop offset="0.5" stop-color="#202327"/><stop offset="1" stop-color="#3a3e45"/></linearGradient>')
+    s.rect("parts", xw + 21, cy - 31, 36, 62, f"url(#{egid})", "#0b0c0e", 1, rx=5)
+    s.rect("parts", xw + 57, cy - 14, 6, 9, "#d6d9dd", "#80868e", 0.6)
+    s.rect("parts", xw + 57, cy + 5, 6, 9, "#d6d9dd", "#80868e", 0.6)
+    tab_p, tab_m = (xw + 63, cy - 9.5), (xw + 63, cy + 9.5)
+    # cable inside: from gland to near the exciter, cores to the tabs
+    ce = xw + 150
+    d = rounded_path([(cx0 - 10, cy), (ce, cy)], 10)
+    s.path("parts", d, stroke="#1c1e21", sw=11)
+    s.path("parts", d, stroke="#8a9098", sw=8)
+    s.path("parts", f"M {ce:.1f} {cy - 2:.1f} C {ce - 40:.1f} {cy - 4:.1f} {tab_p[0] + 30:.1f} {tab_p[1]:.1f} "
+                    f"{tab_p[0]:.1f} {tab_p[1]:.1f}", stroke="#e53935", sw=3)
+    s.path("parts", f"M {ce:.1f} {cy + 2:.1f} C {ce - 40:.1f} {cy + 4:.1f} {tab_m[0] + 30:.1f} {tab_m[1]:.1f} "
+                    f"{tab_m[0]:.1f} {tab_m[1]:.1f}", stroke="#2e2e2e", sw=3)
+    # silica-gel sachet
+    sx, sy = xt1 - 120, cy + ro - wall - 14
+    s.rect("parts", sx, sy - 10, 52, 22, "#ffffff", "#9aa0a8", 1, rx=4)
+    for k in range(9):
+        s.circle("parts", sx + 8 + (k % 5) * 9, sy - 3 + (k // 5) * 8, 1.6, "#7fb3dc")
+    return dict(gland=(gx0 + 26, cy), window_bot=(xw + 5, cy + ro + 7), window_top=(xw + 5, cy - ro - 7),
+                cap_bot=(cx0 + 18, cy + ro + 8), sachet=(sx + 26, sy - 10), exciter=(xw + 39, cy),
+                tube_top=(xt0 + length / 2, cy - ro), tabs=(tab_p, tab_m), ce=ce)
+
+
+def zone(s, bb, c0, c1, half, label, color):
+    """Light tinted area on the board for a group of parts, with a label pill outside the board."""
+    rows = "abcde" if half == "top" else "fghij"
+    x0, x1 = bb.cx(c0) - 0.5 * P, bb.cx(c1) + 0.5 * P
+    y0, y1 = bb.rowy(rows[0]) - 0.5 * P, bb.rowy(rows[-1]) + 0.5 * P
+    s.rect("board", x0, y0, x1 - x0, y1 - y0, color, color, 1.2, rx=6,
+           extra='fill-opacity="0.10" stroke-opacity="0.55" stroke-dasharray="5 3"')
+    return x0, y0, x1, y1
+
+
+def pill(s, x, y, text, color, size=10.5):
+    w = len(text) * size * 0.62 + 16
+    s.rect("labels", x - w / 2, y - 10, w, 20, color, "none", rx=10)
+    s.text("labels", x, y + 4, text, size, "#ffffff", "middle", "bold")
+
+
+def legend_table(s, x, y, w, title_, rows, ncols=2, lh=19.0, size=11.0, col2=170):
+    """Rows: [ref+value, holes]; laid out in ncols columns."""
+    per = math.ceil(len(rows) / ncols)
+    h = 34 + lh * per + 8
+    s.rect("labels", x, y, w, h, "#f6f8fa", "#d0d7de", 1.2, rx=8)
+    s.text("labels", x + 14, y + 23, title_, 13, "#1f2328", "start", "bold")
+    cw = (w - 14) / ncols
+    for i, (a, b) in enumerate(rows):
+        cx_ = x + 14 + (i // per) * cw
+        cy_ = y + 34 + lh * (i % per + 0.75)
+        s.text("labels", cx_, cy_, a.replace("  ", "  "), size, "#24292f", "start")
+        s.text("labels", cx_ + col2, cy_, b, size, "#0b4f8a", "start", "bold", family=MONO)
+    return h
+
+
+# ---------------------------------------------------------------------------
+# Transmitter, underwater: same ESP32 + RC/volume layout, XH-M542 amp, exciter tube
+# ---------------------------------------------------------------------------
+TXW_PARTS = TX_PARTS[:4]          # R1, C1, C2, RV1 in the same holes as the AIR transmitter
+TXW_WIRES = [
+    ("ESP32.D25", "a4", "orange", "tone signal"),
+    ("ESP32.GND_R", "TR2-2", "black", "common ground"),
+    ("a14", "TR2-14", "black", "RV1 low end to ground"),
+    ("XH.IN+", "a13", "yellow", "volume wiper to amp input +"),
+    ("XH.IN−", "TR2-15", "black", "amp input − to ground"),
+    ("DC12.+", "XH.VCC+", "red", "12 V adapter + to amp VCC +"),
+    ("DC12.−", "XH.VCC−", "black", "12 V adapter − to amp VCC −"),
+    ("XH.VCC−", "TR2-29", "black", "amp ground to breadboard − rail (same screw as the adapter −)"),
+    ("XH.OUT+", "EXC.+", "red", "2-core cable, core 1 to exciter"),
+    ("XH.OUT−", "EXC.−", "black", "2-core cable, core 2 to exciter"),
+]
+TXW_OFF = ["ESP32.D25", "ESP32.GND_R", "XH.IN+", "XH.IN−", "XH.VCC+", "XH.VCC−", "XH.OUT+", "XH.OUT−",
+           "DC12.+", "DC12.−", "EXC.+", "EXC.−"]
+TXW_MULTI = {"XH.VCC−": 2}
+TXW_NETS = [
+    {"ESP32.D25", "R1.1"},
+    {"R1.2", "C1.1", "C2.1"},
+    {"C2.2", "RV1.1"},
+    {"RV1.2", "XH.IN+"},
+    {"ESP32.GND_R", "C1.2", "RV1.3", "XH.IN−", "XH.VCC−", "DC12.−"},
+    {"XH.VCC+", "DC12.+"},
+    {"XH.OUT+", "EXC.+"},
+    {"XH.OUT−", "EXC.−"},
+]
+
+
+def build_tx_water():
+    s = Svg(*CANVAS)
+    bb = Breadboard(BBX, BBY)
+    bb.draw(s)
+    title(s, "DUBURI text modem — TRANSMITTER, underwater (WATER mode)",
+          "ESP32 → RC filter + volume → XH-M542 (TPA3116D2) amplifier → exciter glued to an acrylic window "
+          "in a sealed PVC tube.")
+    info = draw_board_parts(s, bb, TXW_PARTS)
+    H = lambda h: bb.xy(h)
+
+    e = esp32(s, 70, BBY, highlight=("D25", "GND"))
+    xh = xh_m542(s, 640, 100, 390, 160, [bb.cx(13), bb.cx(15)], (130, 152), (200, 222))
+    dc = dc_terminal(s, 1120, 200, 217)
+    wall_adapter(s, 1280, 162, dc["jack"], label="12 V 3 A")
+    tube = pvc_transducer(s, 1262, 420, length=410)
+    water_lines(s, 1172, 1252, 340, 500)
+
+    # wires: ESP32 and breadboard
+    a4, t2 = H("a4"), H("TR2-2")
+    draw_wire(s, orth(e["D25"], [("h", 46), ("v", 262), ("h", a4[0])], a4), "orange")
+    draw_wire(s, orth(e["GND_R"], [("h", 405), ("v", t2[1])], t2), "black")
+    draw_wire(s, [H("a14"), H("TR2-14")], "black")
+    draw_wire(s, [xh["IN+"], H("a13")], "yellow")
+    draw_wire(s, [xh["IN−"], H("TR2-15")], "black")
+    # power: adapter -> VCC, VCC- -> breadboard ground
+    vp, vm = xh["VCC+"], xh["VCC−"]
+    draw_wire(s, [vp, dc["+"]], "red", plug_start=False, plug_end=False)
+    draw_wire(s, [(vm[0], vm[1] - 5), dc["−"]], "black", plug_start=False, plug_end=False)
+    t29 = H("TR2-29")
+    draw_wire(s, orth((vm[0], vm[1] + 5), [("h", t29[0]), ("v", t29[1])]), "black", plug_start=False)
+    # OUT -> 2-core round cable -> gland
+    op, om = xh["OUT+"], xh["OUT−"]
+    sx0, sy = op[0] + 46, (op[1] + om[1]) / 2
+    draw_wire(s, [op, (op[0] + 22, op[1]), (sx0, sy - 3)], "red", plug_start=False, plug_end=False, width=4)
+    draw_wire(s, [om, (om[0] + 22, om[1]), (sx0, sy + 3)], "black", plug_start=False, plug_end=False, width=4)
+    g = tube["gland"]
+    sheath = rounded_path([(sx0, sy), (1772, sy), (1772, g[1]), g], 22)
+    s.path("wires", sheath, stroke="#1c1e21", sw=13)
+    s.path("wires", sheath, stroke="#8a9098", sw=10)
+    s.path("wires", sheath, stroke="#ffffff", sw=1.6, extra='opacity="0.30"')
+
+    # labels -----------------------------------------------------------------
+    r1 = info["R1"]
+    tag(s, r1[0] - 18, bb.rowy("g"), [("R1  4.7 kΩ",), ("yellow-violet-red-gold", "#57606a")],
+        (r1[0], r1[1] + 7))
+    c1 = info["C1"]
+    tag(s, bb.cx(9) + 4, bb.rowy("i") + 4, [("C1  3.3 nF",), ("ceramic, marked 332", "#57606a")],
+        (c1[0] + 4, c1[1] + 10))
+    c2 = info["C2"]
+    tag(s, bb.cx(16) + 6, bb.rowy("g") - 4, [("C2  1 µF",), ("ceramic, marked 105", "#57606a")],
+        (c2[0] + 4, c2[1] + 9))
+    rv = info["RV1"]
+    tag(s, bb.cx(22) + 10, bb.rowy("i") + 4, [("RV1  10 kΩ trimmer = volume",),
+                                              ("pins d12 · d13 (wiper) · d14", "#57606a")],
+        ((rv[0] + rv[2]) / 2 + 20, rv[3]))
+    gnd = "top − rail = GND"
+    s.text("labels", bb.cx(30) + 8, bb.rowy("TR1") - 19, gnd, 10, "#2f62c9", "end", "bold")
+    s.text("labels", bb.cx(30) + 8 - len(gnd) * 6.3 - 18, bb.rowy("TR1") - 19, "top + rail: not used", 10,
+           "#8a877f", "end", "bold")
+    s.text("labels", 1157, 410, "DC jack → screw terminal", 10, "#57606a", "middle")
+    s.text("labels", 1093, 140, "2-core round cable", 10, "#57606a", "start", "bold")
+    s.text("labels", 1093, 112, "OUT → exciter", 10, "#57606a", "start")
+    s.text("labels", 1212, 333, "water side", 11, "#1f6fb2", "middle", "bold")
+    s.text("labels", 1475, 324, "3\" PVC tube, side cut-away view", 11.5, "#1f2328", "middle", "bold")
+    s.text("labels", 1420, 370, "exciter 4 Ω 25 W (40 mm)", 11, "#1f2328", "start", "bold")
+    s.text("labels", 1420, 386, "glued to the INSIDE centre of the window", 10, "#57606a", "start")
+    s.text("labels", 1420, 470, "dry air inside", 10.5, "#57606a", "start", "bold")
+    sc = tube["sachet"]
+    s.text("labels", sc[0], sc[1] - 6, "silica gel", 9, "#57606a", "middle")
+    wb = tube["window_bot"]
+    tag(s, wb[0] - 6, 548, [("4 mm clear acrylic window",)], wb, w=180)
+    cb = tube["cap_bot"]
+    tag(s, cb[0] - 30, 548, [("end cap + cable gland",)], cb, w=156)
+
+    # notes --------------------------------------------------------------------
+    s.rect("labels", 1408, 168, 344, 120, "#fff1f0", "#e5534b", 1.6, rx=8)
+    s.text("labels", 1424, 194, "Power at 12 V only", 14, "#c62828", "start", "bold")
+    s.text("labels", 1424, 214, "(≈15 W into 4 Ω).", 12.5, "#c62828", "start", "bold")
+    s.text("labels", 1424, 240, "Never 4S battery direct or 24 V", 12.5, "#8a1c1c", "start")
+    s.text("labels", 1424, 258, "with this exciter.", 12.5, "#8a1c1c", "start")
+    s.rect("labels", 440, 724, 724, 96, "#fff1f0", "#e5534b", 1.6, rx=8)
+    s.text("labels", 458, 752, "OUT terminals: never connect either to GND (bridged output).", 14, "#c62828",
+           "start", "bold")
+    s.text("labels", 458, 778, "Start with RV1 and the board's VOL knob fully down,", 12.5, "#8a1c1c", "start")
+    s.text("labels", 458, 798, "then raise them until the receiver shows clean tones.", 12.5, "#8a1c1c", "start")
+    note_box(s, 440, 836, 724, "How it is powered", [
+        "• ESP32: USB cable from PC 1.  XH-M542: 12 V 3 A adapter into VCC + / −.",
+        "• Grounds are joined: VCC − → breadboard − rail, IN − → − rail, ESP32 GND → − rail.",
+        "• The breadboard + rail is not used. Never feed 12 V into the ESP32 or the breadboard.",
+        "• Same breadboard parts and holes as the AIR transmitter; only the amplifier changes.",
+    ], size=11.5, lh=20)
+    note_box(s, 1196, 584, 562, "Parts and holes (transmitter, WATER)", [
+        ["ESP32 DevKit V1 (30 pin)", "USB cable to PC 1"],
+        ["R1  4.7 kΩ", "c4 ↔ c8"],
+        ["C1  3.3 nF  (332)", "a8 ↔ top − rail"],
+        ["C2  1 µF  (105)", "b8 ↔ b12"],
+        ["RV1  10 kΩ trimmer", "d12 · d13 (wiper) · d14"],
+        ["jumper (black)", "a14 → top − rail"],
+        ["XH-M542  IN+  (yellow)", "← a13"],
+        ["XH-M542  IN−  (black)", "→ top − rail, col 15"],
+        ["12 V 3 A adapter", "→ VCC + / VCC −"],
+        ["XH-M542  VCC−  (black)", "→ top − rail, col 29"],
+        ["OUT + / −", "2-core cable → exciter"],
+        ["ESP32 D25  (orange)", "→ a4"],
+        ["ESP32 GND  (black)", "→ top − rail, col 2"],
+    ], size=11, lh=19, col2=190)
+
+    port = laptop(s, 40, 838, "file:///.../pc/sender.html",
+                  [("DUBURI Sender", 13, "#1f2328", "bold"),
+                   ("Mode : WATER", 10, "#24292f", "normal"),
+                   ("Text : Hello", 9, "#0b6bcb", "normal"),
+                   ("[ Send ]   packet 1/3  ######..", 9, "#1a7f37", "normal")], w=290)
+    usb_cable(s, [e["USB"], (e["USB"][0], 812), (port[0] + 26, 812), (port[0] + 26, port[1]),
+                  (port[0], port[1])])
+    s.text("labels", 196, 830, "USB cable (data + power for ESP32)", 10, "#57606a", "middle")
+    return s
+
+
+# ---------------------------------------------------------------------------
+# Receiver, underwater: piezo hydrophone + 2-stage LM358 preamp on an 830-point board
+# ---------------------------------------------------------------------------
+BBX_W, BBY_W = 40.0, 400.0
+CANVAS_RXW = (1880, 1150)
+
+RXW_PARTS = [
+    ("U1", "dip8", "LM358", "", {"1": "e33", "2": "e32", "3": "e31", "4": "e30",
+                                 "5": "f30", "6": "f31", "7": "f32", "8": "f33"}),
+    ("Cin", "disc", "100 nF", "104", {"1": "b25", "2": "b27"}),
+    ("Rs", "resistor", "10 kΩ", ["brown", "black", "orange", "gold"], {"1": "c27", "2": "c31"}),
+    ("Rb", "resistor", "1 MΩ", ["brown", "black", "green", "gold"], {"1": "b31", "2": "b28"}),
+    ("Rf1", "resistor", "100 kΩ", ["brown", "black", "yellow", "gold"], {"1": "c36", "2": "c33"}),
+    ("Cf1", "disc", "150 pF", "151", {"1": "b36", "2": "b33"}),
+    ("Rg1", "resistor", "3.3 kΩ", ["orange", "orange", "red", "gold"], {"1": "d36", "2": "d39"}),
+    ("Cg1", "disc", "33 nF", "333", {"1": "a39", "2": "TR2-39"}),
+    ("RV2", "trimmer", "100 kΩ", "104", {"1": "g36", "2": "g37", "3": "g38"}),
+    ("Cf2", "cap_off", "100 pF", "101", {"1": "j36", "2": "j37"}, {"off": (0.0, 0.66 * P), "style": "disc"}),
+    ("Rg2", "resistor", "2.2 kΩ", ["red", "red", "red", "gold"], {"1": "i31", "2": "i28"}),
+    ("Cg2", "disc", "47 nF", "473", {"1": "j28", "2": "BR1-28"}),
+    ("Ro", "resistor", "3.3 kΩ", ["orange", "orange", "red", "gold"], {"1": "h37", "2": "h41"}),
+    ("Caa", "disc", "4.7 nF", "472", {"1": "j41", "2": "BR1-41"}),
+    ("Cd", "cap_off", "100 nF", "104", {"1": "BR2-34", "2": "BR1-34"}, {"off": (0.62 * P, 0.0), "style": "mlcc"}),
+    ("Rp", "resistor", "10 Ω", ["brown", "black", "black", "gold"], {"1": "c62", "2": "c59"}),
+    ("Cp", "elko_top", "100 µF 16 V", "", {"+": "d59", "-": "d61"},
+     {"off": (0.0, 1.15 * P), "covers": ["d60", "e59", "e60", "e61"]}),
+    ("Rt", "resistor", "10 kΩ", ["brown", "black", "orange", "gold"], {"1": "b59", "2": "b55"}),
+    ("Rd", "resistor", "6.8 kΩ", ["blue", "grey", "red", "gold"], {"1": "c55", "2": "c52"}),
+    ("Cv", "elko", "10 µF 16 V", "", {"+": "TR1-53", "-": "TR2-53"}),
+]
+RXW_WIRES = [
+    ("ESP32.VIN", "BR2-61", "red", "+5 V (VIN) to bottom + rail"),
+    ("ESP32.GND_L", "BR1-61", "black", "ground to bottom − rail"),
+    ("ESP32.3V3", "a62", "red", "3.3 V from the ESP32 into the 10 Ω filter"),
+    ("f41", "ESP32.D34", "green", "ADC node to GPIO34"),
+    ("HYD.HOT", "a25", "white", "hydrophone cable core (signal)"),
+    ("HYD.SHIELD", "TR2-23", "grey", "hydrophone cable shield to ground"),
+    ("TR2-3", "BR1-3", "black", "joins top and bottom − rails"),
+    ("a30", "TR2-30", "black", "U1 pin 4 to ground"),
+    ("a28", "TR1-28", "violet", "VREF from the top + rail to Rb"),
+    ("a32", "a36", "orange", "U1 pin 2 (INA−) to Rf1 / Cf1 / Rg1"),
+    ("d33", "g30", "yellow", "U1 pin 1 (OUTA) to pin 5 (INB+), around the chip"),
+    ("j33", "BR2-33", "red", "U1 pin 8 to +5 V"),
+    ("h31", "h36", "orange", "U1 pin 6 (INB−) to RV2 / Cf2"),
+    ("i32", "i37", "orange", "U1 pin 7 (OUTB) to RV2 wiper / Cf2 / Ro"),
+    ("a55", "TR1-55", "violet", "VREF onto the top + rail"),
+    ("a52", "TR2-52", "black", "Rd to ground"),
+    ("a61", "TR2-61", "black", "Cp − to ground"),
+]
+RXW_OFF = ["ESP32.VIN", "ESP32.GND_L", "ESP32.3V3", "ESP32.D34", "HYD.HOT", "HYD.SHIELD"]
+RXW_NETS = [
+    {"ESP32.VIN", "U1.8", "Cd.1"},                                                    # +5V
+    {"ESP32.GND_L", "Cp.-", "Rd.2", "Cv.-", "HYD.SHIELD", "U1.4", "Cd.2", "Cg1.2", "Cg2.2",
+     "Caa.2"},                                                                        # GND
+    {"ESP32.3V3", "Rp.1"},                                                            # 3V3
+    {"Rp.2", "Cp.+", "Rt.1"},                                                         # 3V3A
+    {"Rt.2", "Rd.1", "Cv.+", "Rb.2"},                                                 # VREF
+    {"HYD.HOT", "Cin.1"},
+    {"Cin.2", "Rs.1"},                                                                # N1
+    {"Rs.2", "Rb.1", "U1.3"},                                                         # INA+
+    {"U1.2", "Rf1.1", "Cf1.1", "Rg1.1"},                                              # INA-
+    {"U1.1", "Rf1.2", "Cf1.2", "U1.5"},                                               # OUTA = INB+
+    {"Rg1.2", "Cg1.1"},                                                               # G1
+    {"U1.6", "RV2.1", "Cf2.1", "Rg2.1"},                                              # INB-
+    {"U1.7", "RV2.2", "Cf2.2", "Ro.1"},                                               # OUTB
+    {"Rg2.2", "Cg2.1"},                                                               # G2
+    {"Ro.2", "Caa.1", "ESP32.D34"},                                                   # ADC
+    {"RV2.3"},                                                                        # NC
+]
+
+
+def check_rail_830():
+    groups = []
+    for c in sorted(RAIL_830):
+        if groups and c == groups[-1][-1] + 1:
+            groups[-1].append(c)
+        else:
+            groups.append([c])
+    if not (len(RAIL_830) == 50 and len(groups) == 10 and all(len(g) == 5 for g in groups)
+            and groups[0][0] == 3 and groups[-1][-1] == 61
+            and all(b[0] - a[-1] == 2 for a, b in zip(groups, groups[1:]))):
+        raise SystemExit(f"CHECK FAILED: 830-point rail pattern is wrong: {groups}")
+
+
+def board_830():
+    return Breadboard(BBX_W, BBY_W, NCOLS_830, RAIL_830)
+
+
+def build_rx_water():
+    s = Svg(*CANVAS_RXW)
+    bb = board_830()
+    bb.draw(s)
+    title(s, "DUBURI text modem — RECEIVER, underwater (WATER mode)",
+          "Piezo hydrophone → 2-stage LM358 preamp → RC filter → ESP32 GPIO34 (ADC).  "
+          "830-point breadboard, no soldering.")
+    H = lambda h: bb.xy(h)
+    # group zones
+    zone(s, bb, 23, 31, "top", "input", "#2f81f7")
+    zone(s, bb, 32, 39, "top", "stage 1", "#1a7f37")
+    zone(s, bb, 28, 41, "bottom", "stage 2", "#d9822b")
+    zone(s, bb, 52, 62, "top", "VREF", "#8e44ad")
+    info = draw_board_parts(s, bb, RXW_PARTS)
+
+    # ESP32 on the right: left pin column faces the board
+    e = esp32(s, 1556, BBY_W - 4.4, highlight=("D34", "VIN", "GND", "3V3"))
+    # hydrophone
+    ex = hydrophone(s, 210, 205)
+    sh_end = coax(s, [ex, (ex[0] + 60, ex[1] + 18), (bb.cx(24), ex[1] + 18), (bb.cx(24), BBY_W - 64)])
+    hot, t23 = H("a25"), H("TR2-23")
+    draw_wire(s, [sh_end, (sh_end[0], sh_end[1] + 10), (hot[0], sh_end[1] + 24), hot], "white",
+              plug_start=False, width=4.5)
+    draw_wire(s, [sh_end, (sh_end[0], sh_end[1] + 10), (t23[0], sh_end[1] + 24), t23], "grey",
+              plug_start=False, width=4.5)
+
+    # power wires from the ESP32
+    draw_wire(s, [e["VIN"], H("BR2-61")], "red")
+    draw_wire(s, [e["GND_L"], H("BR1-61")], "black")
+    a62 = H("a62")
+    draw_wire(s, orth(e["3V3"], [("h", 1840), ("v", 336), ("h", a62[0])], a62), "red")
+    f41 = H("f41")
+    draw_wire(s, orth(f41, [("v", bb.y + 9.1 * P), ("h", 1515), ("v", e["D34"][1])], e["D34"]), "green")
+    # jumpers on the board
+    for a, b, col, desc in RXW_WIRES:
+        if "." in a or "." in b:
+            continue
+        if (a, b) == ("d33", "g30"):
+            d33, g30 = H("d33"), H("g30")
+            yd, yf = bb.y + 7.12 * P, bb.y + 11.1 * P
+            xl = bb.cx(28.5)
+            draw_wire(s, [d33, (d33[0], yd), (xl, yd), (xl, yf), (g30[0], yf), g30], col, width=5)
+        else:
+            draw_wire(s, [H(a), H(b)], col)
+
+    # rail legend
+    y0 = bb.rowy("TR1") - 19
+    s.text("labels", bb.cx(63) + 8, y0, "top − rail = GND", 10, "#2f62c9", "end", "bold")
+    s.text("labels", bb.cx(63) - 112, y0, "top + rail = VREF ≈ 1.34 V (not a power rail)", 10, "#8e44ad",
+           "end", "bold")
+    yb = bb.y + bb.h + 16
+    s.text("labels", bb.cx(63) + 8, yb, "bottom + rail = +5 V (ESP32 VIN)", 10, "#d93a32", "end", "bold")
+    s.text("labels", bb.cx(63) - 210, yb, "bottom − rail = GND", 10, "#2f62c9", "end", "bold")
+    # zone pills
+    pill(s, bb.cx(27), bb.y + 3.02 * P - 0.0, "input", "#2f81f7")
+    return s, bb, info, e
+
+
+def finish_rx_water(s, bb, info, e):
+    H = lambda h: bb.xy(h)
+    port = laptop(s, 1560, 905, "file:///.../pc/receiver.html",
+                  [("DUBURI Receiver", 13, "#1f2328", "bold"),
+                   ("Mode : WATER", 10, "#24292f", "normal"),
+                   ("From node 1:  Hello", 9, "#1a7f37", "normal"),
+                   ("SCOPE  ▂▃▅▇▅▃▂▁", 9, "#0b6bcb", "normal")], w=280)
+    usb_cable(s, [e["USB"], (e["USB"][0], 880), (1866, 880), (1866, port[1]), port])
+    return s
+
+
+def build_rx_water_full():
+    s, bb, info, e = build_rx_water()
+    return finish_rx_water(s, bb, info, e)
+
+
+# ===========================================================================
 # Placement table (markdown)
 # ===========================================================================
 def pretty(p):
@@ -1221,10 +1884,14 @@ def main():
               "MIC.GND"]
     check(TX_PARTS, TX_WIRES, tx_off, TX_NETS, "transmitter")
     check(RX_PARTS, RX_WIRES, rx_off, RX_NETS, "receiver")
+    check(TXW_PARTS, TXW_WIRES, TXW_OFF, TXW_NETS, "transmitter WATER", multi=TXW_MULTI)
+    check_rail_830()
+    check(RXW_PARTS, RXW_WIRES, RXW_OFF, RXW_NETS, "receiver WATER", board=board_830())
 
     jobs = []
     for name, builder in (("tx_wiring", build_tx), ("rx_wiring", build_rx),
-                          ("system_overview", build_overview)):
+                          ("system_overview", build_overview),
+                          ("tx_water_wiring", build_tx_water), ("rx_water_wiring", build_rx_water_full)):
         s = builder()
         p = os.path.join(HERE, name + ".svg")
         with open(p, "w", encoding="utf-8") as f:
