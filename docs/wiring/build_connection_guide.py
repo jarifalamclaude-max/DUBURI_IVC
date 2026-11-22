@@ -110,6 +110,40 @@ NET_INFO = [  # (a pin in the net, name, colour, what it is)
 GND_COLOR = "#3b4350"
 
 
+def module_name(ref, pins):
+    """Name an off-board module from its pins, so the XH-M542 is never called PAM8403."""
+    p = {x.split(".", 1)[1].replace("−", "-") for x in pins}
+    if ref == "ESP32":
+        return "ESP32 DevKit V1"
+    if {"L+", "L-"} & p or "+5V" in p:
+        return "PAM8403 amplifier (5 V)"
+    if {"IN+", "IN-", "VCC+", "VCC-"} & p or ref.upper().startswith(("XH", "TPA")):
+        return "XH-M542 amplifier (TPA3116D2, 12 V)"
+    if "OUT" in p and "VDD" in p and ("GAIN" in p or ref.upper() == "MIC"):
+        return "MAX9814 mic module"
+    u = ref.upper()
+    if u.startswith(("EXC", "EX", "TUBE", "XDCR", "TRANS")):
+        return "Exciter in the waterproof tube"
+    if u.startswith(("HYD", "PZ", "PIEZO", "HP")):
+        return "Piezo hydrophone (sealed)"
+    if u.startswith("SPK"):
+        return "Speaker"
+    if u.startswith(("DC", "ADP", "PSU", "V12")):
+        return "DC jack (from the adapter)"
+    return ref
+
+
+def pin_name(pid, mods):
+    if pid in PIN_NAMES and not pid.startswith("AMP."):
+        return PIN_NAMES[pid]
+    ref, pin = pid.split(".", 1)
+    mname = module_name(ref, mods.get(ref, {pid}))
+    if mname.startswith("PAM8403") and pid in PIN_NAMES:
+        return PIN_NAMES[pid]
+    short = mname.split(" (")[0]
+    return f"{short} {pin}"
+
+
 def find_data(prefixes):
     for p in prefixes:
         parts, wires, nets = (getattr(W, p + s, None) for s in ("_PARTS", "_WIRES", "_NETS"))
@@ -182,18 +216,17 @@ def node_data(cfg):
             wire_of[a] = (b, col, desc)
         if "." in b:
             wire_of[b] = (a, col, desc)
-    MODNAME = {"ESP32": "ESP32 DevKit V1", "AMP": "PAM8403 amplifier", "DC": "DC jack (from the adapter)",
-               "SPK": "Speaker", "MIC": "MAX9814 mic module"}
     for m, pins in sorted(mods.items(), key=lambda kv: (kv[0] != "ESP32", kv[0])):
+        mname = module_name(m, pins)
         plist = []
         for pid in sorted(pins):
             w = wire_of.get(pid)
             where = ""
             if w:
                 to, col, desc = w
-                where = ("wire (" + col + ") to " + (hole_text(to) if "." not in to else PIN_NAMES.get(to, to)))
-            plist.append(dict(id=pid, label=PIN_NAMES.get(pid, pid.split(".", 1)[1]), hole="", where=where or "not connected"))
-        part_list.append(dict(ref=m, kind="module", value=MODNAME.get(m, m), marking="", bands=[],
+                where = ("wire (" + col + ") to " + (hole_text(to) if "." not in to else pin_name(to, mods)))
+            plist.append(dict(id=pid, label=pin_name(pid, mods), hole="", where=where or "not connected"))
+        part_list.append(dict(ref=m, kind="module", value=mname, marking="", bands=[],
                               role="Off the breadboard, joined with jumper wires", pins=plist, onboard=False))
     # nets
     net_list = []
@@ -221,8 +254,8 @@ def node_data(cfg):
         extra = f" ({p['marking']})" if p["marking"] else ""
         steps.append(dict(id="p:" + p["ref"], text=f"Insert {p['ref']} {p['value']}{extra}: {legs}"))
     for a, b, col, desc in wires:
-        na = PIN_NAMES.get(a, a) if "." in a else a
-        nb = PIN_NAMES.get(b, b) if "." in b else b
+        na = pin_name(a, mods) if "." in a else a
+        nb = pin_name(b, mods) if "." in b else b
         steps.append(dict(id="w:" + a + ">" + b, text=f"Wire ({col}): {na} → {nb}  ·  {desc}"))
     svg_path = os.path.join(HERE, cfg["svg"])
     img = ""
