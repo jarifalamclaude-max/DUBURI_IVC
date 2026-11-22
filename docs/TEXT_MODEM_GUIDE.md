@@ -20,8 +20,8 @@ PC 1-এ একটা web page-এ লেখা টাইপ করো → ESP32
 
 | | **AIR** (এখন যেটা বানাচ্ছ) | **WATER** (পুল, ROV) |
 |---|---|---|
-| Transmitter | PAM8403 + ছোট speaker, খোলা বাতাসে | PAM8403 + speaker, sealed box-এ (মূল গাইড অধ্যায় 6–8) |
-| Receiver | MAX9814 microphone module | পানির নিচের receiver (hydrophone) লাগবে, নিচে 9 দেখো |
+| Transmitter | PAM8403 + ছোট speaker, খোলা বাতাসে | XH-M542 amp + exciter, পানিরোধী tube-এর জানালায় লাগানো (অধ্যায় 9) |
+| Receiver | MAX9814 microphone module | Piezo hydrophone + LM358 preamp (অধ্যায় 9) |
 | এক slot | 40 ms (32 ms window) | 20 ms (16 ms window) |
 | এক packet (2 byte লেখা) | 2.56 s | 1.28 s |
 | দূরত্ব | ঘরে 1–5 m (simulation-এ যাচাই) | 10–25 m |
@@ -237,17 +237,104 @@ page-এ **Repeat 2×** দাও: প্রতিটা packet দুবার 
 
 ---
 
-## 9. WATER মোডের জন্য কী লাগবে
+## 9. WATER (পানির নিচে) build: exciter tube + piezo hydrophone
 
-Firmware-এ WATER মোড তৈরি আছে (মূল DUBURI design, পুল simulation-এ যাচাই করা)। Hardware-এ:
+Firmware-এ WATER মোড তৈরি আছে (20 ms slot, পুল simulation-এ যাচাই করা)। পানির নিচে দুটো জিনিস বদলায়:
+**speaker-এর জায়গায় exciter tube**, আর **MAX9814 mic-এর জায়গায় piezo hydrophone + preamp**
+(MAX9814-এর mic পানিতে কাজ করে না: বাতাসের mic, পানি থেকে শব্দ প্রায় ঢোকে না)। Web page, protocol, firmware একই,
+শুধু দুই board-এ মোড **WATER**।
 
-* **Transmitter:** একই PAM8403 circuit, কিন্তু speaker একটা sealed box-এ, পাতলা acrylic জানালার দিকে মুখ করে
-  (মূল গাইড অধ্যায় 6–8)। Amp-এর supply ROV battery থেকে buck converter দিয়ে।
-* **Receiver:** MAX9814-এর microphone পানিতে কাজ করে না (বাতাস আর পানির মধ্যে শব্দ প্রায় ঢোকে না)। পানির নিচে
-  শোনার জন্য একটা **hydrophone** লাগবে। Piezo ব্যবহার না করলে উপায়: একটা তৈরি hydrophone কেনা (দাম বেশি)
-  আর তার output মূল গাইডের অধ্যায় 10-এর preamp দিয়ে D34-এ দেওয়া। সবচেয়ে সস্তা পথ এখনো piezo disc
-  (মূল গাইড অধ্যায় 9)।
-* দুই board-এ `mode water`। বাকি সব (web page, protocol) একই।
+| | ছবি |
+|---|---|
+| Transmitter (exciter tube + XH-M542, 12 V) | ![TX water](wiring/tx_water_wiring.png) |
+| Receiver (piezo hydrophone + LM358 preamp) | ![RX water](wiring/rx_water_wiring.png) |
+
+Breadboard-এর প্রতিটা ছিদ্রের তালিকা: [`wiring/placement.md`](wiring/placement.md) (script দিয়ে সব সংযোগ যাচাই করা)।
+
+### 9.1 কেনাকাটা (দেশি দোকান, আনুমানিক দাম)
+
+**Transmitter**
+
+| জিনিস | দাম (৳) | কোথায় / মন্তব্য |
+|---|---|---|
+| ESP32 DevKit V1 | 450–650 | আগের মতো |
+| XH-M542 amplifier (TPA3116D2, mono) | ~680 | ElectronicsBD |
+| Exciter 40 mm, **4 Ω**, 25 W ("resonance sound exciter") | ~677 + shipping ~722 | AliExpress |
+| 12 V 3 A adapter + DC jack screw-terminal | 300–450 | Amp শুধু **12 V**-এ (4 Ω-এ ≈15 W)। 4S battery সরাসরি বা 24 V কখনো না। ROV-এ 3S battery সরাসরি চলবে |
+| 4.7 kΩ, 3.3 nF (332), 1 µF (105), 10 kΩ trimmer, breadboard, jumper | ~250 | আগের TX-এর মতো |
+| PVC pipe 3" ~15 cm + end cap (প্যাঁচওয়ালা হলে ভালো) | 200–400 | Tube |
+| Acrylic/polycarbonate disc 4 mm (pipe-এর বাইরের মাপে) | 100–200 | জানালা |
+| 2-part epoxy (Araldite), cable gland PG7/PG9, 2-core **গোল** cable, silica gel | 300–500 | Food box-এর PP/PE plastic-এ epoxy লাগে না, ব্যবহার কোরো না |
+
+**Receiver**
+
+| জিনিস | দাম (৳) | কোথায় / মন্তব্য |
+|---|---|---|
+| ESP32 DevKit V1 | 450–650 | |
+| **Piezo:** guitar contact pickup (cable লাগানো) **বা** 35 mm piezo disc + 2 m shielded mic cable | 360–380 **বা** 60–140 + 60–120 | Othoba / Daraz / ElectronicsBD। 2–3টা কেনো |
+| Liquid electrical tape বা 2-part epoxy | 150–300 | Piezo সিল করতে |
+| **LM358** op-amp (DIP-8) | 10–15 | যেকোনো electronics দোকান (MCP602/MCP6002 পেলে আরো ভালো) |
+| Resistor: 10 Ω, 10 kΩ ×2, 6.8 kΩ, 1 MΩ, 100 kΩ, 3.3 kΩ ×2, 2.2 kΩ; trimmer 100 kΩ | ~60 | |
+| Capacitor: 100 nF ×2, 150 pF, 33 nF, 100 pF, 47 nF, 4.7 nF, 100 µF, 10 µF | ~80 | |
+| Breadboard 830 point, jumper | 150–250 | |
+
+মোট মোটামুটি: **Transmitter ≈ ৳3,000–4,000**, **Receiver ≈ ৳1,300–1,800**।
+
+### 9.2 Exciter tube বানানো (transmitter)
+
+Exciter নিজে waterproof করা যায় না (epoxy লাগালে তার নড়াচড়ার অংশ আটকে যায়)। তাই exciter থাকে **শুকনো tube-এর ভেতরে**,
+একটা পাতলা জানালার ভেতরের দিকে আঠা দিয়ে লাগানো; শুধু জানালা পানি ছোঁয়, জানালাটাই speaker হয়ে যায়।
+
+1. **জানালা:** pipe-এর মুখ আর disc-এর কিনারা শিরিষ কাগজে (120) ঘষো, alcohol দিয়ে মোছো, epoxy দিয়ে disc লাগাও।
+   ভেতরে-বাইরে জোড়ার চারপাশে আরেক প্রলেপ। **24 ঘণ্টা** শুকাতে দাও।
+2. **Exciter:** জানালার ভেতরের মাঝখানে হালকা ঘষে, পাতলা সমান epoxy দিয়ে exciter-এর সমতল পা লাগাও (বাতাসের বুদবুদ নয়,
+   পা আর শরীরের মাঝের ফাঁকে epoxy নয়)। ওপরে ভার দিয়ে **24 ঘণ্টা**। শক্ত বন্ধন = বেশি শব্দ পানিতে যায়।
+3. **Cable:** end cap-এ ছিদ্র করে cable gland, গোল cable ঢুকিয়ে টাইট করো, বাইরে চারপাশে epoxy।
+4. **তার:** exciter-এ solder, heat-shrink, তার বেঁধে রাখো যাতে জানালায় ঠকঠক না করে। Silica gel দিয়ে end cap বন্ধ করো।
+5. **Leak test:** ভেতরে শুকনো টিস্যু রেখে বালতিতে 30 মিনিট, তারপর পুলের তলায় (2–5 m) 1 ঘণ্টা। টিস্যু শুকনো থাকলে ঠিক।
+6. Tube ভাসে (~1 kg উঠানোর জোর), তাই ভার বাঁধো বা ROV frame-এ শক্ত করে লাগাও, জানালা খোলা পানির দিকে।
+   XH-M542 থাকে ROV-এর শুকনো electronics box-এ, tube-এ শুধু cable যায়।
+
+জানালার শক্তি (মূল গাইড অধ্যায় 8-এর সূত্রে): 3" pipe-এ 4 mm acrylic, 5 m গভীরে stress ≈ 4 MPa, acrylic সহ্য করে ≈ 70 MPa।
+
+Wiring: RV1-এর মাঝের পা → XH-M542 **IN +**, GND → **IN −**, 12 V → **VCC + / −**, VCC − থেকে breadboard GND-এ একটা তার,
+**OUT** দুই screw → exciter। প্রথমবার: exciter আগে, তারপর input, power সবশেষে; RV1 আর board-এর VOL একদম কম।
+
+### 9.3 Piezo hydrophone বানানো (receiver)
+
+* **Guitar pickup হলে:** cable আর piezo আগেই লাগানো। পুরো pickup আর cable বের হওয়ার জায়গা liquid electrical tape-এ
+  3–4 বার চুবাও (প্রতিবার শুকিয়ে), বা বোতলের ছিপিতে বসিয়ে epoxy ঢালো। শব্দ-ধরার দিকে পাতলা প্রলেপ, **কোনো বাতাস নয়**।
+  Plug কেটে cable-এর ভেতরের তার আর shield breadboard-এ নাও।
+* **Piezo disc হলে:** shielded cable-এর ভেতরের তার ceramic (রুপালি) অংশে, shield পিতলের কিনারায়, 2–3 সেকেন্ডে solder
+  (বেশি গরমে রুপালি স্তর ওঠে)। Alcohol দিয়ে পরিষ্কার, cable-এ গিঁট/heat-shrink দিয়ে টান সামলাও, তারপর উপরের মতো সিল।
+* 24 ঘণ্টা শুকাও। একদিন পানিতে রেখে multimeter-এ দুই তারের মাঝে resistance অসীম থাকলে leak নেই।
+* বিস্তারিত ছবি: মূল গাইড অধ্যায় 9।
+
+### 9.4 Preamp (LM358)
+
+Piezo-র signal কয়েক mV, ESP32-এর ADC-তে কয়েকশো mV লাগে। দুই stage-এর amplifier (মূল গাইড অধ্যায় 10, op-amp শুধু LM358):
+
+| | মান |
+|---|---|
+| Stage 1 gain | 1 + 100k/3.3k = 31 (30 dB) |
+| Stage 2 gain (RV2) | 1 … 46 (0 … 33 dB) |
+| মোট | 30 … 63 dB |
+| কোন frequency যায় | ≈1.5 kHz থেকে ≈10 kHz (আমাদের 3–8.75 kHz পুরো gain পায়; pump hum আর pinger কাটে) |
+| VREF | 3.3 × 6.8k / (10k + 6.8k) ≈ 1.34 V (signal এর চারপাশে দোলে) |
+| Power | LM358 ESP32-এর **VIN** (USB-র ≈5 V) থেকে; VREF আর filter 3V3 থেকে। Ro 3.3 kΩ ESP32-এর pin রক্ষা করে |
+
+**RV2 = receiver-এর volume।** Tone bar নিচু থাকলে বাড়াও, level meter "clipping" দেখালে কমাও।
+
+### 9.5 পরীক্ষা, ধাপে ধাপে
+
+1. দুই board-এ মোড **WATER** (web page-এর বোতাম, বা `mode water`)।
+2. **শুকনো:** receiver page-এ Scope on; hydrophone-এ আঙুল দিয়ে আলতো টোকা দিলে level লাফাবে।
+3. **বালতি/ড্রাম:** tube আর hydrophone 0.5–1 m দূরে পানিতে। RV1, VOL কম। **Tone test** → 5 kHz-এর বার উঠবে।
+   Bar 15–25 dB হওয়া পর্যন্ত RV1/VOL বাড়াও; level "OK" রাখতে RV2 ঠিক করো। **Sweep** → 24টা বার একে একে।
+4. `Hi` পাঠাও (1.28 s)। আসবে, q দেখো।
+5. **পুল:** 5, 10, 20 m-এ q লিখে রাখো। আনুমানিক range ≈ দূরত্ব × 2^((q − 8) ÷ 6)।
+6. Thruster চালিয়ে আবার দেখো। q অনেক নামলে hydrophone thruster আর amp-এর তার থেকে দূরে, নরম রাবারে লাগাও।
+7. লম্বা message-এর পর exciter-এর গরম মাপো (মূল গাইড 7.6-এর resistance পদ্ধতি)। WATER-এ heat guard 50 %।
 
 ---
 
