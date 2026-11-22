@@ -1,0 +1,1141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DUBURI Receiver</title>
+<style>
+/* ===== COMMON CSS START (keep identical in sender.html and receiver.html) ===== */
+:root {
+  --bg: #f3f5f8; --panel: #ffffff; --soft: #eef1f6; --soft2: #e6eaf1;
+  --ink: #152033; --muted: #5b6a80; --faint: #8a97aa; --line: #dde3eb;
+  --accent: #0a7c76; --accent-ink: #ffffff; --accent-soft: #dff1ef;
+  --pre: #d9891f; --pre-soft: #fbeedb;
+  --good: #1d8a4a; --good-soft: #def3e6; --warn: #a86a0c; --warn-soft: #fbefd6;
+  --bad: #c0362c; --bad-soft: #fbe1de; --demo: #6a4bc4; --demo-soft: #ece6fb;
+  --hdr: #ffffff; --shadow: 0 1px 2px rgba(20,32,51,.06), 0 4px 14px rgba(20,32,51,.05);
+  --air: #2d7fd3; --water: #164a8a;
+  --chipL: 42%; --chipBgA: .14; --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e131a; --panel: #151c26; --soft: #1b2430; --soft2: #222d3b;
+    --ink: #e5ecf5; --muted: #9aa8bb; --faint: #6f7d91; --line: #263243;
+    --accent: #2bb5ab; --accent-ink: #062321; --accent-soft: #123532;
+    --pre: #f0a445; --pre-soft: #3a2a12;
+    --good: #45c27a; --good-soft: #13301f; --warn: #e3a23b; --warn-soft: #362710;
+    --bad: #f0675b; --bad-soft: #3a1714; --demo: #a68cf5; --demo-soft: #261d42;
+    --hdr: #121922; --shadow: 0 1px 2px rgba(0,0,0,.3);
+    --air: #3b8fe6; --water: #2a64b8;
+    --chipL: 70%; --chipBgA: .18;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Bengali", "Nirmala UI", "Vrinda", sans-serif;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+.mono { font-family: var(--mono); }
+header.top {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 12px 22px; background: var(--hdr); border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 5;
+}
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.logo { width: 38px; height: 38px; flex: none; }
+.title { font-weight: 700; font-size: 17px; letter-spacing: .1px; }
+.role { color: var(--muted); font-size: 13px; }
+.conn { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pill {
+  display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 999px;
+  background: var(--soft); color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.pill.on { background: var(--good-soft); color: var(--good); }
+.pill.on::before { background: var(--good); }
+.pill.demo { background: var(--demo-soft); color: var(--demo); }
+.pill.demo::before { background: var(--demo); }
+.pill.lost { background: var(--bad-soft); color: var(--bad); }
+.pill.lost::before { background: var(--bad); }
+.btn {
+  border: 1px solid var(--line); background: var(--panel); border-radius: 9px; padding: 7px 13px;
+  cursor: pointer; font-weight: 600; font-size: 14px; white-space: nowrap;
+}
+.btn:hover:not(:disabled) { border-color: var(--faint); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.07); border-color: var(--accent); }
+.btn.primary:disabled { background: var(--soft2); border-color: var(--line); color: var(--faint); opacity: 1; }
+.btn.danger { color: var(--bad); }
+.btn.ghost { background: transparent; }
+.btn.small { padding: 4px 9px; font-size: 13px; border-radius: 7px; }
+.switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--muted); user-select: none; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch .track { width: 36px; height: 20px; border-radius: 999px; background: var(--soft2); position: relative; transition: background .15s; flex: none; }
+.switch .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+.switch input:checked + .track { background: var(--demo); }
+.switch input:checked + .track::after { transform: translateX(16px); }
+.switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.banner { margin: 12px 22px 0; padding: 10px 14px; border-radius: 10px; font-size: 14px; border: 1px solid transparent; }
+.banner b { font-weight: 700; }
+.banner.warn { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+.banner.bad { background: var(--bad-soft); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 30%, transparent); }
+.banner.demo { background: var(--demo-soft); color: var(--demo); border-color: color-mix(in srgb, var(--demo) 30%, transparent); }
+main.grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 18px; padding: 18px 22px 8px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: var(--shadow); min-width: 0; }
+.card h2 { margin: 0 0 4px; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.card h2 .count { margin-left: auto; }
+.card .sub { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+.hint { color: var(--muted); font-size: 13px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--soft); color: var(--muted); white-space: nowrap; }
+.chip.good { background: var(--good-soft); color: var(--good); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.chip.accent { background: var(--accent-soft); color: var(--accent); }
+.chip.pre { background: var(--pre-soft); color: var(--pre); }
+details.log > summary { cursor: pointer; font-weight: 700; font-size: 16px; list-style: none; display: flex; align-items: center; gap: 8px; }
+details.log > summary::-webkit-details-marker { display: none; }
+details.log > summary::before { content: "▸"; color: var(--muted); font-size: 13px; transition: transform .15s; display: inline-block; }
+details.log[open] > summary::before { transform: rotate(90deg); }
+.logtools { display: flex; align-items: center; gap: 12px; margin: 10px 0 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.logtools label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.logbox {
+  height: 220px; overflow: auto; background: var(--soft); border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px 10px; font: 12.5px/1.5 var(--mono); white-space: pre-wrap; word-break: break-all;
+}
+.logbox .o { color: var(--accent); }
+.logbox .e { color: var(--bad); }
+.logbox .s { color: var(--faint); }
+.logbox .t { color: var(--faint); margin-right: 8px; }
+.cmdform { display: flex; gap: 8px; margin-top: 8px; }
+.cmdform input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--panel); border-radius: 9px; padding: 7px 10px; font-family: var(--mono); font-size: 13px; }
+.scopebars { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; align-items: end; height: 110px; padding: 6px 4px 0; background: var(--soft); border-radius: 10px; border: 1px solid var(--line); position: relative; }
+.scopebars .bar { background: var(--faint); border-radius: 3px 3px 0 0; min-height: 2px; transition: height .2s ease, background .2s; opacity: .55; }
+.scopebars .bar.hot { background: var(--accent); opacity: 1; }
+.scopelabels { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; padding: 3px 4px 0; font-size: 11px; color: var(--muted); }
+.scopelabels span { text-align: center; white-space: nowrap; overflow: visible; }
+footer { color: var(--faint); font-size: 12px; padding: 4px 22px 22px; }
+.modebar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 12px 22px 0; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+.modelab { font-weight: 700; font-size: 14px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--soft); }
+.segbtn { border: 0; background: transparent; padding: 7px 14px; cursor: pointer; font-weight: 800; font-size: 14px; letter-spacing: .4px; color: var(--muted); display: inline-flex; align-items: baseline; gap: 6px; }
+.segbtn small { font-weight: 600; font-size: 12px; letter-spacing: 0; opacity: .85; }
+.segbtn + .segbtn { border-left: 1px solid var(--line); }
+.segbtn:disabled { cursor: not-allowed; opacity: .55; }
+.segbtn.active[data-mode="air"] { background: var(--air); color: #fff; opacity: 1; }
+.segbtn.active[data-mode="water"] { background: var(--water); color: #fff; opacity: 1; }
+.segbtn.pending { outline: 2px dashed var(--faint); outline-offset: -4px; }
+#modeDesc { font-size: 14px; }
+#modeDesc b { font-weight: 700; }
+.modenote { margin-left: auto; color: var(--warn); font-size: 13px; font-weight: 600; }
+@media (max-width: 1040px) { main.grid { grid-template-columns: minmax(0, 1fr); } }
+/* ===== COMMON CSS END ===== */
+
+/* ---- receiver page ---- */
+.tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 18px 22px 0; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; box-shadow: var(--shadow); min-width: 0; }
+.tile .lab { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.tile .val { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.tile .val.good { color: var(--good); } .tile .val.bad { color: var(--bad); } .tile .val.warn { color: var(--warn); }
+.tile .val small { font-size: 14px; color: var(--muted); font-weight: 600; }
+.arrive { border: 1px solid var(--line); background: var(--soft); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; transition: background .2s, border-color .2s; }
+.arrive.flash { background: var(--bad-soft); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
+.arrive.okflash { background: var(--good-soft); border-color: color-mix(in srgb, var(--good) 40%, transparent); }
+.arrtext { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 14px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--faint); flex: none; }
+.dot.live { background: var(--accent); animation: pulse 1.4s ease-in-out infinite; }
+.dot.rx { background: var(--pre); animation: pulse .5s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); } 50% { box-shadow: 0 0 0 6px transparent; } }
+.arrive .progress { height: 6px; border-radius: 99px; background: var(--soft2); overflow: hidden; }
+.arrive .progress > i { display: block; height: 100%; width: 0; background: var(--pre); border-radius: 99px; }
+.partial { margin-top: 12px; }
+.plabel { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 5px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ptext { min-height: 56px; border: 1.5px dashed var(--line); border-radius: 12px; padding: 10px 14px; font-size: 24px; line-height: 1.35; word-break: break-word; }
+.ptext .cursor { display: inline-block; width: 2px; height: 1.05em; background: var(--accent); vertical-align: -0.15em; margin-left: 2px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.lost { display: inline-block; min-width: .9em; padding: 0 .12em; margin: 0 1px; border-radius: 4px; background: var(--bad-soft); color: var(--bad); font-weight: 800; text-align: center; font-size: .8em; vertical-align: .1em; border: 1px solid color-mix(in srgb, var(--bad) 40%, transparent); }
+.empty { color: var(--faint); font-size: 14px; font-style: italic; }
+.lastpkt { margin-top: 10px; font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.lastpkt .mono { color: var(--ink); }
+.msglist { display: flex; flex-direction: column; gap: 10px; max-height: 620px; overflow: auto; padding-right: 2px; }
+.emptybig { border: 1.5px dashed var(--line); border-radius: 12px; padding: 26px 16px; text-align: center; color: var(--faint); }
+.msg { border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px 12px; background: var(--panel); }
+.msg.new { animation: arrivein .6s ease-out; }
+@keyframes arrivein { from { background: var(--accent-soft); transform: translateY(-4px); } to { background: var(--panel); transform: none; } }
+.mhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.mhead .time { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--ink); }
+.mhead .copy { margin-left: auto; }
+.mtext { font-size: 26px; line-height: 1.35; margin-top: 6px; word-break: break-word; }
+.mhex { margin-top: 6px; font-size: 12px; color: var(--muted); }
+.mhex summary { cursor: pointer; width: max-content; }
+.mhex .mono { word-break: break-all; margin-top: 4px; }
+.chartwrap { border: 1px solid var(--line); border-radius: 10px; background: var(--soft); overflow: hidden; }
+#qChart { display: block; width: 100%; height: 210px; }
+.scopehead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.level { margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 14px; }
+.lvhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; font-size: 14px; }
+.lvbar { position: relative; height: 18px; border-radius: 6px; background: var(--bad-soft); overflow: hidden; border: 1px solid var(--line); }
+.lvsafe { position: absolute; top: 0; bottom: 0; left: 2.44%; width: 92.8%; background: var(--good-soft); }
+.lvrange { position: absolute; top: 4px; bottom: 4px; left: 50%; width: 0; background: var(--accent); border-radius: 3px; opacity: .75; transition: left .4s, width .4s; }
+.lvmean { position: absolute; top: 0; bottom: 0; width: 2px; left: 50%; background: var(--ink); transition: left .4s; }
+.lvscale { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); margin-top: 2px; }
+#levelAdvice { margin-top: 4px; font-weight: 600; }
+#levelAdvice.good { color: var(--good); } #levelAdvice.warn { color: var(--warn); } #levelAdvice.bad { color: var(--bad); }
+@media (max-width: 1040px) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 40 40" aria-hidden="true">
+      <rect x="1" y="1" width="38" height="38" rx="10" fill="var(--accent)"/>
+      <path d="M9 22c3-6 6-6 9 0s6 6 9 0" fill="none" stroke="var(--accent-ink)" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M13 12.5a10 10 0 0 0 0 15M9.5 9a15 15 0 0 0 0 22" fill="none" stroke="var(--accent-ink)" stroke-width="2.2" stroke-linecap="round" opacity=".75"/>
+    </svg>
+    <div>
+      <div class="title">DUBURI Acoustic Modem</div>
+      <div class="role">Receiver · PC 2 · shows what the microphone hears</div>
+    </div>
+  </div>
+  <div class="conn">
+    <span id="connPill" class="pill">Not connected</span>
+    <button id="btnConnect" class="btn primary">Connect board</button>
+    <button id="btnDisconnect" class="btn" hidden>Disconnect</button>
+    <button id="btnReset" class="btn ghost" hidden title="Restart the ESP32 (like pressing EN)">Reset board</button>
+    <label class="switch" title="Try the page without a board"><input type="checkbox" id="demoToggle"><span class="track"></span><span>Demo (no board)</span></label>
+  </div>
+</header>
+<div id="noSerialBanner" class="banner warn" hidden><b>This browser cannot talk to the board.</b> Open this file in <b>Google Chrome</b> or <b>Microsoft Edge</b> on a computer (not a phone). Demo mode still works here.</div>
+<div id="demoBanner" class="banner demo" hidden><b>Demo mode:</b> a pretend board is "hearing" made-up messages every few seconds. Turn Demo off and press <b>Connect board</b> to use your ESP32.</div>
+<div id="connError" class="banner bad" hidden></div>
+<div id="boardErr" class="banner bad" hidden></div>
+<div class="modebar">
+  <span class="modelab">Medium</span>
+  <div class="seg" role="group" aria-label="Medium (mode)">
+    <button class="segbtn" id="modeAir" data-mode="air" disabled title="Speaker and microphone in a room">AIR <small>room</small></button>
+    <button class="segbtn" id="modeWater" data-mode="water" disabled title="Speaker box and hydrophone in a pool">WATER <small>pool</small></button>
+  </div>
+  <span id="modeDesc">Mode unknown · connect the board to see it.</span>
+  <span class="modenote">Both boards must be in the same mode.</span>
+</div>
+
+<div class="tiles">
+  <div class="tile"><div class="lab">Messages</div><div class="val" id="cMsgs">0</div></div>
+  <div class="tile"><div class="lab">Packets OK</div><div class="val good" id="cOk">0</div></div>
+  <div class="tile"><div class="lab">Damaged packets</div><div class="val bad" id="cBad">0</div></div>
+  <div class="tile"><div class="lab">Packets heard (preambles)</div><div class="val" id="cDet">0</div></div>
+  <div class="tile"><div class="lab">Success</div><div class="val" id="cPct">—</div></div>
+</div>
+
+<main class="grid">
+  <section class="col">
+    <div class="card">
+      <h2>Incoming <span class="chip" id="listenChip">not connected</span></h2>
+      <p class="sub" id="pktSub">Each packet is a short burst of 64 tones and carries 2 bytes of text.</p>
+      <div class="arrive" id="arrive">
+        <div class="arrtext"><span class="dot" id="arriveDot"></span><span id="arriveText">Connect the board to start listening.</span></div>
+        <div class="progress"><i id="arriveBar"></i></div>
+      </div>
+      <div class="partial">
+        <div class="plabel" id="partialLabel">Message being received</div>
+        <div class="ptext" id="partialText"><span class="empty">Nothing yet.</span></div>
+      </div>
+      <div class="lastpkt" id="lastPkt"><span>Last packet:</span><span>—</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Messages <span class="chip" id="msgCount">0</span><span class="count"></span><button id="btnCsv" class="btn small" disabled>Download CSV</button></h2>
+      <p class="sub">Newest on top. Red <span class="lost">?</span> marks bytes that were lost on the way.</p>
+      <div id="msgList" class="msglist"><div class="emptybig">No messages yet. When the sender PC sends text, it appears here.</div></div>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="card">
+      <h2>Link quality</h2>
+      <p class="sub">q (dB) of every packet. 10 dB or more is a safe link, below 7 dB packets start to fail. Red ✕ = damaged packet.</p>
+      <div class="chartwrap"><canvas id="qChart" aria-label="Link quality chart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2>Microphone &amp; tones</h2>
+      <div class="scopehead">
+        <button class="btn" id="btnScope" disabled>Show live tone bars</button>
+        <span class="hint">Each bar = how loud one tone is above the background noise. When a packet plays, one bar at a time jumps up.</span>
+      </div>
+      <div class="scopebars" id="scopeBars"></div>
+      <div class="scopelabels" id="scopeLabels"></div>
+      <div class="level">
+        <div class="lvhead"><b>Microphone level (ADC)</b><span id="levelStatus" class="chip">no data yet</span></div>
+        <div class="lvbar" title="Green = safe range 100..3900"><div class="lvsafe"></div><div class="lvrange" id="lvRange" hidden></div><div class="lvmean" id="lvMean" hidden></div></div>
+        <div class="lvscale"><span>0</span><span>signal swing (min … max), green = safe</span><span>4095</span></div>
+        <div class="hint" id="levelNums">The page asks the board every 3 s.</div>
+        <div class="hint" id="levelAdvice"></div>
+        <div class="hint" id="boardTotals" style="margin-top:6px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <details class="log" id="logDetails">
+        <summary>Serial log <span class="chip" id="logCount">0 lines</span></summary>
+        <div class="logtools">
+          <label><input type="checkbox" id="logStatus"> show status lines (SCOPE, STATS…)</label>
+          <label><input type="checkbox" id="logScroll" checked> auto-scroll</label>
+          <button class="btn small" id="logClear">Clear</button>
+        </div>
+        <div class="logbox" id="logBox"></div>
+        <form class="cmdform" id="cmdForm" autocomplete="off">
+          <input id="cmdInput" placeholder="Type a board command, e.g. info, stats, help" aria-label="Board command">
+          <button class="btn" type="submit">Send line</button>
+        </form>
+      </details>
+    </div>
+  </section>
+</main>
+<footer>DUBURI IVC · Receiver page · works offline · USB serial 115200 baud · protocol: docs/SERIAL_PROTOCOL.md</footer>
+
+<script>
+"use strict";
+/* ===== COMMON JS START (keep identical in sender.html and receiver.html) ===== */
+const AM = {
+  PRE: [0, 14, 6, 22, 9, 17, 4, 21, 5, 11],
+  NTONES: 24, F_TEXT: 0x2, F_FIRST: 0x8, F_LAST: 0x1, TEXT_MAX: 64, GAP_S: 0.40,
+  toneHz: (k) => 3000 + 250 * k,
+  /* default timing of each medium (the board's INFO line always wins) */
+  MODES: {
+    air: { slot_ms: 40, pkt_ms: 2560, duty: 0.75, burst_s: 10.0, label: "AIR", what: "room: speaker → microphone" },
+    water: { slot_ms: 20, pkt_ms: 1280, duty: 0.50, burst_s: 6.0, label: "WATER", what: "pool: speaker box → hydrophone" },
+  },
+};
+/* Timing from the board's INFO line. Before INFO arrives the mode is unknown and
+   AIR timing is assumed (assumed = true). */
+function linkParams(info) {
+  const mode = info && AM.MODES[info.mode] ? info.mode : null;
+  const d = AM.MODES[mode || "air"];
+  const num = (k) => (info && info[k] !== undefined && !isNaN(parseFloat(info[k])) ? parseFloat(info[k]) : d[k]);
+  return { mode, assumed: !info, slot: num("slot_ms"), pkt: num("pkt_ms"), duty: num("duty"), burst: num("burst_s"), gap: AM.GAP_S };
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const $ = (id) => document.getElementById(id);
+const hex2 = (b) => (b & 255).toString(16).toUpperCase().padStart(2, "0");
+const bin8 = (b) => (b & 255).toString(2).padStart(8, "0");
+const utf8 = (s) => new TextEncoder().encode(s);
+function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function crc16(bytes) {            /* CRC-16/CCITT-FALSE, same as am_crc16() */
+  let c = 0xFFFF;
+  for (const b of bytes) {
+    c ^= (b & 255) << 8;
+    for (let i = 0; i < 8; i++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
+  }
+  return c;
+}
+function amFrame(dst, src, seq, flags, b0, b1) {
+  const f = [((dst & 15) << 4) | (src & 15), ((seq & 15) << 4) | (flags & 15), b0 & 255, b1 & 255];
+  const c = crc16(f);
+  return f.concat([c >> 8, c & 255]);
+}
+function parity7(v) { v ^= v >> 4; v ^= v >> 2; v ^= v >> 1; return v & 1; }
+/* Same as am_tx_build(): frame -> K=7 conv code -> interleave -> 64 tone indexes */
+function amTones(frame) {
+  const info = [];
+  for (const b of frame) for (let i = 7; i >= 0; i--) info.push((b >> i) & 1);
+  for (let i = 0; i < 6; i++) info.push(0);
+  const coded = [];
+  let st = 0;
+  for (const bit of info) {
+    const reg = (bit << 6) | st;
+    coded.push(parity7(reg & 0x79), parity7(reg & 0x5B));
+    st = reg >> 1;
+  }
+  const stream = new Array(108).fill(0);
+  coded.forEach((v, c) => { stream[2 * ((37 * c) % 54) + (c >= 54 ? 1 : 0)] = v; });
+  const t = AM.PRE.slice();
+  for (let k = 0; k < 54; k++) t.push((k % 6) + 6 * ((stream[2 * k] << 1) | stream[2 * k + 1]));
+  return t;
+}
+/* Cut a message into text packets exactly like the firmware does. */
+function textPackets(bytes, dst, src, seq0) {
+  const n = Math.ceil(bytes.length / 2), out = [];
+  for (let i = 0; i < n; i++) {
+    const has1 = 2 * i + 1 < bytes.length;
+    const b0 = bytes[2 * i], b1 = has1 ? bytes[2 * i + 1] : 0;
+    const flags = AM.F_TEXT | (i === 0 ? AM.F_FIRST : 0) | (i === n - 1 ? AM.F_LAST : 0);
+    const seq = (seq0 + i) & 15;
+    const frame = amFrame(dst, src, seq, flags, b0, b1);
+    out.push({ i: i + 1, seq, flags, b0, b1, nb: has1 ? 2 : 1, frame, crc: (frame[4] << 8) | frame[5], idx0: 2 * i });
+  }
+  return out;
+}
+function flagNames(f) {
+  const n = [];
+  if (f & AM.F_TEXT) n.push("TEXT");
+  if (f & AM.F_FIRST) n.push("FIRST");
+  if (f & AM.F_LAST) n.push("LAST");
+  return n.join("+") || "-";
+}
+/* Leaky-bucket heat guard (MAX_TX_DUTY, TX_BURST_S) + gap between packets. */
+function heatPlan(nSends, pktS, duty, burstS, gapS) {
+  const B = burstS * (1 - duty);
+  let heat = 0, total = 0, rest = 0;
+  for (let k = 0; k < nSends; k++) {
+    if (k > 0) { total += gapS; heat = Math.max(0, heat - gapS * duty); }
+    const need = heat + pktS * (1 - duty) - B;
+    if (need > 0) { const w = need / duty; rest += w; total += w; heat -= w * duty; }
+    heat += pktS * (1 - duty);
+    total += pktS;
+  }
+  return { total, rest };
+}
+function hexToBytes(h) {          /* "48__6C" -> [0x48, null, 0x6C] */
+  const out = [];
+  for (let i = 0; i + 1 < h.length; i += 2) {
+    const p = h.substr(i, 2);
+    out.push(p === "__" ? null : parseInt(p, 16));
+  }
+  return out;
+}
+/* Split a board line into kind + key=value fields. "text=" runs to end of line. */
+function parseLine(raw) {
+  const line = raw.replace(/\s+$/, "");
+  const m = { raw: line, kind: "", f: {}, text: null, rest: "" };
+  if (!line) return m;
+  if (line.startsWith("RX (not for me)")) { m.kind = "RXOTHER"; }
+  let body = line;
+  const ti = line.indexOf(" text=");
+  if (ti >= 0) { m.text = line.slice(ti + 6); body = line.slice(0, ti); }
+  const sp = body.indexOf(" ");
+  if (!m.kind) m.kind = sp < 0 ? body : body.slice(0, sp);
+  m.rest = sp < 0 ? "" : body.slice(sp + 1);
+  for (const tok of m.rest.split(/\s+/)) {
+    const eq = tok.indexOf("=");
+    if (eq > 0 && /^[a-z_]+$/.test(tok.slice(0, eq))) m.f[tok.slice(0, eq)] = tok.slice(eq + 1);
+  }
+  if (m.kind === "HEAT-GUARD") { const w = /wait\s+(\d+)\s*ms/.exec(line); m.f.ms = w ? w[1] : "0"; }
+  if (m.kind === "SCOPE") m.vals = m.rest.split(/\s+/).filter((t) => /^-?\d+(\.\d+)?$/.test(t)).map(Number).slice(0, 24);
+  return m;
+}
+const STATUS_KINDS = new Set(["SCOPE", "STATS", "ADC", "LEVEL"]);
+const qBand = (q) => (q >= 10 ? "good" : q >= 7 ? "warn" : "bad");
+const qWord = (q) => (q >= 10 ? "good" : q >= 7 ? "OK" : "weak");
+
+/* ---------- Real board over Web Serial ---------- */
+class SerialLink {
+  constructor(onLine, onClose) {
+    this.onLine = onLine; this.onClose = onClose; this.isDemo = false;
+    this.port = null; this.buf = ""; this.alive = false; this.wq = Promise.resolve();
+  }
+  async connect() {
+    const port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+    this.port = port; this.alive = true;
+    this.writer = port.writable.getWriter();
+    this.enc = new TextEncoder();
+    this._onDisc = () => this._lost("The board was unplugged.");
+    if (port.addEventListener) port.addEventListener("disconnect", this._onDisc);
+    this._readLoop();
+  }
+  async _readLoop() {
+    const port = this.port;
+    while (this.alive && port.readable) {
+      const dec = new TextDecoderStream();
+      this.pipe = port.readable.pipeTo(dec.writable).catch(() => {});
+      this.reader = dec.readable.getReader();
+      try {
+        for (;;) {
+          const { value, done } = await this.reader.read();
+          if (done) break;
+          if (value) this._feed(value);
+        }
+      } catch (e) {
+        if (this.alive && !port.readable) { this._lost("Lost the board (" + (e && e.message ? e.message : e) + ")."); return; }
+      } finally {
+        try { this.reader.releaseLock(); } catch (_) { /* already released */ }
+      }
+      await this.pipe;
+    }
+    if (this.alive) this._lost("The board stopped answering.");
+  }
+  _feed(chunk) {
+    this.buf += chunk;
+    let i;
+    while ((i = this.buf.indexOf("\n")) >= 0) {
+      const line = this.buf.slice(0, i).replace(/\r/g, "");
+      this.buf = this.buf.slice(i + 1);
+      this.onLine(line);
+    }
+    if (this.buf.length > 8192) { this.onLine(this.buf); this.buf = ""; }
+  }
+  send(line) {
+    if (!this.alive) return Promise.resolve();
+    const data = this.enc.encode(line + "\n");
+    this.wq = this.wq.then(() => this.writer.write(data)).catch((e) => {
+      if (this.alive) this._lost("Could not write to the board (" + (e && e.message ? e.message : e) + ").");
+    });
+    return this.wq;
+  }
+  async reset() {             /* esptool-style: EN low pulse while IO0 stays high */
+    if (!this.port) return;
+    await this.port.setSignals({ dataTerminalReady: false, requestToSend: true });
+    await sleep(100);
+    await this.port.setSignals({ requestToSend: false });
+  }
+  async _cleanup() {
+    this.alive = false;
+    const port = this.port;
+    if (port && port.removeEventListener) port.removeEventListener("disconnect", this._onDisc);
+    try { if (this.reader) await this.reader.cancel(); } catch (_) { /* ignore */ }
+    try { if (this.pipe) await this.pipe; } catch (_) { /* ignore */ }
+    try { if (this.writer) this.writer.releaseLock(); } catch (_) { /* ignore */ }
+    try { if (port) await port.close(); } catch (_) { /* ignore */ }
+    this.port = null;
+  }
+  async disconnect() { await this._cleanup(); }
+  _lost(reason) {
+    if (!this.alive) return;
+    this._cleanup().then(() => this.onClose(reason));
+  }
+}
+
+/* ---------- Pretend board for Demo mode (speaks the same protocol) ---------- */
+const DEMO_HEARD = ["Hello from ROV 1", "LED on please", "ডুবুরি", "Depth 2.5 m, all OK", "আমি শুনছি", "Testing 1 2 3", "Turn left", "SOS"];
+class FakeBoard {
+  constructor(opts) {
+    this.node = opts.node; this.peer = opts.peer; this.autoHear = !!opts.autoHear;
+    this.emit = null; this.seq = 5; this.rxSeq = 9; this.mode = opts.mode || "air";
+    this.heat = 0; this.heatT = 0; this.busy = false; this.abort = false;
+    this.scopeTimer = null; this.hearing = false;
+    this.st = { pre: 0, ok: 0, crc: 0, q: 0 };
+  }
+  speed() { return window.__demoSpeed || 1; }
+  wait(ms) { return new Promise((r) => setTimeout(r, ms / this.speed())); }
+  now() { return performance.now() / 1000 * this.speed(); }
+  out(line) { if (this.emit) this.emit(line); }
+  start(emit) {
+    this.emit = emit; this.heatT = this.now();
+    this.boot();
+    if (this.autoHear) this.hearLoop();
+  }
+  stop() { this.emit = null; this.abort = true; clearInterval(this.scopeTimer); this.scopeTimer = null; }
+  P() { return AM.MODES[this.mode]; }
+  info() { const p = this.P(); return `INFO node=${this.node} peer=${this.peer} fw=2.0 mode=${this.mode} text_max=64 slot_ms=${p.slot_ms} pkt_ms=${p.pkt_ms} duty=${p.duty.toFixed(2)} burst_s=${p.burst_s.toFixed(1)}`; }
+  boot() {
+    this.out(`DUBURI modem node ${this.node} ready (${this.mode} mode). Tones 3000..8750 Hz, packet ${(this.P().pkt_ms / 1000).toFixed(2)} s`);
+    this.out("Commands: on|off|toggle|ping [id] ; send <cmd> <arg> [id] ; msg <text> ; sweep ; tone <Hz> <ms> ; scope ; stats ; info ; help");
+    this.out(this.info());
+  }
+  handle(line) {
+    if (!this.emit) return;
+    if (this.busy) { if (line.includes("!")) this.abort = true; return; }
+    const w = line.trim().split(/\s+/);
+    const c = (w[0] || "").toLowerCase();
+    if (c === "info") this.out(this.info());
+    else if (c === "mode") {
+      const m = (w[1] || "").toLowerCase();
+      if (m !== "air" && m !== "water") { this.out(`ERR usage: mode air|water (now ${this.mode})`); return; }
+      if (this.hearing) this.out("ERR busy receiving, try again");
+      else { this.mode = m; this.out(`MODE ${m} saved`); }
+      this.out(this.info());
+    } else if (c === "msghex") {
+      const dst = +w[1], rep = +w[2], h = w[3] || "";
+      if (!(dst >= 1 && dst <= 15) || !(rep >= 1 && rep <= 3) || !/^([0-9a-fA-F]{2})+$/.test(h)) { this.out("ERR usage: msghex <dst 1..15> <repeats 1..3> <hex>"); return; }
+      const bytes = hexToBytes(h);
+      if (bytes.length > 64) { this.out("ERR too long (max 64 bytes)"); return; }
+      if (bytes.includes(0)) { this.out("ERR byte 00 is not allowed"); return; }
+      this.sendText(dst, rep, bytes);
+    } else if (c === "msg") {
+      const t = line.replace(/^\s*msg\s?/, "");
+      const bytes = Array.from(utf8(t));
+      if (!bytes.length) { this.out("ERR empty message"); return; }
+      if (bytes.length > 64) { this.out("ERR too long (max 64 bytes)"); return; }
+      this.sendText(this.peer, 1, bytes);
+    } else if (c === "scope") {
+      const on = w[1] === "on" ? true : w[1] === "off" ? false : !this.scopeTimer;
+      clearInterval(this.scopeTimer); this.scopeTimer = null;
+      if (on) this.scopeTimer = setInterval(() => this.scopeLine(), 250 / this.speed());
+    } else if (c === "stats") {
+      const s = this.st, loud = this.hearing;
+      this.out(`STATS node=${this.node} preambles=${s.pre} ok=${s.ok} crc_fail=${s.crc} last_q=${s.q.toFixed(1)}dB timing_adj=0.4`);
+      this.out("ADC fs_measured=50612.3 fs_used=50612.0 overflows=0 clipped=0");
+      const rms = loud ? 140 + Math.random() * 40 : 35 + Math.random() * 10;
+      this.out(`LEVEL mean=1652 rms=${rms.toFixed(1)} min=${Math.round(1652 - rms * 3)} max=${Math.round(1652 + rms * 3)} (want rms 20..300, min>100, max<3900)`);
+    } else if (c === "tone") {
+      const hz = +w[1], ms = +w[2];
+      if (!(hz >= 100 && hz <= 20000 && ms >= 1 && ms <= 5000)) { this.out("usage: tone <100..20000 Hz> <1..5000 ms>"); return; }
+      this.out(`TONE ${hz} Hz (real ${hz} Hz) for ${ms} ms`);
+    } else if (c === "sweep") {
+      this.out("SWEEP: each tone 300 ms. Watch 'scope' on the other vehicle.");
+      (async () => { this.busy = true; for (let i = 0; i < 24 && this.emit && !this.abort; i++) { this.out(`SWEEP tone ${i} = ${AM.toneHz(i)} Hz`); await this.wait(450); } this.busy = false; this.abort = false; })();
+    } else if (["on", "off", "toggle", "ping"].includes(c)) {
+      const id = w[1] ? +w[1] : this.peer;
+      (async () => { this.busy = true; for (let t = 1; t <= 3 && this.emit; t++) { this.out(`TX to=${id} seq=${this.seq} cmd=1 arg=0 (try ${t}/3)`); await this.wait(1500); this.out("   no reply"); } this.out(`FAIL no reply from ${id}`); this.busy = false; })();
+    } else this.out("Commands: on|off|toggle|ping [id] ; send <cmd> <arg> [id] ; msg <text> ; sweep ; tone <Hz> <ms> ; scope ; stats ; info ; help");
+  }
+  scopeLine() {
+    const v = [];
+    for (let i = 0; i < 24; i++) v.push(Math.round(Math.random() * 4 - 1));
+    if (this.hearing) { const k = Math.floor(Math.random() * 24); v[k] = 14 + Math.round(Math.random() * 10); }
+    this.out(`SCOPE ${v.join(" ")}  rms=${this.hearing ? 150 : 38}`);
+  }
+  async heatGuard(T) {
+    const d = this.P().duty, B = this.P().burst_s * (1 - d), t = this.now();
+    this.heat = Math.max(0, this.heat - (t - this.heatT) * d); this.heatT = t;
+    const need = this.heat + T * (1 - d) - B;
+    if (need > 0) {
+      const ms = Math.round(need / d * 1000);
+      this.out(`HEAT-GUARD wait ${ms} ms`);
+      await this.wait(ms);
+      this.heat = Math.max(0, this.heat - need);
+    }
+  }
+  heatAdd(T) { this.heat += T * (1 - this.P().duty); this.heatT = this.now(); }
+  async sendText(dst, rep, bytes) {
+    this.busy = true; this.abort = false;
+    const pk = textPackets(bytes, dst, this.node, this.seq);
+    const t0 = this.now();
+    this.out(`TXMSG dst=${dst} len=${bytes.length} n=${pk.length} rep=${rep}`);
+    for (const p of pk) {
+      for (let tr = 1; tr <= rep; tr++) {
+        if (this.abort || !this.emit) { this.out(`TXABORT i=${p.i} n=${pk.length}`); this.busy = false; this.abort = false; return; }
+        const T = this.P().pkt_ms / 1000;
+        await this.heatGuard(T);
+        const data = hex2(p.b0) + (p.nb === 2 ? hex2(p.b1) : "");
+        this.out(`TXPKT i=${p.i} n=${pk.length} try=${tr} seq=${p.seq} flags=${(p.flags).toString(16).toUpperCase()} data=${data} tones=${amTones(p.frame).join(",")}`);
+        await this.wait(T * 1000);
+        this.heatAdd(T);
+        if (!(p.i === pk.length && tr === rep)) await this.wait(AM.GAP_S * 1000);
+      }
+    }
+    this.seq = (this.seq + pk.length) & 15;
+    this.out(`TXDONE n=${pk.length} ms=${Math.round((this.now() - t0) * 1000)}`);
+    this.busy = false;
+  }
+  async hearLoop() {
+    await this.wait(2500);
+    while (this.emit) {
+      if (this.busy) { await this.wait(1000); continue; }
+      const text = DEMO_HEARD[Math.floor(Math.random() * DEMO_HEARD.length)];
+      const bytes = Array.from(utf8(text));
+      const pk = textPackets(bytes, this.node, this.peer, this.rxSeq);
+      this.rxSeq = (this.rxSeq + pk.length) & 15;
+      const got = [], qs = [];
+      const rep = Math.random() < 0.3 ? 2 : 1;               /* sometimes the sender repeats each packet */
+      let lost = 0, heat = 0;
+      for (const p of pk) {
+        let have = false;
+        for (let tr = 1; tr <= rep; tr++) {
+          if (!this.emit) return;
+          const P = this.P(), T = P.pkt_ms / 1000;
+          this.hearing = true;
+          await this.wait(10 * P.slot_ms);
+          this.st.pre++; this.out(`DET n=${this.st.pre}`);
+          await this.wait(54 * P.slot_ms);
+          this.hearing = false;
+          const middle = p.i > 1 && p.i < pk.length;
+          if (middle && Math.random() < (rep > 1 ? 0.3 : 0.12)) {
+            this.st.crc++; this.out(`CRCFAIL n=${this.st.crc}`);
+          } else if (have) {
+            this.st.ok++; this.out(`REPEAT src=${this.peer} seq=${p.seq} (dropped)`);
+          } else {
+            const q = Math.max(4, 12 + (Math.random() + Math.random() + Math.random() - 1.5) * 5);
+            this.st.ok++; this.st.q = q; qs.push(q); have = true;
+            const data = hex2(p.b0) + (p.nb === 2 ? hex2(p.b1) : "");
+            this.out(`TXT src=${this.peer} dst=${this.node} seq=${p.seq} first=${p.i === 1 ? 1 : 0} last=${p.i === pk.length ? 1 : 0} data=${data} q=${q.toFixed(1)}`);
+            got.push(p.b0); if (p.nb === 2) got.push(p.b1);
+          }
+          heat = Math.max(0, heat - AM.GAP_S * P.duty) + T * (1 - P.duty);
+          const lim = (P.burst_s - T) * (1 - P.duty);
+          const rest = heat > lim ? (heat - lim) / P.duty : 0;
+          heat -= rest * P.duty;
+          await this.wait((AM.GAP_S + rest) * 1000);
+        }
+        if (!have) { lost++; got.push(null, null); }
+      }
+      const hex = got.map((b) => (b === null ? "__" : hex2(b))).join("");
+      const human = got.map((b) => (b === null ? 63 : b < 32 ? 46 : b));
+      const txt = new TextDecoder().decode(new Uint8Array(human));
+      const qa = qs.length ? qs.reduce((a, b) => a + b, 0) / qs.length : 0;
+      this.out(`MSG src=${this.peer} dst=${this.node} ok=${lost ? 0 : 1} lost=${lost} len=${got.length} q=${qa.toFixed(1)} hex=${hex} text=${txt}`);
+      await this.wait(5000 + Math.random() * 4000);
+    }
+  }
+}
+class DemoLink {
+  constructor(onLine, onClose, opts) { this.onLine = onLine; this.onClose = onClose; this.isDemo = true; this.board = new FakeBoard(opts); }
+  async connect() { this.board.start((l) => setTimeout(() => this.onLine(l), 0)); }
+  send(line) { setTimeout(() => this.board.handle(line), 5); return Promise.resolve(); }
+  async reset() { const b = this.board; b.stop(); await sleep(300); this.board = new FakeBoard({ node: b.node, peer: b.peer, autoHear: b.autoHear, mode: b.mode }); this.board.start((l) => setTimeout(() => this.onLine(l), 0)); }
+  async disconnect() { this.board.stop(); }
+}
+
+/* ---------- Log panel ---------- */
+class LogPanel {
+  constructor() {
+    this.box = $("logBox"); this.count = 0; this.max = 600;
+    $("logClear").onclick = () => { this.box.textContent = ""; this.count = 0; this._n(); };
+  }
+  _n() { $("logCount").textContent = this.count + (this.count === 1 ? " line" : " lines"); }
+  add(text, cls) {
+    const isStatus = cls === "s";
+    if (isStatus && !$("logStatus").checked) return;
+    const d = document.createElement("div");
+    if (cls) d.className = cls;
+    const t = new Date();
+    d.innerHTML = `<span class="t">${t.toTimeString().slice(0, 8)}</span>` + esc(text);
+    this.box.appendChild(d);
+    this.count++;
+    while (this.box.childNodes.length > this.max) this.box.removeChild(this.box.firstChild);
+    if ($("logScroll").checked) this.box.scrollTop = this.box.scrollHeight;
+    this._n();
+  }
+}
+
+/* ---------- Connection controller (header buttons, banners, link) ---------- */
+class Conn {
+  constructor({ demoOpts, onLine, onState, errBanner }) {
+    this.demoOpts = demoOpts; this.onLineCb = onLine; this.onState = onState; this.errBanner = !!errBanner;
+    this.link = null; this.state = "off"; this.node = null; this.log = new LogPanel();
+    this.mode = null; this.info = null; this.pendingMode = null; this.busy = false; this.errT = null;
+    for (const b of document.querySelectorAll(".segbtn")) b.onclick = () => this.askMode(b.dataset.mode);
+    this.hasSerial = "serial" in navigator;
+    $("noSerialBanner").hidden = this.hasSerial;
+    $("btnConnect").onclick = () => this.connectReal();
+    $("btnDisconnect").onclick = () => this.disconnect();
+    $("btnReset").onclick = () => this.reset();
+    $("demoToggle").onchange = (e) => this.setDemo(e.target.checked);
+    $("cmdForm").onsubmit = (e) => { e.preventDefault(); const v = $("cmdInput").value.trim(); if (v) { this.send(v); $("cmdInput").value = ""; } };
+    if (!this.hasSerial) $("btnConnect").disabled = true;
+    this._render(true);
+  }
+  get connected() { return this.state === "on" || this.state === "demo"; }
+  _err(msg) { const b = $("connError"); b.innerHTML = msg; b.hidden = !msg; }
+  _render(skipCallback) {
+    const p = $("connPill");
+    p.className = "pill" + (this.state === "off" ? "" : " " + this.state);
+    p.textContent = this.state === "on" ? "Connected" + (this.node != null ? " · node " + this.node : "")
+      : this.state === "demo" ? "Demo board" + (this.node != null ? " · node " + this.node : "")
+      : this.state === "lost" ? "Board disconnected" : "Not connected";
+    $("btnConnect").hidden = this.state === "on" || this.state === "demo";
+    $("btnDisconnect").hidden = this.state !== "on";
+    $("btnReset").hidden = !this.connected;
+    $("demoBanner").hidden = this.state !== "demo";
+    $("demoToggle").checked = this.state === "demo";
+    $("btnConnect").disabled = !this.hasSerial;
+    this._renderMode();
+    if (!skipCallback) this.onState(this.state);
+  }
+  setNode(n) { this.node = n; this._render(); }
+  setBusy(b) { this.busy = b; this._renderMode(); }
+  askMode(m) {
+    if (!this.connected || this.busy || m === this.mode) return;
+    this.pendingMode = m; this._renderMode();
+    this.send("mode " + m);
+    clearTimeout(this.modeT);
+    this.modeT = setTimeout(() => { this.pendingMode = null; this._renderMode(); }, 4000);
+  }
+  _renderMode() {
+    const c = this.connected;
+    for (const b of document.querySelectorAll(".segbtn")) {
+      b.disabled = !c || this.busy;
+      b.classList.toggle("active", c && b.dataset.mode === this.mode);
+      b.classList.toggle("pending", b.dataset.mode === this.pendingMode);
+    }
+    const lp = linkParams(this.info);
+    const d = $("modeDesc");
+    if (!c) d.innerHTML = "Mode unknown · connect the board to see it.";
+    else if (this.pendingMode) d.innerHTML = `Switching to <b>${AM.MODES[this.pendingMode].label}</b>…`;
+    else if (!this.mode) d.innerHTML = "Mode unknown · waiting for the board's INFO line.";
+    else d.innerHTML = `Board is in <b>${AM.MODES[this.mode].label}</b> mode (${AM.MODES[this.mode].what}) · ${lp.slot} ms per tone · ${(lp.pkt / 1000).toFixed(2)} s per packet`;
+  }
+  _line(line) {
+    const m = parseLine(line);
+    this.log.add(line, m.kind === "ERR" ? "e" : STATUS_KINDS.has(m.kind) ? "s" : "");
+    if (m.kind === "INFO") {
+      this.info = m.f; this.mode = AM.MODES[m.f.mode] ? m.f.mode : null;
+      this.pendingMode = null; clearTimeout(this.modeT);
+      if (m.f.node !== undefined) this.setNode(+m.f.node); else this._renderMode();
+    }
+    if (m.kind === "ERR") {
+      if (this.pendingMode) { this.pendingMode = null; this._renderMode(); }
+      if (this.errBanner) {
+        const b = $("boardErr"); b.textContent = "Board says: " + (m.rest || m.raw); b.hidden = false;
+        clearTimeout(this.errT); this.errT = setTimeout(() => { b.hidden = true; }, 10000);
+      }
+    }
+    this.onLineCb(m);
+  }
+  _closed(reason) {
+    this.link = null; this.node = null; this.info = null; this.mode = null; this.pendingMode = null; this.state = "lost"; this._render();
+    this._err("<b>Board disconnected.</b> " + esc(reason) + " Plug it in again and press <b>Connect board</b>.");
+  }
+  async connectReal() {
+    this._err("");
+    if (this.link) await this.disconnect();
+    const link = new SerialLink((l) => this._line(l), (r) => this._closed(r));
+    try {
+      await link.connect();
+    } catch (e) {
+      if (e && e.name === "NotFoundError") return;           /* user closed the port chooser */
+      this._err("<b>Could not open the board.</b> Close the Arduino IDE Serial Monitor (or any other program using the port) and try again. " +
+        "If the board is not in the list, install the USB driver (CP210x or CH340) and use a data USB cable. <span class=\"mono\">(" + esc(e && e.message ? e.message : e) + ")</span>");
+      return;
+    }
+    this.link = link; this.state = "on"; this._render();
+    this.log.add("connected to USB serial port at 115200 baud", "o");
+    this._askInfo();
+  }
+  async _askInfo() {
+    await sleep(300); this.send("info");
+    await sleep(1700); if (this.connected && this.node == null) this.send("info");
+  }
+  async setDemo(on) {
+    this._err("");
+    if (this.link) await this.disconnect(true);
+    if (!on) { this.state = "off"; this._render(); return; }
+    this.link = new DemoLink((l) => this._line(l), (r) => this._closed(r), this.demoOpts);
+    await this.link.connect();
+    this.state = "demo"; this._render();
+    this.log.add("demo board started (pretend ESP32)", "o");
+  }
+  async disconnect(quiet) {
+    const l = this.link;
+    this.link = null; this.node = null; this.info = null; this.mode = null; this.pendingMode = null;
+    if (l) await l.disconnect();
+    this.state = "off";
+    if (!quiet) this._render();
+  }
+  async reset() {
+    if (!this.link) return;
+    this.node = null; this.info = null; this.mode = null; this._render();
+    this.log.add("reset board", "o");
+    try { await this.link.reset(); } catch (e) { this._err("Reset failed: " + esc(e.message || e)); }
+    this._askInfo();
+  }
+  send(line, quiet) {
+    if (!this.link) return false;
+    this.log.add("› " + line, quiet ? "s" : "o");
+    this.link.send(line);
+    return true;
+  }
+}
+function scopeLabelsHtml() {
+  let h = "";
+  for (let i = 0; i < 24; i++) h += `<span>${i % 4 === 0 ? (AM.toneHz(i) / 1000).toFixed(0) + "k" : ""}</span>`;
+  return h;
+}
+function renderScope(container, vals) {
+  if (container.children.length !== 24) container.innerHTML = Array.from({ length: 24 }, (_, i) => `<div class="bar" title="${AM.toneHz(i)} Hz"></div>`).join("");
+  for (let i = 0; i < 24; i++) {
+    const v = vals[i] === undefined ? 0 : vals[i];
+    const b = container.children[i];
+    const pct = Math.max(2, Math.min(100, (v + 5) / 35 * 100));
+    b.style.height = pct + "%";
+    b.classList.toggle("hot", v >= 10);
+    b.title = `${AM.toneHz(i)} Hz: ${v} dB above noise`;
+  }
+}
+/* ===== COMMON JS END ===== */
+
+/* =================== Receiver page =================== */
+const R = {
+  info: null, partial: null, msgs: [], c: { msgs: 0, ok: 0, bad: 0, det: 0 },
+  pts: [], scopeOn: false, flashT: null, poll: null, lastTxt: null,
+};
+const LP = () => linkParams(R.info);
+const dataMs = () => 54 * LP().slot;                         /* data part of a packet */
+
+const conn = new Conn({ demoOpts: { node: 2, peer: 1, autoHear: true }, onLine, onState, errBanner: true });
+$("scopeLabels").innerHTML = scopeLabelsHtml();
+renderScope($("scopeBars"), []);
+$("btnScope").onclick = () => setScope(!R.scopeOn, true);
+$("btnCsv").onclick = downloadCsv;
+
+function setScope(on, send) {
+  R.scopeOn = on;
+  if (send) conn.send(on ? "scope on" : "scope off");
+  $("btnScope").textContent = on ? "Stop live tone bars" : "Show live tone bars";
+  if (!on) renderScope($("scopeBars"), []);
+}
+
+function onState(st) {
+  const c = st === "on" || st === "demo";
+  $("btnScope").disabled = !c;
+  clearInterval(R.poll); R.poll = null;
+  if (c) {
+    R.poll = setInterval(() => { if (conn.connected) conn.send("stats", true); }, 3000);
+    setTimeout(() => { if (conn.connected) conn.send("stats", true); }, 800);
+    $("listenChip").className = "chip good"; $("listenChip").textContent = "listening";
+    setArrive("Listening… waiting for the sender.", "live");
+  } else {
+    R.info = null; setScope(false, false);
+    $("pktSub").textContent = "Each packet is a short burst of 64 tones and carries 2 bytes of text.";
+    $("listenChip").className = "chip"; $("listenChip").textContent = st === "lost" ? "disconnected" : "not connected";
+    setArrive("Connect the board to start listening.", "");
+  }
+}
+
+function setArrive(text, dot, barMs) {
+  $("arriveText").textContent = text;
+  $("arriveDot").className = "dot" + (dot ? " " + dot : "");
+  const bar = $("arriveBar");
+  bar.style.transition = "none"; bar.style.width = "0";
+  if (barMs) { void bar.offsetWidth; bar.style.transition = `width ${barMs}ms linear`; bar.style.width = "100%"; }
+}
+function flash(cls) {
+  const a = $("arrive");
+  a.classList.remove("flash", "okflash"); void a.offsetWidth; a.classList.add(cls);
+  clearTimeout(R.flashT); R.flashT = setTimeout(() => a.classList.remove(cls), 1200);
+}
+
+/* How many bytes at the end of `b` are an unfinished UTF-8 letter (0..3)? */
+function utf8TailCut(b) {
+  for (let k = 1; k <= Math.min(3, b.length); k++) {
+    const x = b[b.length - k];
+    if (x === null || x < 0x80) return 0;
+    if (x >= 0xC0) { const need = x >= 0xF0 ? 4 : x >= 0xE0 ? 3 : 2; return need > k ? k : 0; }
+  }
+  return 0;
+}
+/* bytes (null = lost) -> HTML: decode runs of real bytes as UTF-8, lost bytes as red "?".
+   holdTail: keep back an unfinished letter (its next byte is still on the way). */
+function bytesHtml(bytes, holdTail) {
+  const cut = holdTail ? utf8TailCut(bytes) : 0;
+  if (cut) bytes = bytes.slice(0, bytes.length - cut);
+  let h = "", run = [];
+  const flush = () => { if (run.length) { h += esc(new TextDecoder("utf-8").decode(new Uint8Array(run))); run = []; } };
+  for (const b of bytes) {
+    if (b === null) { flush(); h += '<span class="lost" title="lost byte">?</span>'; }
+    else run.push(b);
+  }
+  flush();
+  return h;
+}
+function bytesPlain(bytes) {
+  let s = "", run = [];
+  const flush = () => { if (run.length) { s += new TextDecoder("utf-8").decode(new Uint8Array(run)); run = []; } };
+  for (const b of bytes) { if (b === null) { flush(); s += "?"; } else run.push(b); }
+  flush();
+  return s;
+}
+
+function counters() {
+  const c = R.c;
+  $("cMsgs").textContent = c.msgs; $("cOk").textContent = c.ok; $("cBad").textContent = c.bad; $("cDet").textContent = c.det;
+  const tot = c.ok + c.bad;
+  const pct = tot ? Math.round(c.ok / tot * 100) : null;
+  const el = $("cPct");
+  el.innerHTML = pct === null ? "—" : pct + "<small> %</small>";
+  el.className = "val" + (pct === null ? "" : pct >= 90 ? " good" : pct >= 70 ? " warn" : " bad");
+}
+
+function renderPartial() {
+  const p = R.partial;
+  if (!p) { $("partialLabel").textContent = "Message being received"; $("partialText").innerHTML = '<span class="empty">Nothing yet.</span>'; return; }
+  const n = p.pkts, lostN = p.bytes.filter((b) => b === null).length;
+  $("partialLabel").innerHTML = `From node ${p.src} · ${n} packet${n > 1 ? "s" : ""} so far` +
+    (lostN ? ` · <span class="chip bad">${lostN} bytes lost</span>` : "") +
+    (p.startLost ? ' <span class="chip warn">start missed</span>' : "") +
+    (p.done ? ' <span class="chip good">last packet in</span>' : "");
+  $("partialText").innerHTML = bytesHtml(p.bytes, !p.done) + (p.done ? "" : '<span class="cursor"></span>');
+}
+
+function onTxt(m) {
+  const src = +m.f.src, seq = +m.f.seq, q = parseFloat(m.f.q);
+  const data = hexToBytes(m.f.data || "").filter((b) => b !== null);
+  const now = performance.now();
+  const dup = R.lastTxt && R.lastTxt.src === src && R.lastTxt.seq === seq && now - R.lastTxt.t < 6000;
+  R.lastTxt = { src, seq, t: now };
+  if (dup) return false;                                   /* a repeated copy of the same packet */
+  let p = R.partial;
+  if (m.f.first === "1" || !p || p.src !== src || p.done) {
+    p = R.partial = { src, bytes: [], exp: seq, pkts: 0, startLost: m.f.first !== "1", done: false };
+  }
+  if (seq !== p.exp) { const gap = (seq - p.exp) & 15; for (let i = 0; i < 2 * gap; i++) p.bytes.push(null); }
+  p.bytes.push(...data);
+  p.exp = (seq + 1) & 15; p.pkts++;
+  if (m.f.last === "1") p.done = true;
+  renderPartial();
+  const bits = data.map((b) => `<b>${hex2(b)}</b> ${bin8(b)}`).join(" &nbsp; ");
+  $("lastPkt").innerHTML = `<span>Last packet:</span><span class="chip ${qBand(q)}">q ${isNaN(q) ? "?" : q.toFixed(1)} dB · ${qWord(q)}</span>` +
+    `<span>seq ${seq}${m.f.first === "1" ? " · first" : ""}${m.f.last === "1" ? " · last" : ""}</span><span class="mono">${bits}</span>`;
+  return true;
+}
+
+function addMessage(m) {
+  const bytes = hexToBytes(m.f.hex || "");
+  const msg = {
+    t: new Date(), src: +m.f.src, dst: +m.f.dst, ok: m.f.ok === "1", lost: +m.f.lost || 0,
+    q: parseFloat(m.f.q), bytes, hex: m.f.hex || "", text: bytesPlain(bytes),
+  };
+  R.msgs.push(msg); R.c.msgs++;
+  $("msgCount").textContent = R.msgs.length;
+  $("btnCsv").disabled = false;
+  const list = $("msgList");
+  if (list.querySelector(".emptybig")) list.innerHTML = "";
+  const d = document.createElement("div");
+  d.className = "msg new";
+  const status = msg.ok ? '<span class="chip good">complete</span>'
+    : `<span class="chip warn">${msg.lost ? msg.lost + " packet" + (msg.lost > 1 ? "s" : "") + " lost" : "incomplete"}</span>`;
+  const qc = isNaN(msg.q) ? "" : `<span class="chip ${qBand(msg.q)}">q ${msg.q.toFixed(1)} dB · ${qWord(msg.q)}</span>`;
+  d.innerHTML = `<div class="mhead"><span class="time">${msg.t.toTimeString().slice(0, 8)}</span><span>from node ${msg.src} → ${msg.dst}</span>${status}${qc}` +
+    `<button class="btn small copy">Copy</button></div><div class="mtext">${bytesHtml(bytes) || '<span class="empty">(empty)</span>'}</div>` +
+    `<details class="mhex"><summary>show bytes (${bytes.length})</summary><div class="mono">${bytes.map((b) => (b === null ? "__" : hex2(b))).join(" ")}</div></details>`;
+  d.querySelector(".copy").onclick = (e) => copyText(msg.text, e.target);
+  list.prepend(d);
+}
+
+async function copyText(text, btn) {
+  try { await navigator.clipboard.writeText(text); }
+  catch (_) {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (__) { /* ignore */ }
+    ta.remove();
+  }
+  const old = btn.textContent; btn.textContent = "Copied"; setTimeout(() => { btn.textContent = old; }, 1200);
+}
+
+function csvCell(v) { const s = String(v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function downloadCsv() {
+  const rows = [["time", "from", "to", "complete", "lost_packets", "bytes", "q_db", "text", "hex"]];
+  for (const m of R.msgs) rows.push([m.t.toISOString(), m.src, m.dst, m.ok ? 1 : 0, m.lost, m.bytes.length, isNaN(m.q) ? "" : m.q.toFixed(1), m.text, m.hex]);
+  const csv = "﻿" + rows.map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = "duburi_messages_" + new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-") + ".csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+function onLevel(f) {
+  const mean = +f.mean, rms = parseFloat(f.rms), mn = +f.min, mx = +f.max;
+  if ([mean, rms, mn, mx].some((v) => isNaN(v))) return;
+  const pct = (v) => Math.max(0, Math.min(100, v / 4095 * 100));
+  $("lvRange").hidden = false; $("lvMean").hidden = false;
+  $("lvRange").style.left = pct(mn) + "%"; $("lvRange").style.width = Math.max(0.6, pct(mx) - pct(mn)) + "%";
+  $("lvMean").style.left = pct(mean) + "%";
+  $("levelNums").textContent = `average ${mean} · swing rms ${rms.toFixed(1)} · min ${mn} · max ${mx}  (good: rms 20–300, min above 100, max below 3900)`;
+  let cls, word, adv;
+  if (mx >= 3900 || mn <= 100) { cls = "bad"; word = "clipping"; adv = "Too loud: the signal hits the top or bottom of the ADC. Turn down the sender volume or the microphone gain, or move the speaker further away."; }
+  else if (rms < 20) { cls = "warn"; word = "too quiet"; adv = "Very quiet. That is normal when nothing is playing. If a packet is playing now, move closer, turn up the sender volume, or raise the microphone gain."; }
+  else if (rms > 300) { cls = "warn"; word = "very loud"; adv = "Loud but not clipping yet. Lower the volume a little if packets fail."; }
+  else { cls = "good"; word = "OK"; adv = "Level is fine."; }
+  $("levelStatus").className = "chip " + cls; $("levelStatus").textContent = word;
+  $("levelAdvice").className = "hint " + cls; $("levelAdvice").textContent = adv;
+}
+
+function onLine(m) {
+  switch (m.kind) {
+    case "INFO": {
+      R.info = m.f;
+      const lp = LP();
+      $("pktSub").textContent = `Each packet is ${(lp.pkt / 1000).toFixed(2)} s of tones (64 tones × ${lp.slot} ms) and carries 2 bytes of text.`;
+      break;
+    }
+    case "REPEAT":
+      R.c.ok++;
+      setArrive(`Repeated copy of packet seq ${m.f.seq} from node ${m.f.src}: already have it, ignored. Listening…`, "live");
+      $("listenChip").className = "chip good"; $("listenChip").textContent = "listening";
+      break;
+    case "DET":
+      R.c.det++;
+      setArrive("Packet arriving… (tones are coming in)", "rx", dataMs());
+      $("listenChip").className = "chip warn"; $("listenChip").textContent = "receiving";
+      break;
+    case "CRCFAIL":
+      R.c.bad++; R.pts.push({ bad: true });
+      setArrive("Damaged packet: it failed the CRC check. Its 2 bytes will show as lost (red ?).", "live");
+      flash("flash");
+      $("listenChip").className = "chip good"; $("listenChip").textContent = "listening";
+      drawChart();
+      break;
+    case "TXT": {
+      const fresh = onTxt(m);
+      const q = parseFloat(m.f.q);
+      R.c.ok++; R.pts.push({ q });
+      setArrive(`Packet received ✓ seq ${m.f.seq}, q ${isNaN(q) ? "?" : q.toFixed(1)} dB (${qWord(q)})${fresh ? "" : " (repeat copy)"}. Listening…`, "live");
+      flash("okflash");
+      $("listenChip").className = "chip good"; $("listenChip").textContent = "listening";
+      drawChart();
+      break;
+    }
+    case "MSG":
+      addMessage(m);
+      if (R.partial && R.partial.src === +m.f.src) R.partial = null;
+      renderPartial();
+      setArrive(`Message from node ${m.f.src} finished` + (m.f.ok === "1" ? " ✓" : ` (${m.f.lost} packet${+m.f.lost === 1 ? "" : "s"} lost)`) + ". Listening…", "live");
+      break;
+    case "RX": case "ACK": case "RXOTHER": {
+      const q = parseFloat(m.f.q);
+      R.c.ok++; if (!isNaN(q)) R.pts.push({ q });
+      const what = m.kind === "ACK" ? `ACK from node ${m.f.src}` : m.kind === "RXOTHER" ? `packet for node ${m.f.dst} (not this board)` : `command packet from node ${m.f.src}: cmd ${m.f.cmd}, arg ${m.f.arg}`;
+      setArrive(`Received ${what}. Listening…`, "live");
+      $("listenChip").className = "chip good"; $("listenChip").textContent = "listening";
+      drawChart();
+      break;
+    }
+    case "SCOPE":
+      if (m.vals && m.vals.length) { if (!R.scopeOn) setScope(true, false); renderScope($("scopeBars"), m.vals); }
+      break;
+    case "LEVEL": onLevel(m.f); break;
+    case "STATS":
+      $("boardTotals").textContent = `Board totals since power-on: ${m.f.preambles} heard, ${m.f.ok} OK, ${m.f.crc_fail} damaged, last q ${m.f.last_q || "—"}.`;
+      break;
+    default: break;
+  }
+  counters();
+}
+
+/* ---------- link-quality chart ---------- */
+function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function drawChart() {
+  const cv = $("qChart"), dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth, H = cv.clientHeight;
+  if (!W || !H) return;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  const g = cv.getContext("2d");
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, W, H);
+  const L = 40, Rr = 58, T = 10, B = 24;
+  const pts = R.pts.slice(-60);
+  const qmax = Math.max(25, ...pts.filter((p) => !p.bad).map((p) => Math.ceil(p.q / 5) * 5));
+  const y = (q) => T + (H - T - B) * (1 - Math.max(0, Math.min(qmax, q)) / qmax);
+  const band = (a, b, col) => { g.fillStyle = col; g.fillRect(L, y(b), W - L - Rr, y(a) - y(b)); };
+  band(10, qmax, cssVar("--good-soft")); band(7, 10, cssVar("--warn-soft")); band(0, 7, cssVar("--bad-soft"));
+  g.font = "11px system-ui, sans-serif"; g.textBaseline = "middle"; g.textAlign = "left";
+  g.fillStyle = cssVar("--good"); g.fillText("good ≥10", W - Rr + 6, y((10 + qmax) / 2));
+  g.fillStyle = cssVar("--warn"); g.fillText("OK 7–10", W - Rr + 6, y(8.5));
+  g.fillStyle = cssVar("--bad"); g.fillText("weak <7", W - Rr + 6, y(3.5));
+  g.strokeStyle = cssVar("--line"); g.lineWidth = 1; g.fillStyle = cssVar("--muted"); g.textAlign = "right";
+  for (let q = 0; q <= qmax; q += 5) { const yy = Math.round(y(q)) + 0.5; g.beginPath(); g.moveTo(L, yy); g.lineTo(W - Rr, yy); g.stroke(); g.fillText(q + "", L - 6, yy); }
+  g.save(); g.translate(11, (H - B + T) / 2); g.rotate(-Math.PI / 2); g.textAlign = "center"; g.fillText("q (dB)", 0, 0); g.restore();
+  g.textAlign = "center"; g.fillStyle = cssVar("--muted");
+  g.fillText(pts.length ? `last ${pts.length} packet${pts.length > 1 ? "s" : ""} →` : "", L + (W - L - Rr) / 2, H - 9);
+  if (!pts.length) { g.font = "13px system-ui, sans-serif"; g.fillText("No packets yet", L + (W - L - Rr) / 2, (H - B + T) / 2); return; }
+  const step = (W - L - Rr) / 60;
+  const x = (i) => L + step * (i + 0.5);
+  g.strokeStyle = cssVar("--accent"); g.lineWidth = 2; g.beginPath();
+  let started = false;
+  pts.forEach((p, i) => { if (p.bad) { started = false; return; } if (!started) { g.moveTo(x(i), y(p.q)); started = true; } else g.lineTo(x(i), y(p.q)); });
+  g.stroke();
+  pts.forEach((p, i) => {
+    if (p.bad) {
+      g.strokeStyle = cssVar("--bad"); g.lineWidth = 2; const cx = x(i), cy = y(1.5), r = 4;
+      g.beginPath(); g.moveTo(cx - r, cy - r); g.lineTo(cx + r, cy + r); g.moveTo(cx + r, cy - r); g.lineTo(cx - r, cy + r); g.stroke();
+    } else {
+      g.fillStyle = cssVar("--" + (p.q >= 10 ? "good" : p.q >= 7 ? "warn" : "bad"));
+      g.beginPath(); g.arc(x(i), y(p.q), 3.5, 0, Math.PI * 2); g.fill();
+    }
+  });
+}
+window.addEventListener("resize", drawChart);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawChart);
+drawChart();
+counters();
+</script>
+</body>
+</html>

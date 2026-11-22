@@ -1,0 +1,1260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DUBURI Sender</title>
+<style>
+/* ===== COMMON CSS START (keep identical in sender.html and receiver.html) ===== */
+:root {
+  --bg: #f3f5f8; --panel: #ffffff; --soft: #eef1f6; --soft2: #e6eaf1;
+  --ink: #152033; --muted: #5b6a80; --faint: #8a97aa; --line: #dde3eb;
+  --accent: #0a7c76; --accent-ink: #ffffff; --accent-soft: #dff1ef;
+  --pre: #d9891f; --pre-soft: #fbeedb;
+  --good: #1d8a4a; --good-soft: #def3e6; --warn: #a86a0c; --warn-soft: #fbefd6;
+  --bad: #c0362c; --bad-soft: #fbe1de; --demo: #6a4bc4; --demo-soft: #ece6fb;
+  --hdr: #ffffff; --shadow: 0 1px 2px rgba(20,32,51,.06), 0 4px 14px rgba(20,32,51,.05);
+  --air: #2d7fd3; --water: #164a8a;
+  --chipL: 42%; --chipBgA: .14; --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e131a; --panel: #151c26; --soft: #1b2430; --soft2: #222d3b;
+    --ink: #e5ecf5; --muted: #9aa8bb; --faint: #6f7d91; --line: #263243;
+    --accent: #2bb5ab; --accent-ink: #062321; --accent-soft: #123532;
+    --pre: #f0a445; --pre-soft: #3a2a12;
+    --good: #45c27a; --good-soft: #13301f; --warn: #e3a23b; --warn-soft: #362710;
+    --bad: #f0675b; --bad-soft: #3a1714; --demo: #a68cf5; --demo-soft: #261d42;
+    --hdr: #121922; --shadow: 0 1px 2px rgba(0,0,0,.3);
+    --air: #3b8fe6; --water: #2a64b8;
+    --chipL: 70%; --chipBgA: .18;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Bengali", "Nirmala UI", "Vrinda", sans-serif;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+.mono { font-family: var(--mono); }
+header.top {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 12px 22px; background: var(--hdr); border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 5;
+}
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.logo { width: 38px; height: 38px; flex: none; }
+.title { font-weight: 700; font-size: 17px; letter-spacing: .1px; }
+.role { color: var(--muted); font-size: 13px; }
+.conn { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pill {
+  display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 999px;
+  background: var(--soft); color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.pill.on { background: var(--good-soft); color: var(--good); }
+.pill.on::before { background: var(--good); }
+.pill.demo { background: var(--demo-soft); color: var(--demo); }
+.pill.demo::before { background: var(--demo); }
+.pill.lost { background: var(--bad-soft); color: var(--bad); }
+.pill.lost::before { background: var(--bad); }
+.btn {
+  border: 1px solid var(--line); background: var(--panel); border-radius: 9px; padding: 7px 13px;
+  cursor: pointer; font-weight: 600; font-size: 14px; white-space: nowrap;
+}
+.btn:hover:not(:disabled) { border-color: var(--faint); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.07); border-color: var(--accent); }
+.btn.primary:disabled { background: var(--soft2); border-color: var(--line); color: var(--faint); opacity: 1; }
+.btn.danger { color: var(--bad); }
+.btn.ghost { background: transparent; }
+.btn.small { padding: 4px 9px; font-size: 13px; border-radius: 7px; }
+.switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--muted); user-select: none; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch .track { width: 36px; height: 20px; border-radius: 999px; background: var(--soft2); position: relative; transition: background .15s; flex: none; }
+.switch .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+.switch input:checked + .track { background: var(--demo); }
+.switch input:checked + .track::after { transform: translateX(16px); }
+.switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.banner { margin: 12px 22px 0; padding: 10px 14px; border-radius: 10px; font-size: 14px; border: 1px solid transparent; }
+.banner b { font-weight: 700; }
+.banner.warn { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+.banner.bad { background: var(--bad-soft); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 30%, transparent); }
+.banner.demo { background: var(--demo-soft); color: var(--demo); border-color: color-mix(in srgb, var(--demo) 30%, transparent); }
+main.grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 18px; padding: 18px 22px 8px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: var(--shadow); min-width: 0; }
+.card h2 { margin: 0 0 4px; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.card h2 .count { margin-left: auto; }
+.card .sub { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+.hint { color: var(--muted); font-size: 13px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--soft); color: var(--muted); white-space: nowrap; }
+.chip.good { background: var(--good-soft); color: var(--good); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.chip.accent { background: var(--accent-soft); color: var(--accent); }
+.chip.pre { background: var(--pre-soft); color: var(--pre); }
+details.log > summary { cursor: pointer; font-weight: 700; font-size: 16px; list-style: none; display: flex; align-items: center; gap: 8px; }
+details.log > summary::-webkit-details-marker { display: none; }
+details.log > summary::before { content: "▸"; color: var(--muted); font-size: 13px; transition: transform .15s; display: inline-block; }
+details.log[open] > summary::before { transform: rotate(90deg); }
+.logtools { display: flex; align-items: center; gap: 12px; margin: 10px 0 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.logtools label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.logbox {
+  height: 220px; overflow: auto; background: var(--soft); border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px 10px; font: 12.5px/1.5 var(--mono); white-space: pre-wrap; word-break: break-all;
+}
+.logbox .o { color: var(--accent); }
+.logbox .e { color: var(--bad); }
+.logbox .s { color: var(--faint); }
+.logbox .t { color: var(--faint); margin-right: 8px; }
+.cmdform { display: flex; gap: 8px; margin-top: 8px; }
+.cmdform input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--panel); border-radius: 9px; padding: 7px 10px; font-family: var(--mono); font-size: 13px; }
+.scopebars { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; align-items: end; height: 110px; padding: 6px 4px 0; background: var(--soft); border-radius: 10px; border: 1px solid var(--line); position: relative; }
+.scopebars .bar { background: var(--faint); border-radius: 3px 3px 0 0; min-height: 2px; transition: height .2s ease, background .2s; opacity: .55; }
+.scopebars .bar.hot { background: var(--accent); opacity: 1; }
+.scopelabels { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; padding: 3px 4px 0; font-size: 11px; color: var(--muted); }
+.scopelabels span { text-align: center; white-space: nowrap; overflow: visible; }
+footer { color: var(--faint); font-size: 12px; padding: 4px 22px 22px; }
+.modebar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 12px 22px 0; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+.modelab { font-weight: 700; font-size: 14px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--soft); }
+.segbtn { border: 0; background: transparent; padding: 7px 14px; cursor: pointer; font-weight: 800; font-size: 14px; letter-spacing: .4px; color: var(--muted); display: inline-flex; align-items: baseline; gap: 6px; }
+.segbtn small { font-weight: 600; font-size: 12px; letter-spacing: 0; opacity: .85; }
+.segbtn + .segbtn { border-left: 1px solid var(--line); }
+.segbtn:disabled { cursor: not-allowed; opacity: .55; }
+.segbtn.active[data-mode="air"] { background: var(--air); color: #fff; opacity: 1; }
+.segbtn.active[data-mode="water"] { background: var(--water); color: #fff; opacity: 1; }
+.segbtn.pending { outline: 2px dashed var(--faint); outline-offset: -4px; }
+#modeDesc { font-size: 14px; }
+#modeDesc b { font-weight: 700; }
+.modenote { margin-left: auto; color: var(--warn); font-size: 13px; font-weight: 600; }
+@media (max-width: 1040px) { main.grid { grid-template-columns: minmax(0, 1fr); } }
+/* ===== COMMON CSS END ===== */
+
+/* ---- sender page ---- */
+.compose { display: flex; flex-direction: column; gap: 12px; }
+.msgrow { position: relative; }
+.msgrow input {
+  width: 100%; border: 1.5px solid var(--line); background: var(--panel); border-radius: 12px;
+  padding: 13px 14px; font-size: 19px; outline: none;
+}
+.msgrow input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.msgrow input.over { border-color: var(--bad); box-shadow: 0 0 0 3px var(--bad-soft); }
+.metaRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.meter { flex: 1; min-width: 120px; height: 6px; background: var(--soft2); border-radius: 99px; overflow: hidden; }
+.meter > i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 99px; transition: width .15s; }
+.meter.over > i { background: var(--bad); }
+#bytesCount { font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+#bytesCount.over { color: var(--bad); }
+.opts { display: flex; gap: 14px; flex-wrap: wrap; align-items: end; }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.field select { border: 1px solid var(--line); background: var(--panel); border-radius: 9px; padding: 7px 10px; min-width: 150px; font-weight: 500; color: var(--ink); }
+.sendrow { display: flex; gap: 8px; margin-left: auto; }
+.sendrow .btn { padding: 9px 18px; font-size: 15px; }
+#sendStatus { font-size: 14px; min-height: 20px; }
+#sendStatus.bad { color: var(--bad); font-weight: 600; }
+#sendStatus.good { color: var(--good); font-weight: 600; }
+
+.step { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; padding: 12px 0; border-top: 1px dashed var(--line); }
+.step:first-of-type { border-top: 0; padding-top: 4px; }
+.step .num { width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 800; font-size: 13px; display: grid; place-items: center; }
+.step h3 { margin: 1px 0 6px; font-size: 14px; }
+.step .why { color: var(--muted); font-size: 12.5px; margin: 0 0 8px; }
+.empty { color: var(--faint); font-size: 13px; font-style: italic; }
+.chars { display: flex; flex-wrap: wrap; gap: 6px; }
+.cchip {
+  --l: var(--chipL);
+  display: flex; flex-direction: column; align-items: center; min-width: 38px; padding: 4px 6px 3px; border-radius: 9px;
+  background: hsla(var(--h), 70%, 50%, var(--chipBgA)); border: 1px solid hsla(var(--h), 70%, 45%, .45);
+}
+.cchip .ch { font-size: 18px; line-height: 1.2; color: hsl(var(--h), 65%, var(--l)); font-weight: 600; }
+.cchip .hx { font: 11px/1.3 var(--mono); color: var(--muted); }
+.bits { display: flex; flex-wrap: wrap; gap: 4px 8px; font: 13px/1.5 var(--mono); }
+.bits .byte { color: hsl(var(--h), 65%, var(--chipL)); padding: 0 2px; border-bottom: 2px solid hsla(var(--h), 70%, 45%, .5); }
+.tablewrap { max-height: 330px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+table.pk { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.pk th { position: sticky; top: 0; background: var(--soft); text-align: left; font-weight: 700; color: var(--muted); font-size: 12px; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.pk td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.pk tr:last-child td { border-bottom: 0; }
+table.pk td.m { font-family: var(--mono); white-space: nowrap; }
+table.pk .fbits { font: 11.5px/1.5 var(--mono); }
+.fbits span { padding: 0 1px; display: inline-block; }
+.fbits .hdr { color: var(--muted); }
+.fbits .hdr2 { color: var(--faint); }
+.fbits .pad { color: var(--faint); text-decoration: line-through; }
+.fbits .crc { color: var(--demo); }
+.fbits .dat { color: hsl(var(--h), 65%, var(--chipL)); font-weight: 700; }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+.fec { margin-top: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.fec .arrow { color: var(--faint); }
+.air { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.air .big { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.txhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+#txTitle { font-weight: 700; }
+.progress { height: 8px; border-radius: 99px; background: var(--soft2); overflow: hidden; margin: 6px 0 12px; }
+.progress > i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 99px; }
+.rollwrap { position: relative; border: 1px solid var(--line); border-radius: 10px; background: var(--soft); overflow: hidden; }
+#roll { display: block; width: 100%; height: 250px; }
+.nowrow { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 10px; font-size: 14px; }
+.nowrow .freq { font-weight: 800; font-size: 20px; font-variant-numeric: tabular-nums; min-width: 92px; }
+.databits { font: 13px var(--mono); }
+.heat { margin-top: 10px; padding: 8px 12px; border-radius: 10px; background: var(--warn-soft); color: var(--warn); font-size: 14px; font-weight: 600; }
+.errbox { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--bad-soft); color: var(--bad); font-weight: 700; font-size: 14px; }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; }
+#miniScopeWrap { margin-top: 12px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 40 40" aria-hidden="true">
+      <rect x="1" y="1" width="38" height="38" rx="10" fill="var(--accent)"/>
+      <path d="M9 22c3-6 6-6 9 0s6 6 9 0" fill="none" stroke="var(--accent-ink)" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M27 12.5a10 10 0 0 1 0 15M30.5 9a15 15 0 0 1 0 22" fill="none" stroke="var(--accent-ink)" stroke-width="2.2" stroke-linecap="round" opacity=".75"/>
+    </svg>
+    <div>
+      <div class="title">DUBURI Acoustic Modem</div>
+      <div class="role">Sender · PC 1 · type text, the board plays it as tones</div>
+    </div>
+  </div>
+  <div class="conn">
+    <span id="connPill" class="pill">Not connected</span>
+    <button id="btnConnect" class="btn primary">Connect board</button>
+    <button id="btnDisconnect" class="btn" hidden>Disconnect</button>
+    <button id="btnReset" class="btn ghost" hidden title="Restart the ESP32 (like pressing EN)">Reset board</button>
+    <label class="switch" title="Try the page without a board"><input type="checkbox" id="demoToggle"><span class="track"></span><span>Demo (no board)</span></label>
+  </div>
+</header>
+<div id="noSerialBanner" class="banner warn" hidden><b>This browser cannot talk to the board.</b> Open this file in <b>Google Chrome</b> or <b>Microsoft Edge</b> on a computer (not a phone). Demo mode still works here.</div>
+<div id="demoBanner" class="banner demo" hidden><b>Demo mode:</b> a pretend board is answering, nothing is played on a real speaker. Turn Demo off and press <b>Connect board</b> to use your ESP32.</div>
+<div id="connError" class="banner bad" hidden></div>
+<div id="boardErr" class="banner bad" hidden></div>
+<div class="modebar">
+  <span class="modelab">Medium</span>
+  <div class="seg" role="group" aria-label="Medium (mode)">
+    <button class="segbtn" id="modeAir" data-mode="air" disabled title="Speaker and microphone in a room">AIR <small>room</small></button>
+    <button class="segbtn" id="modeWater" data-mode="water" disabled title="Speaker box and hydrophone in a pool">WATER <small>pool</small></button>
+  </div>
+  <span id="modeDesc">Mode unknown · connect the board to see it.</span>
+  <span class="modenote">Both boards must be in the same mode.</span>
+</div>
+
+<main class="grid">
+  <section class="col">
+    <div class="card">
+      <h2>1 · Type your message</h2>
+      <p class="sub">Up to 64 bytes. English letters are 1 byte each, Bangla letters are 3 bytes each.</p>
+      <div class="compose">
+        <div class="msgrow"><input id="msg" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. Hello DUBURI" aria-label="Message to send"></div>
+        <div class="metaRow">
+          <span><span id="bytesCount">0 / 64 bytes</span> · <span id="pktCount">0 packets</span></span>
+          <div class="meter" id="byteMeter"><i></i></div>
+        </div>
+        <div class="opts">
+          <label class="field">Send to
+            <select id="dst"></select>
+          </label>
+          <label class="field">Repeat each packet
+            <select id="rep">
+              <option value="1">1× (fastest)</option>
+              <option value="2">2× (safer)</option>
+              <option value="3">3× (safest, slow)</option>
+            </select>
+          </label>
+          <div class="sendrow">
+            <button id="btnStop" class="btn danger" disabled>Stop</button>
+            <button id="btnSend" class="btn primary" disabled>Send</button>
+          </div>
+        </div>
+        <div id="sendStatus" class="hint">Connect the board (or turn on Demo) to send.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2 · How your text becomes sound</h2>
+      <p class="sub">This updates while you type. It is exactly what the board will build.</p>
+      <div class="step">
+        <div class="num">1</div>
+        <div>
+          <h3>Letters → bytes (UTF-8)</h3>
+          <p class="why">The computer stores every letter as one or more bytes. Each box shows a letter and its bytes in hex.</p>
+          <div id="chars" class="chars"><span class="empty">Type something above.</span></div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <div>
+          <h3>Bytes → bits</h3>
+          <p class="why">Every byte is 8 bits (0 or 1). Same colours as the letters.</p>
+          <div id="bits" class="bits"><span class="empty">—</span></div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <div>
+          <h3>Bits → packets</h3>
+          <p class="why">Each packet carries 2 bytes of your text, plus who it is for, a packet number and a CRC-16 check, so the receiver knows if it arrived damaged.</p>
+          <div id="seqNote" class="hint" style="margin-bottom:8px"></div>
+          <div class="tablewrap">
+            <table class="pk">
+              <thead><tr><th>#</th><th>to · from</th><th>seq · flags</th><th>data</th><th>CRC-16</th><th>48 bits of the packet</th></tr></thead>
+              <tbody id="pktBody"><tr><td colspan="6" class="empty">No packets yet.</td></tr></tbody>
+            </table>
+          </div>
+          <div class="legend">
+            <span><i style="background:var(--muted)"></i>to · from</span>
+            <span><i style="background:var(--faint)"></i>seq · flags</span>
+            <span><i style="background:hsl(170,65%,42%)"></i>your bytes</span>
+            <span><i style="background:var(--demo)"></i>CRC-16</span>
+          </div>
+          <div class="fec">
+            <span class="chip">48 bits</span><span class="arrow">→ error-correction code →</span>
+            <span class="chip">108 bits</span><span class="arrow">→</span>
+            <span class="chip accent">54 data tones</span><span class="arrow">+</span>
+            <span class="chip pre">10 preamble tones</span><span class="arrow">=</span>
+            <span class="chip"><span id="fecTones">64 tones</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">4</div>
+        <div>
+          <h3>Time on the air</h3>
+          <div class="air"><span class="big" id="airBig">0 s</span><span class="hint" id="airDetail">—</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="card">
+      <h2>3 · Transmission</h2>
+      <div class="txhead">
+        <span id="txTitle">Nothing sent yet</span>
+        <span id="txChip" class="chip">idle</span>
+      </div>
+      <div class="progress"><i id="txBar"></i></div>
+      <div class="rollwrap"><canvas id="roll" aria-label="Tones of the current packet"></canvas></div>
+      <div class="nowrow">
+        <span class="freq" id="nowFreq">— Hz</span>
+        <span class="hint" id="nowSlot">Each column is one slot. One tone plays per slot.</span>
+      </div>
+      <div class="nowrow"><span class="hint">Packet data:</span><span class="databits" id="txData">—</span></div>
+      <div id="heat" class="heat" hidden></div>
+      <div id="txErr" class="errbox" hidden></div>
+    </div>
+
+    <div class="card">
+      <h2>Tools</h2>
+      <p class="sub">Quick checks for the speaker side.</p>
+      <div class="tools">
+        <button class="btn" id="btnTone" disabled title="Plays 5000 Hz for half a second">Tone test (5 kHz)</button>
+        <button class="btn" id="btnSweep" disabled title="Plays all 24 tones, about 20 seconds">Sweep all 24 tones</button>
+        <button class="btn" id="btnScope" disabled>Show mic bars</button>
+      </div>
+      <div id="miniScopeWrap" hidden>
+        <div class="scopebars" id="miniScope"></div>
+        <div class="scopelabels" id="miniScopeLabels"></div>
+        <div class="hint" style="margin-top:6px">Only useful if this board also has a microphone.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <details class="log" id="logDetails">
+        <summary>Serial log <span class="chip" id="logCount">0 lines</span></summary>
+        <div class="logtools">
+          <label><input type="checkbox" id="logStatus"> show status lines (SCOPE, STATS…)</label>
+          <label><input type="checkbox" id="logScroll" checked> auto-scroll</label>
+          <button class="btn small" id="logClear">Clear</button>
+        </div>
+        <div class="logbox" id="logBox"></div>
+        <form class="cmdform" id="cmdForm" autocomplete="off">
+          <input id="cmdInput" placeholder="Type a board command, e.g. info, stats, help" aria-label="Board command">
+          <button class="btn" type="submit">Send line</button>
+        </form>
+      </details>
+    </div>
+  </section>
+</main>
+<footer>DUBURI IVC · Sender page · works offline · USB serial 115200 baud · protocol: docs/SERIAL_PROTOCOL.md</footer>
+
+<script>
+"use strict";
+/* ===== COMMON JS START (keep identical in sender.html and receiver.html) ===== */
+const AM = {
+  PRE: [0, 14, 6, 22, 9, 17, 4, 21, 5, 11],
+  NTONES: 24, F_TEXT: 0x2, F_FIRST: 0x8, F_LAST: 0x1, TEXT_MAX: 64, GAP_S: 0.40,
+  toneHz: (k) => 3000 + 250 * k,
+  /* default timing of each medium (the board's INFO line always wins) */
+  MODES: {
+    air: { slot_ms: 40, pkt_ms: 2560, duty: 0.75, burst_s: 10.0, label: "AIR", what: "room: speaker → microphone" },
+    water: { slot_ms: 20, pkt_ms: 1280, duty: 0.50, burst_s: 6.0, label: "WATER", what: "pool: speaker box → hydrophone" },
+  },
+};
+/* Timing from the board's INFO line. Before INFO arrives the mode is unknown and
+   AIR timing is assumed (assumed = true). */
+function linkParams(info) {
+  const mode = info && AM.MODES[info.mode] ? info.mode : null;
+  const d = AM.MODES[mode || "air"];
+  const num = (k) => (info && info[k] !== undefined && !isNaN(parseFloat(info[k])) ? parseFloat(info[k]) : d[k]);
+  return { mode, assumed: !info, slot: num("slot_ms"), pkt: num("pkt_ms"), duty: num("duty"), burst: num("burst_s"), gap: AM.GAP_S };
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const $ = (id) => document.getElementById(id);
+const hex2 = (b) => (b & 255).toString(16).toUpperCase().padStart(2, "0");
+const bin8 = (b) => (b & 255).toString(2).padStart(8, "0");
+const utf8 = (s) => new TextEncoder().encode(s);
+function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function crc16(bytes) {            /* CRC-16/CCITT-FALSE, same as am_crc16() */
+  let c = 0xFFFF;
+  for (const b of bytes) {
+    c ^= (b & 255) << 8;
+    for (let i = 0; i < 8; i++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
+  }
+  return c;
+}
+function amFrame(dst, src, seq, flags, b0, b1) {
+  const f = [((dst & 15) << 4) | (src & 15), ((seq & 15) << 4) | (flags & 15), b0 & 255, b1 & 255];
+  const c = crc16(f);
+  return f.concat([c >> 8, c & 255]);
+}
+function parity7(v) { v ^= v >> 4; v ^= v >> 2; v ^= v >> 1; return v & 1; }
+/* Same as am_tx_build(): frame -> K=7 conv code -> interleave -> 64 tone indexes */
+function amTones(frame) {
+  const info = [];
+  for (const b of frame) for (let i = 7; i >= 0; i--) info.push((b >> i) & 1);
+  for (let i = 0; i < 6; i++) info.push(0);
+  const coded = [];
+  let st = 0;
+  for (const bit of info) {
+    const reg = (bit << 6) | st;
+    coded.push(parity7(reg & 0x79), parity7(reg & 0x5B));
+    st = reg >> 1;
+  }
+  const stream = new Array(108).fill(0);
+  coded.forEach((v, c) => { stream[2 * ((37 * c) % 54) + (c >= 54 ? 1 : 0)] = v; });
+  const t = AM.PRE.slice();
+  for (let k = 0; k < 54; k++) t.push((k % 6) + 6 * ((stream[2 * k] << 1) | stream[2 * k + 1]));
+  return t;
+}
+/* Cut a message into text packets exactly like the firmware does. */
+function textPackets(bytes, dst, src, seq0) {
+  const n = Math.ceil(bytes.length / 2), out = [];
+  for (let i = 0; i < n; i++) {
+    const has1 = 2 * i + 1 < bytes.length;
+    const b0 = bytes[2 * i], b1 = has1 ? bytes[2 * i + 1] : 0;
+    const flags = AM.F_TEXT | (i === 0 ? AM.F_FIRST : 0) | (i === n - 1 ? AM.F_LAST : 0);
+    const seq = (seq0 + i) & 15;
+    const frame = amFrame(dst, src, seq, flags, b0, b1);
+    out.push({ i: i + 1, seq, flags, b0, b1, nb: has1 ? 2 : 1, frame, crc: (frame[4] << 8) | frame[5], idx0: 2 * i });
+  }
+  return out;
+}
+function flagNames(f) {
+  const n = [];
+  if (f & AM.F_TEXT) n.push("TEXT");
+  if (f & AM.F_FIRST) n.push("FIRST");
+  if (f & AM.F_LAST) n.push("LAST");
+  return n.join("+") || "-";
+}
+/* Leaky-bucket heat guard (MAX_TX_DUTY, TX_BURST_S) + gap between packets. */
+function heatPlan(nSends, pktS, duty, burstS, gapS) {
+  const B = burstS * (1 - duty);
+  let heat = 0, total = 0, rest = 0;
+  for (let k = 0; k < nSends; k++) {
+    if (k > 0) { total += gapS; heat = Math.max(0, heat - gapS * duty); }
+    const need = heat + pktS * (1 - duty) - B;
+    if (need > 0) { const w = need / duty; rest += w; total += w; heat -= w * duty; }
+    heat += pktS * (1 - duty);
+    total += pktS;
+  }
+  return { total, rest };
+}
+function hexToBytes(h) {          /* "48__6C" -> [0x48, null, 0x6C] */
+  const out = [];
+  for (let i = 0; i + 1 < h.length; i += 2) {
+    const p = h.substr(i, 2);
+    out.push(p === "__" ? null : parseInt(p, 16));
+  }
+  return out;
+}
+/* Split a board line into kind + key=value fields. "text=" runs to end of line. */
+function parseLine(raw) {
+  const line = raw.replace(/\s+$/, "");
+  const m = { raw: line, kind: "", f: {}, text: null, rest: "" };
+  if (!line) return m;
+  if (line.startsWith("RX (not for me)")) { m.kind = "RXOTHER"; }
+  let body = line;
+  const ti = line.indexOf(" text=");
+  if (ti >= 0) { m.text = line.slice(ti + 6); body = line.slice(0, ti); }
+  const sp = body.indexOf(" ");
+  if (!m.kind) m.kind = sp < 0 ? body : body.slice(0, sp);
+  m.rest = sp < 0 ? "" : body.slice(sp + 1);
+  for (const tok of m.rest.split(/\s+/)) {
+    const eq = tok.indexOf("=");
+    if (eq > 0 && /^[a-z_]+$/.test(tok.slice(0, eq))) m.f[tok.slice(0, eq)] = tok.slice(eq + 1);
+  }
+  if (m.kind === "HEAT-GUARD") { const w = /wait\s+(\d+)\s*ms/.exec(line); m.f.ms = w ? w[1] : "0"; }
+  if (m.kind === "SCOPE") m.vals = m.rest.split(/\s+/).filter((t) => /^-?\d+(\.\d+)?$/.test(t)).map(Number).slice(0, 24);
+  return m;
+}
+const STATUS_KINDS = new Set(["SCOPE", "STATS", "ADC", "LEVEL"]);
+const qBand = (q) => (q >= 10 ? "good" : q >= 7 ? "warn" : "bad");
+const qWord = (q) => (q >= 10 ? "good" : q >= 7 ? "OK" : "weak");
+
+/* ---------- Real board over Web Serial ---------- */
+class SerialLink {
+  constructor(onLine, onClose) {
+    this.onLine = onLine; this.onClose = onClose; this.isDemo = false;
+    this.port = null; this.buf = ""; this.alive = false; this.wq = Promise.resolve();
+  }
+  async connect() {
+    const port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+    this.port = port; this.alive = true;
+    this.writer = port.writable.getWriter();
+    this.enc = new TextEncoder();
+    this._onDisc = () => this._lost("The board was unplugged.");
+    if (port.addEventListener) port.addEventListener("disconnect", this._onDisc);
+    this._readLoop();
+  }
+  async _readLoop() {
+    const port = this.port;
+    while (this.alive && port.readable) {
+      const dec = new TextDecoderStream();
+      this.pipe = port.readable.pipeTo(dec.writable).catch(() => {});
+      this.reader = dec.readable.getReader();
+      try {
+        for (;;) {
+          const { value, done } = await this.reader.read();
+          if (done) break;
+          if (value) this._feed(value);
+        }
+      } catch (e) {
+        if (this.alive && !port.readable) { this._lost("Lost the board (" + (e && e.message ? e.message : e) + ")."); return; }
+      } finally {
+        try { this.reader.releaseLock(); } catch (_) { /* already released */ }
+      }
+      await this.pipe;
+    }
+    if (this.alive) this._lost("The board stopped answering.");
+  }
+  _feed(chunk) {
+    this.buf += chunk;
+    let i;
+    while ((i = this.buf.indexOf("\n")) >= 0) {
+      const line = this.buf.slice(0, i).replace(/\r/g, "");
+      this.buf = this.buf.slice(i + 1);
+      this.onLine(line);
+    }
+    if (this.buf.length > 8192) { this.onLine(this.buf); this.buf = ""; }
+  }
+  send(line) {
+    if (!this.alive) return Promise.resolve();
+    const data = this.enc.encode(line + "\n");
+    this.wq = this.wq.then(() => this.writer.write(data)).catch((e) => {
+      if (this.alive) this._lost("Could not write to the board (" + (e && e.message ? e.message : e) + ").");
+    });
+    return this.wq;
+  }
+  async reset() {             /* esptool-style: EN low pulse while IO0 stays high */
+    if (!this.port) return;
+    await this.port.setSignals({ dataTerminalReady: false, requestToSend: true });
+    await sleep(100);
+    await this.port.setSignals({ requestToSend: false });
+  }
+  async _cleanup() {
+    this.alive = false;
+    const port = this.port;
+    if (port && port.removeEventListener) port.removeEventListener("disconnect", this._onDisc);
+    try { if (this.reader) await this.reader.cancel(); } catch (_) { /* ignore */ }
+    try { if (this.pipe) await this.pipe; } catch (_) { /* ignore */ }
+    try { if (this.writer) this.writer.releaseLock(); } catch (_) { /* ignore */ }
+    try { if (port) await port.close(); } catch (_) { /* ignore */ }
+    this.port = null;
+  }
+  async disconnect() { await this._cleanup(); }
+  _lost(reason) {
+    if (!this.alive) return;
+    this._cleanup().then(() => this.onClose(reason));
+  }
+}
+
+/* ---------- Pretend board for Demo mode (speaks the same protocol) ---------- */
+const DEMO_HEARD = ["Hello from ROV 1", "LED on please", "ডুবুরি", "Depth 2.5 m, all OK", "আমি শুনছি", "Testing 1 2 3", "Turn left", "SOS"];
+class FakeBoard {
+  constructor(opts) {
+    this.node = opts.node; this.peer = opts.peer; this.autoHear = !!opts.autoHear;
+    this.emit = null; this.seq = 5; this.rxSeq = 9; this.mode = opts.mode || "air";
+    this.heat = 0; this.heatT = 0; this.busy = false; this.abort = false;
+    this.scopeTimer = null; this.hearing = false;
+    this.st = { pre: 0, ok: 0, crc: 0, q: 0 };
+  }
+  speed() { return window.__demoSpeed || 1; }
+  wait(ms) { return new Promise((r) => setTimeout(r, ms / this.speed())); }
+  now() { return performance.now() / 1000 * this.speed(); }
+  out(line) { if (this.emit) this.emit(line); }
+  start(emit) {
+    this.emit = emit; this.heatT = this.now();
+    this.boot();
+    if (this.autoHear) this.hearLoop();
+  }
+  stop() { this.emit = null; this.abort = true; clearInterval(this.scopeTimer); this.scopeTimer = null; }
+  P() { return AM.MODES[this.mode]; }
+  info() { const p = this.P(); return `INFO node=${this.node} peer=${this.peer} fw=2.0 mode=${this.mode} text_max=64 slot_ms=${p.slot_ms} pkt_ms=${p.pkt_ms} duty=${p.duty.toFixed(2)} burst_s=${p.burst_s.toFixed(1)}`; }
+  boot() {
+    this.out(`DUBURI modem node ${this.node} ready (${this.mode} mode). Tones 3000..8750 Hz, packet ${(this.P().pkt_ms / 1000).toFixed(2)} s`);
+    this.out("Commands: on|off|toggle|ping [id] ; send <cmd> <arg> [id] ; msg <text> ; sweep ; tone <Hz> <ms> ; scope ; stats ; info ; help");
+    this.out(this.info());
+  }
+  handle(line) {
+    if (!this.emit) return;
+    if (this.busy) { if (line.includes("!")) this.abort = true; return; }
+    const w = line.trim().split(/\s+/);
+    const c = (w[0] || "").toLowerCase();
+    if (c === "info") this.out(this.info());
+    else if (c === "mode") {
+      const m = (w[1] || "").toLowerCase();
+      if (m !== "air" && m !== "water") { this.out(`ERR usage: mode air|water (now ${this.mode})`); return; }
+      if (this.hearing) this.out("ERR busy receiving, try again");
+      else { this.mode = m; this.out(`MODE ${m} saved`); }
+      this.out(this.info());
+    } else if (c === "msghex") {
+      const dst = +w[1], rep = +w[2], h = w[3] || "";
+      if (!(dst >= 1 && dst <= 15) || !(rep >= 1 && rep <= 3) || !/^([0-9a-fA-F]{2})+$/.test(h)) { this.out("ERR usage: msghex <dst 1..15> <repeats 1..3> <hex>"); return; }
+      const bytes = hexToBytes(h);
+      if (bytes.length > 64) { this.out("ERR too long (max 64 bytes)"); return; }
+      if (bytes.includes(0)) { this.out("ERR byte 00 is not allowed"); return; }
+      this.sendText(dst, rep, bytes);
+    } else if (c === "msg") {
+      const t = line.replace(/^\s*msg\s?/, "");
+      const bytes = Array.from(utf8(t));
+      if (!bytes.length) { this.out("ERR empty message"); return; }
+      if (bytes.length > 64) { this.out("ERR too long (max 64 bytes)"); return; }
+      this.sendText(this.peer, 1, bytes);
+    } else if (c === "scope") {
+      const on = w[1] === "on" ? true : w[1] === "off" ? false : !this.scopeTimer;
+      clearInterval(this.scopeTimer); this.scopeTimer = null;
+      if (on) this.scopeTimer = setInterval(() => this.scopeLine(), 250 / this.speed());
+    } else if (c === "stats") {
+      const s = this.st, loud = this.hearing;
+      this.out(`STATS node=${this.node} preambles=${s.pre} ok=${s.ok} crc_fail=${s.crc} last_q=${s.q.toFixed(1)}dB timing_adj=0.4`);
+      this.out("ADC fs_measured=50612.3 fs_used=50612.0 overflows=0 clipped=0");
+      const rms = loud ? 140 + Math.random() * 40 : 35 + Math.random() * 10;
+      this.out(`LEVEL mean=1652 rms=${rms.toFixed(1)} min=${Math.round(1652 - rms * 3)} max=${Math.round(1652 + rms * 3)} (want rms 20..300, min>100, max<3900)`);
+    } else if (c === "tone") {
+      const hz = +w[1], ms = +w[2];
+      if (!(hz >= 100 && hz <= 20000 && ms >= 1 && ms <= 5000)) { this.out("usage: tone <100..20000 Hz> <1..5000 ms>"); return; }
+      this.out(`TONE ${hz} Hz (real ${hz} Hz) for ${ms} ms`);
+    } else if (c === "sweep") {
+      this.out("SWEEP: each tone 300 ms. Watch 'scope' on the other vehicle.");
+      (async () => { this.busy = true; for (let i = 0; i < 24 && this.emit && !this.abort; i++) { this.out(`SWEEP tone ${i} = ${AM.toneHz(i)} Hz`); await this.wait(450); } this.busy = false; this.abort = false; })();
+    } else if (["on", "off", "toggle", "ping"].includes(c)) {
+      const id = w[1] ? +w[1] : this.peer;
+      (async () => { this.busy = true; for (let t = 1; t <= 3 && this.emit; t++) { this.out(`TX to=${id} seq=${this.seq} cmd=1 arg=0 (try ${t}/3)`); await this.wait(1500); this.out("   no reply"); } this.out(`FAIL no reply from ${id}`); this.busy = false; })();
+    } else this.out("Commands: on|off|toggle|ping [id] ; send <cmd> <arg> [id] ; msg <text> ; sweep ; tone <Hz> <ms> ; scope ; stats ; info ; help");
+  }
+  scopeLine() {
+    const v = [];
+    for (let i = 0; i < 24; i++) v.push(Math.round(Math.random() * 4 - 1));
+    if (this.hearing) { const k = Math.floor(Math.random() * 24); v[k] = 14 + Math.round(Math.random() * 10); }
+    this.out(`SCOPE ${v.join(" ")}  rms=${this.hearing ? 150 : 38}`);
+  }
+  async heatGuard(T) {
+    const d = this.P().duty, B = this.P().burst_s * (1 - d), t = this.now();
+    this.heat = Math.max(0, this.heat - (t - this.heatT) * d); this.heatT = t;
+    const need = this.heat + T * (1 - d) - B;
+    if (need > 0) {
+      const ms = Math.round(need / d * 1000);
+      this.out(`HEAT-GUARD wait ${ms} ms`);
+      await this.wait(ms);
+      this.heat = Math.max(0, this.heat - need);
+    }
+  }
+  heatAdd(T) { this.heat += T * (1 - this.P().duty); this.heatT = this.now(); }
+  async sendText(dst, rep, bytes) {
+    this.busy = true; this.abort = false;
+    const pk = textPackets(bytes, dst, this.node, this.seq);
+    const t0 = this.now();
+    this.out(`TXMSG dst=${dst} len=${bytes.length} n=${pk.length} rep=${rep}`);
+    for (const p of pk) {
+      for (let tr = 1; tr <= rep; tr++) {
+        if (this.abort || !this.emit) { this.out(`TXABORT i=${p.i} n=${pk.length}`); this.busy = false; this.abort = false; return; }
+        const T = this.P().pkt_ms / 1000;
+        await this.heatGuard(T);
+        const data = hex2(p.b0) + (p.nb === 2 ? hex2(p.b1) : "");
+        this.out(`TXPKT i=${p.i} n=${pk.length} try=${tr} seq=${p.seq} flags=${(p.flags).toString(16).toUpperCase()} data=${data} tones=${amTones(p.frame).join(",")}`);
+        await this.wait(T * 1000);
+        this.heatAdd(T);
+        if (!(p.i === pk.length && tr === rep)) await this.wait(AM.GAP_S * 1000);
+      }
+    }
+    this.seq = (this.seq + pk.length) & 15;
+    this.out(`TXDONE n=${pk.length} ms=${Math.round((this.now() - t0) * 1000)}`);
+    this.busy = false;
+  }
+  async hearLoop() {
+    await this.wait(2500);
+    while (this.emit) {
+      if (this.busy) { await this.wait(1000); continue; }
+      const text = DEMO_HEARD[Math.floor(Math.random() * DEMO_HEARD.length)];
+      const bytes = Array.from(utf8(text));
+      const pk = textPackets(bytes, this.node, this.peer, this.rxSeq);
+      this.rxSeq = (this.rxSeq + pk.length) & 15;
+      const got = [], qs = [];
+      const rep = Math.random() < 0.3 ? 2 : 1;               /* sometimes the sender repeats each packet */
+      let lost = 0, heat = 0;
+      for (const p of pk) {
+        let have = false;
+        for (let tr = 1; tr <= rep; tr++) {
+          if (!this.emit) return;
+          const P = this.P(), T = P.pkt_ms / 1000;
+          this.hearing = true;
+          await this.wait(10 * P.slot_ms);
+          this.st.pre++; this.out(`DET n=${this.st.pre}`);
+          await this.wait(54 * P.slot_ms);
+          this.hearing = false;
+          const middle = p.i > 1 && p.i < pk.length;
+          if (middle && Math.random() < (rep > 1 ? 0.3 : 0.12)) {
+            this.st.crc++; this.out(`CRCFAIL n=${this.st.crc}`);
+          } else if (have) {
+            this.st.ok++; this.out(`REPEAT src=${this.peer} seq=${p.seq} (dropped)`);
+          } else {
+            const q = Math.max(4, 12 + (Math.random() + Math.random() + Math.random() - 1.5) * 5);
+            this.st.ok++; this.st.q = q; qs.push(q); have = true;
+            const data = hex2(p.b0) + (p.nb === 2 ? hex2(p.b1) : "");
+            this.out(`TXT src=${this.peer} dst=${this.node} seq=${p.seq} first=${p.i === 1 ? 1 : 0} last=${p.i === pk.length ? 1 : 0} data=${data} q=${q.toFixed(1)}`);
+            got.push(p.b0); if (p.nb === 2) got.push(p.b1);
+          }
+          heat = Math.max(0, heat - AM.GAP_S * P.duty) + T * (1 - P.duty);
+          const lim = (P.burst_s - T) * (1 - P.duty);
+          const rest = heat > lim ? (heat - lim) / P.duty : 0;
+          heat -= rest * P.duty;
+          await this.wait((AM.GAP_S + rest) * 1000);
+        }
+        if (!have) { lost++; got.push(null, null); }
+      }
+      const hex = got.map((b) => (b === null ? "__" : hex2(b))).join("");
+      const human = got.map((b) => (b === null ? 63 : b < 32 ? 46 : b));
+      const txt = new TextDecoder().decode(new Uint8Array(human));
+      const qa = qs.length ? qs.reduce((a, b) => a + b, 0) / qs.length : 0;
+      this.out(`MSG src=${this.peer} dst=${this.node} ok=${lost ? 0 : 1} lost=${lost} len=${got.length} q=${qa.toFixed(1)} hex=${hex} text=${txt}`);
+      await this.wait(5000 + Math.random() * 4000);
+    }
+  }
+}
+class DemoLink {
+  constructor(onLine, onClose, opts) { this.onLine = onLine; this.onClose = onClose; this.isDemo = true; this.board = new FakeBoard(opts); }
+  async connect() { this.board.start((l) => setTimeout(() => this.onLine(l), 0)); }
+  send(line) { setTimeout(() => this.board.handle(line), 5); return Promise.resolve(); }
+  async reset() { const b = this.board; b.stop(); await sleep(300); this.board = new FakeBoard({ node: b.node, peer: b.peer, autoHear: b.autoHear, mode: b.mode }); this.board.start((l) => setTimeout(() => this.onLine(l), 0)); }
+  async disconnect() { this.board.stop(); }
+}
+
+/* ---------- Log panel ---------- */
+class LogPanel {
+  constructor() {
+    this.box = $("logBox"); this.count = 0; this.max = 600;
+    $("logClear").onclick = () => { this.box.textContent = ""; this.count = 0; this._n(); };
+  }
+  _n() { $("logCount").textContent = this.count + (this.count === 1 ? " line" : " lines"); }
+  add(text, cls) {
+    const isStatus = cls === "s";
+    if (isStatus && !$("logStatus").checked) return;
+    const d = document.createElement("div");
+    if (cls) d.className = cls;
+    const t = new Date();
+    d.innerHTML = `<span class="t">${t.toTimeString().slice(0, 8)}</span>` + esc(text);
+    this.box.appendChild(d);
+    this.count++;
+    while (this.box.childNodes.length > this.max) this.box.removeChild(this.box.firstChild);
+    if ($("logScroll").checked) this.box.scrollTop = this.box.scrollHeight;
+    this._n();
+  }
+}
+
+/* ---------- Connection controller (header buttons, banners, link) ---------- */
+class Conn {
+  constructor({ demoOpts, onLine, onState, errBanner }) {
+    this.demoOpts = demoOpts; this.onLineCb = onLine; this.onState = onState; this.errBanner = !!errBanner;
+    this.link = null; this.state = "off"; this.node = null; this.log = new LogPanel();
+    this.mode = null; this.info = null; this.pendingMode = null; this.busy = false; this.errT = null;
+    for (const b of document.querySelectorAll(".segbtn")) b.onclick = () => this.askMode(b.dataset.mode);
+    this.hasSerial = "serial" in navigator;
+    $("noSerialBanner").hidden = this.hasSerial;
+    $("btnConnect").onclick = () => this.connectReal();
+    $("btnDisconnect").onclick = () => this.disconnect();
+    $("btnReset").onclick = () => this.reset();
+    $("demoToggle").onchange = (e) => this.setDemo(e.target.checked);
+    $("cmdForm").onsubmit = (e) => { e.preventDefault(); const v = $("cmdInput").value.trim(); if (v) { this.send(v); $("cmdInput").value = ""; } };
+    if (!this.hasSerial) $("btnConnect").disabled = true;
+    this._render(true);
+  }
+  get connected() { return this.state === "on" || this.state === "demo"; }
+  _err(msg) { const b = $("connError"); b.innerHTML = msg; b.hidden = !msg; }
+  _render(skipCallback) {
+    const p = $("connPill");
+    p.className = "pill" + (this.state === "off" ? "" : " " + this.state);
+    p.textContent = this.state === "on" ? "Connected" + (this.node != null ? " · node " + this.node : "")
+      : this.state === "demo" ? "Demo board" + (this.node != null ? " · node " + this.node : "")
+      : this.state === "lost" ? "Board disconnected" : "Not connected";
+    $("btnConnect").hidden = this.state === "on" || this.state === "demo";
+    $("btnDisconnect").hidden = this.state !== "on";
+    $("btnReset").hidden = !this.connected;
+    $("demoBanner").hidden = this.state !== "demo";
+    $("demoToggle").checked = this.state === "demo";
+    $("btnConnect").disabled = !this.hasSerial;
+    this._renderMode();
+    if (!skipCallback) this.onState(this.state);
+  }
+  setNode(n) { this.node = n; this._render(); }
+  setBusy(b) { this.busy = b; this._renderMode(); }
+  askMode(m) {
+    if (!this.connected || this.busy || m === this.mode) return;
+    this.pendingMode = m; this._renderMode();
+    this.send("mode " + m);
+    clearTimeout(this.modeT);
+    this.modeT = setTimeout(() => { this.pendingMode = null; this._renderMode(); }, 4000);
+  }
+  _renderMode() {
+    const c = this.connected;
+    for (const b of document.querySelectorAll(".segbtn")) {
+      b.disabled = !c || this.busy;
+      b.classList.toggle("active", c && b.dataset.mode === this.mode);
+      b.classList.toggle("pending", b.dataset.mode === this.pendingMode);
+    }
+    const lp = linkParams(this.info);
+    const d = $("modeDesc");
+    if (!c) d.innerHTML = "Mode unknown · connect the board to see it.";
+    else if (this.pendingMode) d.innerHTML = `Switching to <b>${AM.MODES[this.pendingMode].label}</b>…`;
+    else if (!this.mode) d.innerHTML = "Mode unknown · waiting for the board's INFO line.";
+    else d.innerHTML = `Board is in <b>${AM.MODES[this.mode].label}</b> mode (${AM.MODES[this.mode].what}) · ${lp.slot} ms per tone · ${(lp.pkt / 1000).toFixed(2)} s per packet`;
+  }
+  _line(line) {
+    const m = parseLine(line);
+    this.log.add(line, m.kind === "ERR" ? "e" : STATUS_KINDS.has(m.kind) ? "s" : "");
+    if (m.kind === "INFO") {
+      this.info = m.f; this.mode = AM.MODES[m.f.mode] ? m.f.mode : null;
+      this.pendingMode = null; clearTimeout(this.modeT);
+      if (m.f.node !== undefined) this.setNode(+m.f.node); else this._renderMode();
+    }
+    if (m.kind === "ERR") {
+      if (this.pendingMode) { this.pendingMode = null; this._renderMode(); }
+      if (this.errBanner) {
+        const b = $("boardErr"); b.textContent = "Board says: " + (m.rest || m.raw); b.hidden = false;
+        clearTimeout(this.errT); this.errT = setTimeout(() => { b.hidden = true; }, 10000);
+      }
+    }
+    this.onLineCb(m);
+  }
+  _closed(reason) {
+    this.link = null; this.node = null; this.info = null; this.mode = null; this.pendingMode = null; this.state = "lost"; this._render();
+    this._err("<b>Board disconnected.</b> " + esc(reason) + " Plug it in again and press <b>Connect board</b>.");
+  }
+  async connectReal() {
+    this._err("");
+    if (this.link) await this.disconnect();
+    const link = new SerialLink((l) => this._line(l), (r) => this._closed(r));
+    try {
+      await link.connect();
+    } catch (e) {
+      if (e && e.name === "NotFoundError") return;           /* user closed the port chooser */
+      this._err("<b>Could not open the board.</b> Close the Arduino IDE Serial Monitor (or any other program using the port) and try again. " +
+        "If the board is not in the list, install the USB driver (CP210x or CH340) and use a data USB cable. <span class=\"mono\">(" + esc(e && e.message ? e.message : e) + ")</span>");
+      return;
+    }
+    this.link = link; this.state = "on"; this._render();
+    this.log.add("connected to USB serial port at 115200 baud", "o");
+    this._askInfo();
+  }
+  async _askInfo() {
+    await sleep(300); this.send("info");
+    await sleep(1700); if (this.connected && this.node == null) this.send("info");
+  }
+  async setDemo(on) {
+    this._err("");
+    if (this.link) await this.disconnect(true);
+    if (!on) { this.state = "off"; this._render(); return; }
+    this.link = new DemoLink((l) => this._line(l), (r) => this._closed(r), this.demoOpts);
+    await this.link.connect();
+    this.state = "demo"; this._render();
+    this.log.add("demo board started (pretend ESP32)", "o");
+  }
+  async disconnect(quiet) {
+    const l = this.link;
+    this.link = null; this.node = null; this.info = null; this.mode = null; this.pendingMode = null;
+    if (l) await l.disconnect();
+    this.state = "off";
+    if (!quiet) this._render();
+  }
+  async reset() {
+    if (!this.link) return;
+    this.node = null; this.info = null; this.mode = null; this._render();
+    this.log.add("reset board", "o");
+    try { await this.link.reset(); } catch (e) { this._err("Reset failed: " + esc(e.message || e)); }
+    this._askInfo();
+  }
+  send(line, quiet) {
+    if (!this.link) return false;
+    this.log.add("› " + line, quiet ? "s" : "o");
+    this.link.send(line);
+    return true;
+  }
+}
+function scopeLabelsHtml() {
+  let h = "";
+  for (let i = 0; i < 24; i++) h += `<span>${i % 4 === 0 ? (AM.toneHz(i) / 1000).toFixed(0) + "k" : ""}</span>`;
+  return h;
+}
+function renderScope(container, vals) {
+  if (container.children.length !== 24) container.innerHTML = Array.from({ length: 24 }, (_, i) => `<div class="bar" title="${AM.toneHz(i)} Hz"></div>`).join("");
+  for (let i = 0; i < 24; i++) {
+    const v = vals[i] === undefined ? 0 : vals[i];
+    const b = container.children[i];
+    const pct = Math.max(2, Math.min(100, (v + 5) / 35 * 100));
+    b.style.height = pct + "%";
+    b.classList.toggle("hot", v >= 10);
+    b.title = `${AM.toneHz(i)} Hz: ${v} dB above noise`;
+  }
+}
+/* ===== COMMON JS END ===== */
+
+/* =================== Sender page =================== */
+const PAL = [170, 28, 210, 330, 95, 265, 48, 0, 190, 300];
+const S = {
+  info: null, lastSeq: null, dstTouched: false,
+  sending: false, n: 0, rep: 1, total: 0, watchdog: null,
+  heatEnd: 0, heatTimer: null,
+  roll: null, rollT0: 0, rollPkt: null, raf: 0, scopeOn: false, curSeq0: null,
+};
+const LP = () => linkParams(S.info);
+const slotMs = () => LP().slot;
+const pktMs = () => LP().pkt;
+
+const conn = new Conn({ demoOpts: { node: 1, peer: 2, autoHear: false }, onLine, onState });
+
+function fillDst() {
+  const sel = $("dst"), keep = sel.value;
+  const me = S.info ? +S.info.node : null, peer = S.info ? +S.info.peer : 2;
+  let h = "";
+  for (let i = 1; i <= 15; i++) {
+    let lab = i === 15 ? "15 · everyone" : "Node " + i;
+    if (i === peer && i !== 15) lab += " (peer)";
+    if (i === me) lab += " (this board)";
+    h += `<option value="${i}">${lab}</option>`;
+  }
+  sel.innerHTML = h;
+  sel.value = S.dstTouched && keep ? keep : String(peer);
+}
+fillDst();
+$("dst").onchange = () => { S.dstTouched = true; preview(); };
+$("rep").onchange = preview;
+$("msg").addEventListener("input", preview);
+$("msg").addEventListener("keydown", (e) => { if (e.key === "Enter" && !$("btnSend").disabled) doSend(); });
+$("btnSend").onclick = doSend;
+$("btnStop").onclick = () => { conn.send("!"); setStatus("Stop requested. The board stops after the current packet.", ""); };
+$("btnTone").onclick = () => conn.send("tone 5000 500");
+$("btnSweep").onclick = () => { conn.send("sweep"); setStatus("Sweep started: the board plays all 24 tones (about 20 s). Watch the tone bars on the receiver.", ""); };
+$("btnScope").onclick = () => {
+  S.scopeOn = !S.scopeOn;
+  conn.send(S.scopeOn ? "scope on" : "scope off");
+  $("btnScope").textContent = S.scopeOn ? "Hide mic bars" : "Show mic bars";
+  $("miniScopeWrap").hidden = !S.scopeOn;
+};
+$("miniScopeLabels").innerHTML = scopeLabelsHtml();
+
+function onState(st) {
+  if (st !== "on" && st !== "demo") {
+    if (S.sending) finishTx("Connection closed while sending.", "bad");
+    S.info = null; S.scopeOn = false;
+    $("btnScope").textContent = "Show mic bars"; $("miniScopeWrap").hidden = true;
+  }
+  updateButtons();
+  preview();
+}
+
+function setStatus(text, cls) { const s = $("sendStatus"); s.textContent = text; s.className = cls || "hint"; }
+
+function msgBytes() { return Array.from(utf8($("msg").value)); }
+
+function updateButtons() {
+  const c = conn.connected, b = msgBytes();
+  const okLen = b.length >= 1 && b.length <= AM.TEXT_MAX && !b.includes(0);
+  $("btnSend").disabled = !c || S.sending || !okLen;
+  $("btnStop").disabled = !c || !S.sending;
+  for (const id of ["btnTone", "btnSweep", "btnScope"]) $(id).disabled = !c || S.sending;
+  if (!S.sending) {
+    if (!c) setStatus("Connect the board (or turn on Demo) to send.", "hint");
+    else if (b.includes(0)) setStatus("The message contains a NUL character. Remove it.", "bad");
+    else if (b.length > AM.TEXT_MAX) setStatus(`Too long: ${b.length} bytes. The limit is ${AM.TEXT_MAX}. Remove some letters.`, "bad");
+    else if (!b.length) setStatus("Type a message, then press Send (or Enter).", "hint");
+    else if ($("sendStatus").dataset.keep !== "1") setStatus("Ready. Press Send (or Enter).", "hint");
+  }
+}
+
+function charMap(text) {         /* byte index -> character index */
+  const chars = Array.from(text), map = [];
+  chars.forEach((ch, ci) => { for (let k = 0; k < utf8(ch).length; k++) map.push(ci); });
+  return { chars, map };
+}
+
+function preview() {
+  const text = $("msg").value;
+  const all = msgBytes();
+  const bytes = all.slice(0, AM.TEXT_MAX);
+  const over = all.length > AM.TEXT_MAX;
+  const { chars, map } = charMap(text);
+  $("bytesCount").textContent = `${all.length} / ${AM.TEXT_MAX} bytes`;
+  $("bytesCount").classList.toggle("over", over);
+  $("msg").classList.toggle("over", over);
+  $("byteMeter").classList.toggle("over", over);
+  $("byteMeter").firstElementChild.style.width = Math.min(100, all.length / AM.TEXT_MAX * 100) + "%";
+
+  // 1. letters -> bytes
+  if (!chars.length) $("chars").innerHTML = '<span class="empty">Type something above.</span>';
+  else {
+    let h = "", bi = 0;
+    chars.forEach((ch, ci) => {
+      const bs = Array.from(utf8(ch));
+      const shown = ch === " " ? "␠" : ch.charCodeAt(0) < 32 ? "·" : ch;
+      const cut = bi + bs.length > AM.TEXT_MAX;
+      h += `<div class="cchip" style="--h:${PAL[ci % PAL.length]}${cut ? ";opacity:.35" : ""}" title="${cut ? "over the 64-byte limit" : "U+" + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")}"><span class="ch">${esc(shown)}</span><span class="hx">${bs.map(hex2).join(" ")}</span></div>`;
+      bi += bs.length;
+    });
+    $("chars").innerHTML = h;
+  }
+  // 2. bits
+  $("bits").innerHTML = bytes.length ? bytes.map((b, i) => `<span class="byte" style="--h:${PAL[map[i] % PAL.length]}" title="byte ${i + 1}: 0x${hex2(b)}">${bin8(b)}</span>`).join("") : '<span class="empty">—</span>';
+
+  // 3. packets
+  const dst = +$("dst").value || 2, rep = +$("rep").value || 1;
+  const src = S.info ? +S.info.node : 1;
+  const seq0 = S.sending && S.curSeq0 !== null ? S.curSeq0 : S.lastSeq === null ? 0 : (S.lastSeq + 1) & 15;
+  const pk = textPackets(bytes, dst, src, seq0);
+  $("pktCount").textContent = pk.length + (pk.length === 1 ? " packet" : " packets");
+  const srcNote = S.info ? `from node ${src}` : "from node 1 (assumed until the board is connected)";
+  $("seqNote").innerHTML = S.sending && S.curSeq0 !== null
+    ? `Being sent now: these are the board's real packet numbers (seq ${S.curSeq0}…). Sent ${srcNote}.`
+    : S.lastSeq === null
+    ? `Packet numbers (seq) are counted by the board. Not known yet, so this table assumes seq starts at 0; the CRC on the air may differ. Sent ${srcNote}.`
+    : `seq is a <b>prediction</b>: the board's last packet was seq ${S.lastSeq}, so this message should start at ${seq0}. Sent ${srcNote}.`;
+  if (!pk.length) $("pktBody").innerHTML = '<tr><td colspan="6" class="empty">No packets yet.</td></tr>';
+  else {
+    $("pktBody").innerHTML = pk.map((p) => {
+      const h0 = PAL[map[p.idx0] % PAL.length], h1 = p.nb === 2 ? PAL[map[p.idx0 + 1] % PAL.length] : 0;
+      const f = p.frame;
+      const fb = `<span class="hdr" title="to/from">${bin8(f[0])}</span> <span class="hdr2" title="seq/flags">${bin8(f[1])}</span> ` +
+        `<span class="dat" style="--h:${h0}">${bin8(f[2])}</span> ` +
+        (p.nb === 2 ? `<span class="dat" style="--h:${h1}">${bin8(f[3])}</span>` : `<span class="pad" title="padding byte (odd length)">${bin8(f[3])}</span>`) +
+        ` <span class="crc">${bin8(f[4])}</span> <span class="crc">${bin8(f[5])}</span>`;
+      const dataTxt = p.nb === 2 ? `${hex2(p.b0)} ${hex2(p.b1)}` : `${hex2(p.b0)} <span class="hint">00 pad</span>`;
+      return `<tr><td class="m">${p.i}</td><td class="m">${dst} · ${src}</td><td class="m">${p.seq} · ${p.flags.toString(16).toUpperCase()} <span class="hint">${flagNames(p.flags)}</span></td>` +
+        `<td class="m">${dataTxt}</td><td class="m">${p.crc.toString(16).toUpperCase().padStart(4, "0")}</td><td class="fbits">${fb}</td></tr>`;
+    }).join("");
+  }
+  $("fecTones").textContent = `64 tones, ${(pktMs() / 1000).toFixed(2)} s`;
+
+  // 4. airtime
+  const lp = LP();
+  const sends = pk.length * rep;
+  if (!sends) { $("airBig").textContent = "0 s"; $("airDetail").textContent = "—"; }
+  else {
+    const plan = heatPlan(sends, lp.pkt / 1000, lp.duty, lp.burst, lp.gap);
+    $("airBig").textContent = "≈ " + plan.total.toFixed(1) + " s";
+    $("airDetail").textContent = `${sends} packet${sends > 1 ? "s" : ""} × ${(lp.pkt / 1000).toFixed(2)} s` +
+      (sends > 1 ? ` + ${lp.gap.toFixed(2)} s gaps` : "") + (plan.rest > 0.05 ? ` + ${plan.rest.toFixed(1)} s speaker rest (heat guard)` : "") +
+      (lp.assumed ? ". Mode unknown: AIR timing assumed until the board answers." : `. ${AM.MODES[lp.mode] ? AM.MODES[lp.mode].label : ""} mode. Longer if the board sent something just before.`);
+  }
+  updateButtons();
+}
+
+function armWatchdog(sec) {
+  clearTimeout(S.watchdog);
+  S.watchdog = setTimeout(() => finishTx("The board did not answer. Is the DUBURI firmware (v2, with text messages) on it?", "bad"), sec * 1000);
+}
+
+function doSend() {
+  const b = msgBytes();
+  if (!conn.connected || S.sending || !b.length || b.length > AM.TEXT_MAX || b.includes(0)) return;
+  const dst = +$("dst").value, rep = +$("rep").value;
+  const hex = b.map(hex2).join("");
+  S.sending = true; S.n = 0; S.rep = rep; S.total = 0; S.curSeq0 = null; conn.setBusy(true);
+  $("sendStatus").dataset.keep = "";
+  $("txErr").hidden = true;
+  setStatus("Sending… waiting for the board.", "");
+  $("txTitle").textContent = "Starting…"; $("txChip").className = "chip accent"; $("txChip").textContent = "sending";
+  setBar(0, 0);
+  updateButtons();
+  conn.send(`msghex ${dst} ${rep} ${hex}`);
+  armWatchdog(6);
+}
+
+function setBar(from, to, ms) {
+  const bar = $("txBar");
+  bar.style.transition = "none";
+  bar.style.width = (from * 100) + "%";
+  if (ms) {
+    void bar.offsetWidth;
+    bar.style.transition = `width ${ms}ms linear`;
+    bar.style.width = (to * 100) + "%";
+  }
+}
+
+function finishTx(msg, cls) {
+  clearTimeout(S.watchdog); S.watchdog = null;
+  stopHeat();
+  if (!S.sending) return;
+  S.sending = false; S.curSeq0 = null; conn.setBusy(false);
+  setStatus(msg, cls);
+  $("sendStatus").dataset.keep = "1";
+  $("txChip").className = "chip " + (cls === "good" ? "good" : cls === "bad" ? "bad" : "");
+  $("txChip").textContent = cls === "good" ? "done" : cls === "bad" ? "stopped" : "idle";
+  updateButtons();
+}
+
+function stopHeat() { clearInterval(S.heatTimer); S.heatTimer = null; $("heat").hidden = true; }
+
+function onLine(m) {
+  switch (m.kind) {
+    case "INFO":
+      S.info = m.f; fillDst(); preview();
+      break;
+    case "TXMSG":
+      S.n = +m.f.n || 0; S.rep = +m.f.rep || 1; S.total = S.n * S.rep;
+      $("txTitle").textContent = `Sending ${m.f.len} bytes in ${S.n} packet${S.n > 1 ? "s" : ""} to node ${m.f.dst}` + (S.rep > 1 ? ` (each ${S.rep}×)` : "");
+      setStatus(`Sending to node ${m.f.dst}…`, "");
+      armWatchdog(8);
+      break;
+    case "TXPKT": {
+      stopHeat();
+      const i = +m.f.i, n = +m.f.n, tr = +m.f.try || 1, seq = +m.f.seq;
+      if (!S.sending) { S.sending = true; conn.setBusy(true); updateButtons(); }
+      if (n && !S.n) { S.n = n; S.total = n * S.rep; }
+      const total = S.total || n || 1;
+      const k = (i - 1) * S.rep + tr;
+      S.lastSeq = seq;
+      const s0 = (seq - (i - 1) + 16) & 15;
+      if (S.curSeq0 !== s0) { S.curSeq0 = s0; preview(); }
+      const tones = (m.f.tones || "").split(",").map(Number).filter((v) => v >= 0 && v < 24);
+      S.roll = tones.length === 64 ? tones : null;
+      S.rollT0 = performance.now();
+      const data = hexToBytes(m.f.data || "");
+      $("txTitle").textContent = `Packet ${i} of ${n}` + (S.rep > 1 ? ` · try ${tr} of ${S.rep}` : "") + ` · seq ${seq}`;
+      $("txChip").className = "chip accent"; $("txChip").textContent = "playing";
+      $("txData").innerHTML = data.length ? data.map((b) => `<b>${hex2(b)}</b> ${bin8(b)}`).join(" &nbsp; ") +
+        ` <span class="hint">“${esc(new TextDecoder().decode(new Uint8Array(data.filter((b) => b !== null))))}” · flags ${esc(m.f.flags || "")} ${flagNames(parseInt(m.f.flags, 16))}</span>` : "—";
+      setBar((k - 1) / total, k / total, pktMs());
+      startRoll();
+      armWatchdog(pktMs() / 1000 + 8);
+      break;
+    }
+    case "HEAT-GUARD": {
+      const ms = +m.f.ms || 0;
+      S.heatEnd = performance.now() + ms;
+      $("heat").hidden = false;
+      clearInterval(S.heatTimer);
+      const tick = () => {
+        const left = Math.max(0, S.heatEnd - performance.now());
+        $("heat").textContent = `Speaker resting (heat guard): next packet in ${(left / 1000).toFixed(1)} s`;
+        if (left <= 0) stopHeat();
+      };
+      tick(); S.heatTimer = setInterval(tick, 100);
+      armWatchdog(ms / 1000 + 8);
+      break;
+    }
+    case "TXDONE":
+      setBar(1, 1);
+      $("txTitle").textContent = `Sent ${m.f.n} packet${+m.f.n > 1 ? "s" : ""}` + (m.f.ms ? ` in ${(+m.f.ms / 1000).toFixed(1)} s` : "");
+      finishTx(`Done: message sent (${m.f.n} packet${+m.f.n > 1 ? "s" : ""}${m.f.ms ? ", " + (+m.f.ms / 1000).toFixed(1) + " s" : ""}). Check the receiver PC.`, "good");
+      preview();
+      break;
+    case "TXABORT":
+      $("txTitle").textContent = `Stopped at packet ${m.f.i} of ${m.f.n}`;
+      finishTx(`Stopped at packet ${m.f.i} of ${m.f.n}. The receiver will show the message as incomplete.`, "bad");
+      preview();
+      break;
+    case "ERR": {
+      const t = m.rest || m.raw;
+      $("txErr").hidden = false;
+      $("txErr").textContent = "Board error: " + t;
+      if (S.sending) finishTx("Board error: " + t, "bad");
+      break;
+    }
+    case "SCOPE":
+      if (m.vals && m.vals.length) { if (!S.scopeOn) { S.scopeOn = true; $("btnScope").textContent = "Hide mic bars"; $("miniScopeWrap").hidden = false; } renderScope($("miniScope"), m.vals); }
+      break;
+    default:
+      break;
+  }
+}
+
+/* ---------- Piano roll ---------- */
+function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function startRoll() { cancelAnimationFrame(S.raf); const step = () => { drawRoll(); if (performance.now() - S.rollT0 < 64 * slotMs() + 60) S.raf = requestAnimationFrame(step); else drawRoll(true); }; step(); }
+function drawRoll(finished) {
+  const cv = $("roll"), dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth, H = cv.clientHeight;
+  if (!W || !H) return;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  const g = cv.getContext("2d");
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, W, H);
+  const L = 50, T = 22, B = 18, R = 8;
+  const cw = (W - L - R) / 64, rh = (H - T - B) / 24;
+  const line = cssVar("--line"), muted = cssVar("--muted"), acc = cssVar("--accent"), pre = cssVar("--pre"), preSoft = cssVar("--pre-soft"), ink = cssVar("--ink");
+  g.fillStyle = preSoft; g.fillRect(L, T, cw * 10, rh * 24);
+  g.strokeStyle = line; g.lineWidth = 1;
+  for (let r = 0; r <= 24; r++) { const y = Math.round(T + r * rh) + 0.5; g.globalAlpha = r % 4 === 0 ? 1 : 0.45; g.beginPath(); g.moveTo(L, y); g.lineTo(W - R, y); g.stroke(); }
+  for (let c = 0; c <= 64; c += 2) { const x = Math.round(L + c * cw) + 0.5; g.globalAlpha = c % 10 === 0 ? 0.9 : 0.3; g.beginPath(); g.moveTo(x, T); g.lineTo(x, T + 24 * rh); g.stroke(); }
+  g.globalAlpha = 1;
+  g.fillStyle = muted; g.font = "11px system-ui, sans-serif"; g.textAlign = "right"; g.textBaseline = "middle";
+  for (let k = 0; k < 24; k += 4) g.fillText((AM.toneHz(k) / 1000).toFixed(1) + " kHz", L - 6, T + (23 - k + 0.5) * rh);
+  g.fillText("8.75", L - 6, T + 0.5 * rh);
+  g.textAlign = "left"; g.textBaseline = "alphabetic";
+  const preLab = g.measureText("preamble (start)").width < cw * 10 - 4 ? "preamble (start)" : g.measureText("preamble").width < cw * 10 - 4 ? "preamble" : "start";
+  g.fillStyle = pre; g.fillText(preLab, L + 2, T - 7);
+  g.fillStyle = muted; g.fillText("data: 54 tones, each carries 2 bits", L + cw * 10 + 6, T - 7);
+  g.textAlign = "center"; g.fillText("time →  (64 slots × " + slotMs() + " ms)", L + (W - L - R) / 2, H - 4);
+  const tones = S.roll;
+  if (!tones) {
+    g.fillStyle = muted; g.font = "13px system-ui, sans-serif"; g.textAlign = "center";
+    g.fillText("The tones of each packet appear here while it plays.", L + (W - L - R) / 2, T + 12 * rh);
+    $("nowFreq").textContent = "— Hz";
+    $("nowSlot").textContent = `Each column is a ${slotMs()} ms slot. One tone plays per slot.`;
+    return;
+  }
+  const el = performance.now() - S.rollT0;
+  const cur = finished ? 64 : Math.min(63, Math.floor(el / slotMs()));
+  for (let c = 0; c < 64; c++) {
+    const k = tones[c], x = L + c * cw, y = T + (23 - k) * rh;
+    g.fillStyle = c < 10 ? pre : acc;
+    g.globalAlpha = c < cur ? 1 : c === cur ? 1 : 0.28;
+    g.fillRect(x + 0.6, y + 0.8, Math.max(1, cw - 1.2), Math.max(1, rh - 1.6));
+  }
+  g.globalAlpha = 1;
+  if (!finished) {
+    const x = L + (cur + 0.5) * cw;
+    g.strokeStyle = ink; g.lineWidth = 2; g.beginPath(); g.moveTo(x, T - 2); g.lineTo(x, T + 24 * rh + 2); g.stroke();
+    const k = tones[cur];
+    $("nowFreq").textContent = AM.toneHz(k) + " Hz";
+    $("nowSlot").textContent = `slot ${cur + 1} of 64 · ${cur < 10 ? "preamble" : "data tone " + (cur - 9) + " of 54"}`;
+  } else {
+    $("nowFreq").textContent = "— Hz";
+    $("nowSlot").textContent = "Packet finished. Each column is a " + slotMs() + " ms slot, one tone per slot.";
+  }
+}
+window.addEventListener("resize", () => drawRoll(performance.now() - S.rollT0 > 64 * slotMs()));
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => drawRoll(true));
+drawRoll(true);
+preview();
+</script>
+</body>
+</html>
