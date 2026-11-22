@@ -60,6 +60,8 @@ header.top {
 .pill.on::before { background: var(--good); }
 .pill.demo { background: var(--demo-soft); color: var(--demo); }
 .pill.demo::before { background: var(--demo); }
+.pill.audio { background: var(--accent-soft); color: var(--accent); }
+.pill.audio::before { background: var(--accent); }
 .pill.lost { background: var(--bad-soft); color: var(--bad); }
 .pill.lost::before { background: var(--bad); }
 .btn {
@@ -86,6 +88,7 @@ header.top {
 .banner.warn { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
 .banner.bad { background: var(--bad-soft); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 30%, transparent); }
 .banner.demo { background: var(--demo-soft); color: var(--demo); border-color: color-mix(in srgb, var(--demo) 30%, transparent); }
+.banner.audio { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
 main.grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 18px; padding: 18px 22px 8px; align-items: start; }
 .col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: var(--shadow); min-width: 0; }
@@ -228,6 +231,7 @@ table.pk .fbits { font: 11.5px/1.5 var(--mono); }
   <div class="conn">
     <span id="connPill" class="pill">Not connected</span>
     <button id="btnConnect" class="btn primary">Connect board</button>
+    <button id="btnAudio" class="btn" title="No ESP32? The tones come out of this computer's own speaker">Use this computer's speaker</button>
     <button id="btnDisconnect" class="btn" hidden>Disconnect</button>
     <button id="btnReset" class="btn ghost" hidden title="Restart the ESP32 (like pressing EN)">Reset board</button>
     <label class="switch" title="Try the page without a board"><input type="checkbox" id="demoToggle"><span class="track"></span><span>Demo (no board)</span></label>
@@ -235,6 +239,7 @@ table.pk .fbits { font: 11.5px/1.5 var(--mono); }
 </header>
 <div id="noSerialBanner" class="banner warn" hidden><b>This browser cannot talk to the board.</b> Open this file in <b>Google Chrome</b> or <b>Microsoft Edge</b> on a computer (not a phone). Demo mode still works here.</div>
 <div id="demoBanner" class="banner demo" hidden><b>Demo mode:</b> a pretend board is answering, nothing is played on a real speaker. Turn Demo off and press <b>Connect board</b> to use your ESP32.</div>
+<div id="audioBanner" class="banner audio" hidden><b>No board:</b> the tones come out of <b>this computer's speaker</b>. Set the volume to about 50–70 %. On the other computer (or in a second window on this one) open <b>receiver.html</b> and press <b>Use this computer's microphone</b>. Both must show the same mode.</div>
 <div id="connError" class="banner bad" hidden></div>
 <div id="boardErr" class="banner bad" hidden></div>
 <div class="modebar">
@@ -388,6 +393,399 @@ table.pk .fbits { font: 11.5px/1.5 var(--mono); }
 
 <script>
 "use strict";
+/* ===== AMCORE START: JavaScript port of the modem core (generated into the pages by pc/sync_common.py) =====
+ * amcore.js - DUBURI modem in JavaScript, a line-by-line port of
+ *   firmware/DuburiModem/am_core.c  (tones, coding, receiver)
+ *   firmware/DuburiModem/am_text.c  (text messages)
+ * so a laptop's own speaker and microphone can talk to each other (or to an
+ * ESP32 board) without any hardware. pc/test/amcore_test.js checks it against
+ * the C code on the same recordings. Edit here, then run pc/sync_common.py.
+ */
+var AMCore = (function () {
+  "use strict";
+  const NTONES = 24, NSETS = 6, M = 4, PRE_LEN = 10, FRAME_BYTES = 6, PAYLOAD_BYTES = 4;
+  const INFO_BITS = 54, CODED_BITS = 108, DATA_SLOTS = 54, TOTAL_SLOTS = 64;
+  const T_HOP = 0.0025, T_TRACK = 0.001;
+  const DET_SCORE_MIN = 0.14, DET_MATCH_MIN = 5;
+  const PEAK_HOPS = 14, NOISE_INIT_HOPS = 40, NOISE_ALPHA = 1 / 256, NOISE_CLIP = 8, LLR_CLAMP = 20;
+  const RING = 8192, RING_MASK = RING - 1, HIST = 256, OUTQ = 4;
+  const PREAMBLE = [0, 14, 6, 22, 9, 17, 4, 21, 5, 11];
+  const MODES = {
+    water: { name: "water", slot: 0.020, win: 0.016 },
+    air: { name: "air", slot: 0.040, win: 0.032 },
+  };
+  const F_TEXT = 0x2, F_FIRST = 0x8, F_LAST = 0x1, F_ACK_REQ = 0x8, F_IS_ACK = 0x4;
+  const TEXT_MAX = 64, TEXT_TIMEOUT_MS = 8000, TEXT_DUP_MS = 6000;
+
+  const toneHz = (k) => 3000 + 250 * k;
+  const round = (x) => Math.round(x);
+
+  function crc16(bytes) {
+    let c = 0xFFFF;
+    for (let i = 0; i < bytes.length; i++) {
+      c ^= (bytes[i] & 255) << 8;
+      for (let b = 0; b < 8; b++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
+    }
+    return c;
+  }
+  function parity7(v) { v ^= v >> 4; v ^= v >> 2; v ^= v >> 1; return v & 1; }
+  function convEncode(bits) {
+    const out = new Uint8Array(2 * bits.length);
+    let st = 0;
+    for (let t = 0; t < bits.length; t++) {
+      const reg = ((bits[t] & 1) << 6) | st;
+      out[2 * t] = parity7(reg & 0x79);
+      out[2 * t + 1] = parity7(reg & 0x5B);
+      st = reg >> 1;
+    }
+    return out;
+  }
+  /* Soft Viterbi, llr > 0 means bit 0; ends in state 0 (zero tail). */
+  function viterbi(llr, n) {
+    const dec = new Uint8Array(n * 64);
+    let pm = new Float64Array(64).fill(-1e30), npm = new Float64Array(64);
+    pm[0] = 0;
+    for (let t = 0; t < n; t++) {
+      const l0 = llr[2 * t], l1 = llr[2 * t + 1];
+      for (let ns = 0; ns < 64; ns++) {
+        const u = ns >> 5;
+        let best = -1e30, bestb = 0;
+        for (let b = 0; b < 2; b++) {
+          const ps = ((ns & 31) << 1) | b;
+          const reg = (u << 6) | ps;
+          const m = pm[ps] + (parity7(reg & 0x79) ? -l0 : l0) + (parity7(reg & 0x5B) ? -l1 : l1);
+          if (m > best) { best = m; bestb = b; }
+        }
+        npm[ns] = best;
+        dec[t * 64 + ns] = bestb;
+      }
+      const tmp = pm; pm = npm; npm = tmp;
+    }
+    const bits = new Uint8Array(n);
+    let s = 0;
+    for (let t = n - 1; t >= 0; t--) {
+      bits[t] = s >> 5;
+      s = ((s & 31) << 1) | dec[t * 64 + s];
+    }
+    return bits;
+  }
+  const interleave = (c) => 2 * ((37 * c) % DATA_SLOTS) + (c >= DATA_SLOTS ? 1 : 0);
+
+  function pack(p) {
+    const f = [((p.dst & 15) << 4) | (p.src & 15), ((p.seq & 15) << 4) | (p.flags & 15), p.cmd & 255, p.arg & 255];
+    const c = crc16(f);
+    return f.concat([c >> 8, c & 255]);
+  }
+  function unpack(f) {
+    const c = crc16(f.slice(0, PAYLOAD_BYTES));
+    const p = { dst: f[0] >> 4, src: f[0] & 15, seq: f[1] >> 4, flags: f[1] & 15, cmd: f[2], arg: f[3] };
+    return { p, ok: f[4] === (c >> 8) && f[5] === (c & 255) };
+  }
+  /* am_tx_build(): packet -> 64 tone indexes */
+  function txBuild(p) {
+    const frame = pack(p);
+    const info = new Uint8Array(INFO_BITS);
+    for (let i = 0; i < FRAME_BYTES * 8; i++) info[i] = (frame[i >> 3] >> (7 - (i & 7))) & 1;
+    const coded = convEncode(info);
+    const stream = new Uint8Array(CODED_BITS);
+    for (let c = 0; c < CODED_BITS; c++) stream[interleave(c)] = coded[c];
+    const t = PREAMBLE.slice();
+    for (let k = 0; k < DATA_SLOTS; k++) t.push((k % NSETS) + NSETS * ((stream[2 * k] << 1) | stream[2 * k + 1]));
+    return t;
+  }
+
+  /* ---------------------------------------------------------------- receiver */
+  const ST_SEARCH = 0, ST_PEAK = 1, ST_DECODE = 2;
+
+  class Rx {
+    constructor(fs, mode) {
+      this.ring = new Float64Array(RING);
+      this.win = new Float64Array(4096);
+      this.xw = new Float64Array(4096);
+      this.coef = new Float64Array(NTONES);
+      this.noise = new Float64Array(NTONES);
+      this.scope = new Float64Array(NTONES);
+      this.histFrac = new Float64Array(HIST * PRE_LEN);
+      this.histAmax = new Uint8Array(HIST);
+      this.pkScore = new Float64Array(24);
+      this.pkEnd = new Float64Array(24);
+      this.llr = new Float64Array(CODED_BITS);
+      this.slotQ = new Float64Array(DATA_SLOTS);
+      this.preOff = new Int32Array(PRE_LEN);
+      this.n = 0; this.dc = -1; this.noiseInit = 0;
+      this.out = [];
+      this.stats = { preambles: 0, packets_ok: 0, crc_fail: 0, clipped: 0, last_q_db: 0, last_timing_adj: 0 };
+      this.muteUntil = 0; this.muted = false;
+      this.mode = MODES[mode] ? mode : "water";
+      this._timing();
+      this._configure(fs);
+      this._resetSearch();
+    }
+    _timing() { this.tSlot = MODES[this.mode].slot; this.tWin = MODES[this.mode].win; }
+    _configure(fs) {
+      this.fs = fs;
+      this.W = Math.min(round(this.tWin * fs), this.win.length);
+      this.H = round(T_HOP * fs);
+      this.D = round(T_TRACK * fs);
+      this.S = this.tSlot * fs;
+      for (let n = 0; n < this.W; n++) this.win[n] = 0.5 - 0.5 * Math.cos(2 * Math.PI * (n + 0.5) / this.W);
+      for (let k = 0; k < NTONES; k++) this.coef[k] = 2 * Math.cos(2 * Math.PI * toneHz(k) / fs);
+      for (let j = 0; j < PRE_LEN; j++) this.preOff[j] = round((PRE_LEN - 1 - j) * this.S / this.H);
+    }
+    _resetSearch() { this.state = ST_SEARCH; this.hopCount = 0; this.pkN = 0; this.nextHop = this.n + this.H; }
+    setMode(mode) {
+      if (this.state !== ST_SEARCH || !MODES[mode]) return false;
+      this.mode = mode; this._timing(); this._configure(this.fs);
+      this.noiseInit = 0; this.noise.fill(0);
+      this._resetSearch();
+      return true;
+    }
+    mute(samples) { this.muteUntil = this.n + samples; this.muted = true; this.state = ST_SEARCH; }
+    pop() { return this.out.shift() || null; }
+
+    _energies(end, tones, E) {
+      const W = this.W, start = end - W, ring = this.ring, win = this.win, xw = this.xw;
+      for (let i = 0; i < W; i++) xw[i] = ring[(start + i) & RING_MASK] * win[i];
+      for (let t = 0; t < tones.length; t++) {
+        const c = this.coef[tones[t]];
+        let s1 = 0, s2 = 0;
+        for (let i = 0; i < W; i++) { const s0 = xw[i] + c * s1 - s2; s2 = s1; s1 = s0; }
+        E[t] = s1 * s1 + s2 * s2 - c * s1 * s2 + 1e-3;
+      }
+    }
+    _slotEnd(slot) { return this.syncBase + round(this.syncFrac + this.trackAdj + (slot + 1) * this.S); }
+
+    _hop() {
+      const E = new Float64Array(NTONES), z = new Float64Array(NTONES);
+      this._energies(this.n, ALL_TONES, E);
+      if (this.state === ST_SEARCH) {
+        if (this.noiseInit < NOISE_INIT_HOPS) {
+          const k = 1 / (this.noiseInit + 1);
+          for (let i = 0; i < NTONES; i++) this.noise[i] += (E[i] - this.noise[i]) * k;
+          this.noiseInit++;
+          this.nextHop += this.H;
+          return;
+        }
+        for (let i = 0; i < NTONES; i++) {
+          let e = E[i];
+          if (e > NOISE_CLIP * this.noise[i]) e = NOISE_CLIP * this.noise[i];
+          this.noise[i] += (e - this.noise[i]) * NOISE_ALPHA;
+        }
+      }
+      let sum = 0, zmax = 0, amax = 0;
+      for (let i = 0; i < NTONES; i++) {
+        z[i] = E[i] / this.noise[i];
+        this.scope[i] = 10 * Math.log10(z[i]);
+        sum += z[i];
+        if (z[i] > zmax) { zmax = z[i]; amax = i; }
+      }
+      const hi = this.hopCount % HIST;
+      for (let j = 0; j < PRE_LEN; j++) this.histFrac[hi * PRE_LEN + j] = z[PREAMBLE[j]] / sum;
+      this.histAmax[hi] = amax;
+      if (this.hopCount >= this.preOff[0]) {
+        let score = 0, match = 0;
+        for (let j = 0; j < PRE_LEN; j++) {
+          const h = (this.hopCount - this.preOff[j]) % HIST;
+          score += this.histFrac[h * PRE_LEN + j];
+          match += this.histAmax[h] === PREAMBLE[j] ? 1 : 0;
+        }
+        score /= PRE_LEN;
+        if (this.state === ST_SEARCH && score >= DET_SCORE_MIN && match >= DET_MATCH_MIN) {
+          this.state = ST_PEAK; this.pkN = 0;
+        }
+        if (this.state === ST_PEAK) {
+          this.pkScore[this.pkN] = score; this.pkEnd[this.pkN] = this.n; this.pkN++;
+        }
+      }
+      this.hopCount++;
+      this.nextHop += this.H;
+      if (this.state === ST_PEAK && this.pkN >= PEAK_HOPS) this._finishPeak();
+    }
+    _finishPeak() {
+      let m = 0;
+      for (let i = 1; i < this.pkN; i++) if (this.pkScore[i] > this.pkScore[m]) m = i;
+      const top = this.pkScore[m], lim = 0.85 * top;
+      let l = m, r = m;
+      while (l > 0 && this.pkScore[l - 1] >= lim) l--;
+      while (r < this.pkN - 1 && this.pkScore[r + 1] >= lim) r++;
+      const base = 0.7 * top;
+      let wsum = 0, isum = 0;
+      for (let i = l; i <= r; i++) { const w = this.pkScore[i] - base; wsum += w; isum += w * (i - l); }
+      const c = wsum > 0 ? isum / wsum : 0;
+      this.syncBase = this.pkEnd[l];
+      this.syncFrac = c * this.H;
+      this.trackAdj = 0;
+      this.slot = 0;
+      this.state = ST_DECODE;
+      this.stats.preambles++;
+      this.nextHop = this._slotEnd(0) + this.D;
+    }
+    _finishPacket() {
+      const cl = new Float64Array(CODED_BITS);
+      for (let c = 0; c < CODED_BITS; c++) cl[c] = this.llr[interleave(c)];
+      const info = viterbi(cl, INFO_BITS);
+      const frame = [0, 0, 0, 0, 0, 0];
+      for (let i = 0; i < FRAME_BYTES * 8; i++) frame[i >> 3] |= info[i] << (7 - (i & 7));
+      const q = Array.from(this.slotQ).sort((a, b) => a - b);
+      const qmed = 0.5 * (q[DATA_SLOTS / 2 - 1] + q[DATA_SLOTS / 2]);
+      const u = unpack(frame);
+      if (u.ok) {
+        this.stats.packets_ok++;
+        this.stats.last_q_db = qmed;
+        this.stats.last_timing_adj = this.trackAdj;
+        if (this.out.length < OUTQ) this.out.push({ pkt: u.p, q_db: qmed, at: this.n });
+      } else {
+        this.stats.crc_fail++;
+      }
+      this._resetSearch();
+    }
+    _decodeSlot() {
+      const i = this.slot, set = i % NSETS;
+      const tones = [set, set + NSETS, set + 2 * NSETS, set + 3 * NSETS];
+      const Ec = new Float64Array(M), z = new Float64Array(M), lz = new Float64Array(M);
+      const e = this._slotEnd(i);
+      this._energies(e, tones, Ec);
+      let vhat = 0;
+      for (let v = 0; v < M; v++) {
+        z[v] = Ec[v] / this.noise[tones[v]];
+        lz[v] = Math.log(z[v]);
+        if (z[v] > z[vhat]) vhat = v;
+      }
+      const clamp = (x) => Math.max(-LLR_CLAMP, Math.min(LLR_CLAMP, x));
+      this.llr[2 * i] = clamp(Math.max(lz[0], lz[1]) - Math.max(lz[2], lz[3]));
+      this.llr[2 * i + 1] = clamp(Math.max(lz[0], lz[2]) - Math.max(lz[1], lz[3]));
+      this.slotQ[i] = 10 * Math.log10(Math.max(z[vhat] - 1, 1e-3));
+      if (z[vhat] > 4) {                       /* early/late timing tracking */
+        const tv = [tones[vhat]], Ee = new Float64Array(1), El = new Float64Array(1);
+        this._energies(e - this.D, tv, Ee);
+        this._energies(e + this.D, tv, El);
+        const err = (El[0] - Ee[0]) / (El[0] + Ee[0]);
+        this.trackAdj += 0.25 * this.D * err;
+        const lim = 0.25 * this.S;
+        if (this.trackAdj > lim) this.trackAdj = lim;
+        if (this.trackAdj < -lim) this.trackAdj = -lim;
+      }
+      this.slot++;
+      if (this.slot >= DATA_SLOTS) this._finishPacket();
+      else this.nextHop = this._slotEnd(this.slot) + this.D;
+    }
+    /* x: samples in ESP32 ADC counts (0..4095, any offset; floats allowed) */
+    process(x) {
+      for (let k = 0; k < x.length; k++) {
+        const xf = x[k];
+        if (xf <= 8 || xf >= 4087) this.stats.clipped++;
+        if (this.dc < 0) this.dc = xf;
+        this.dc += (xf - this.dc) * (1 / 1024);
+        this.ring[this.n & RING_MASK] = xf - this.dc;
+        this.n++;
+        if (this.muted) {
+          if (this.n < this.muteUntil) continue;
+          this.muted = false; this._resetSearch(); continue;
+        }
+        while (this.n >= this.nextHop) {
+          if (this.state === ST_DECODE) this._decodeSlot();
+          else this._hop();
+        }
+      }
+    }
+  }
+  const ALL_TONES = Array.from({ length: NTONES }, (_, i) => i);
+
+  /* ------------------------------------------------------------ text layer */
+  function textPacket(msg, i, dst, src, seq0) {
+    const n = Math.ceil(msg.length / 2);
+    let flags = F_TEXT;
+    if (i === 0) flags |= F_FIRST;
+    if (i === n - 1) flags |= F_LAST;
+    return { dst: dst & 15, src: src & 15, seq: (seq0 + i) & 15, flags, cmd: msg[2 * i], arg: 2 * i + 1 < msg.length ? msg[2 * i + 1] : 0 };
+  }
+  const isText = (p) => (p.flags & F_TEXT) !== 0;
+
+  class TextRx {
+    constructor() { this.s = Array.from({ length: 16 }, () => ({ active: false, haveSeq: false, lastSeq: 0, lastMs: 0 })); }
+    _start(s, p, started) {
+      s.active = true; s.started = started; s.qSum = 0; s.qN = 0;
+      s.msg = { src: p.src, dst: p.dst, ok: 0, lost: 0, data: [], lostmask: [], q_db: 0 };
+    }
+    _put(s, b, lost) { if (s.msg.data.length < TEXT_MAX) { s.msg.data.push(lost ? 0 : b); s.msg.lostmask.push(lost ? 1 : 0); } }
+    _lostPk(s, n) { for (let k = 0; k < n; k++) { this._put(s, 0, 1); this._put(s, 0, 1); } s.msg.lost += n; }
+    _finish(s) {
+      s.msg.ok = s.started && s.msg.lost === 0 ? 1 : 0;
+      s.msg.q_db = s.qN ? s.qSum / s.qN : 0;
+      s.active = false;
+      return s.msg;
+    }
+    /* returns -1 for a repeat, else a list of finished messages (0..2) */
+    feed(p, q, now) {
+      if (!isText(p)) return [];
+      const s = this.s[p.src & 15], seq = p.seq & 15, out = [];
+      const recent = s.haveSeq && now - s.lastMs < TEXT_TIMEOUT_MS;
+      if (s.haveSeq && seq === s.lastSeq && now - s.lastMs < TEXT_DUP_MS) return -1;
+      if (p.flags & F_FIRST) {
+        if (s.active) { const miss = (seq - s.lastSeq - 1) & 15; this._lostPk(s, miss < 1 ? 1 : miss); out.push(this._finish(s)); }
+        this._start(s, p, true);
+      } else if (!s.active) {
+        this._start(s, p, false);
+        let miss = recent ? ((seq - s.lastSeq - 1) & 15) : 1;
+        if (miss < 1) miss = 1;
+        this._lostPk(s, miss);
+      } else {
+        const miss = (seq - ((s.lastSeq + 1) & 15)) & 15;
+        if (miss) this._lostPk(s, miss);
+      }
+      this._put(s, p.cmd, 0);
+      if (!((p.flags & F_LAST) && p.arg === 0)) this._put(s, p.arg, 0);
+      s.qSum += q; s.qN++;
+      s.lastSeq = seq; s.haveSeq = true; s.lastMs = now;
+      if (p.flags & F_LAST) out.push(this._finish(s));
+      return out;
+    }
+    poll(now) {
+      for (const s of this.s) {
+        if (s.active && now - s.lastMs > TEXT_TIMEOUT_MS) { this._lostPk(s, 1); return this._finish(s); }
+      }
+      return null;
+    }
+  }
+  const HX = "0123456789ABCDEF";
+  function formatMsg(m) {
+    let hex = "", text = "";
+    for (let i = 0; i < m.data.length; i++) {
+      hex += m.lostmask[i] ? "__" : HX[m.data[i] >> 4] + HX[m.data[i] & 15];
+    }
+    const bytes = m.data.map((b, i) => (m.lostmask[i] ? 0x3F : b < 0x20 || b === 0x7F ? 0x2E : b));
+    try { text = new TextDecoder().decode(new Uint8Array(bytes)); } catch (_) { text = ""; }
+    return `MSG src=${m.src} dst=${m.dst} ok=${m.ok} lost=${m.lost} len=${m.data.length} q=${m.q_db.toFixed(1)} hex=${hex} text=${text}`;
+  }
+
+  /* ---------------------------------------------------- audio for a laptop */
+  /* One packet as audio: a phase-continuous sine, one tone per slot, with a
+   * 3 ms fade at the very start and end (no clicks). */
+  function renderPacket(tones, fs, slotS, amp) {
+    const n = Math.round(tones.length * slotS * fs);
+    const out = new Float32Array(n), fade = Math.round(0.003 * fs);
+    let ph = 0;
+    for (let i = 0; i < n; i++) {
+      const k = Math.min(tones.length - 1, Math.floor(i / (slotS * fs)));
+      ph += 2 * Math.PI * toneHz(tones[k]) / fs;
+      if (ph > 2 * Math.PI) ph -= 2 * Math.PI;
+      let g = amp;
+      if (i < fade) g *= i / fade;
+      if (i > n - fade) g *= (n - i) / fade;
+      out[i] = g * Math.sin(ph);
+    }
+    return out;
+  }
+
+  return {
+    NTONES, PRE_LEN, TOTAL_SLOTS, DATA_SLOTS, PREAMBLE, MODES, TEXT_MAX,
+    F_TEXT, F_FIRST, F_LAST, F_ACK_REQ, F_IS_ACK,
+    toneHz, crc16, convEncode, viterbi, interleave, pack, unpack, txBuild,
+    Rx, textPacket, isText, TextRx, formatMsg, renderPacket,
+  };
+})();
+if (typeof module !== "undefined" && module.exports) module.exports = AMCore;
+/* ===== AMCORE END ===== */
 /* ===== COMMON JS START (keep identical in sender.html and receiver.html) ===== */
 const AM = {
   PRE: [0, 14, 6, 22, 9, 17, 4, 21, 5, 11],
@@ -759,6 +1157,208 @@ class DemoLink {
   async disconnect() { this.board.stop(); }
 }
 
+/* ---------- This computer's speaker + microphone instead of a board ----------
+   Runs the same modem as the ESP32 (AMCore, a port of am_core.c / am_text.c)
+   inside the page and speaks the same serial protocol, so the rest of the page
+   cannot tell the difference. Sender: tones go out of the speaker. Receiver:
+   the microphone is decoded. Works between two computers, between two windows
+   on one computer, and with a real ESP32 board on the other side. */
+class AudioBoard {
+  constructor(opts) {
+    this.node = opts.node; this.peer = opts.peer; this.mic = !!opts.mic; this.mode = opts.mode || "air";
+    this.emit = null; this.seq = Math.floor(Math.random() * 16); this.scopeOn = false;
+    this.tx = null; this.sent = []; this.timers = new Set();
+    this.lv = { n: 0, s: 0, s2: 0, mn: 4095, mx: 0, out: { mean: 0, rms: 0, min: 0, max: 0 } };
+    this.ev = { pre: 0, crc: 0 }; this.amp = 0.5;
+  }
+  async start(emit) {
+    this.emit = emit;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) throw new Error("this browser has no Web Audio");
+    this.ctx = new AC();
+    try { if (this.ctx.state === "suspended") await this.ctx.resume(); } catch (_) { /* resumes on next click */ }
+    this.fs = this.ctx.sampleRate;
+    if (this.mic) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("no microphone access in this browser");
+      /* The browser's echo cancelling / noise removal / auto gain would eat our tones. */
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+      this.src = this.ctx.createMediaStreamSource(this.stream);
+      this.proc = this.ctx.createScriptProcessor(2048, 1, 1);
+      this.sink = this.ctx.createGain(); this.sink.gain.value = 0;
+      this.src.connect(this.proc); this.proc.connect(this.sink); this.sink.connect(this.ctx.destination);
+      this.rx = new AMCore.Rx(this.fs, this.mode); this.trx = new AMCore.TextRx();
+      this.proc.onaudioprocess = (e) => this._audio(e.inputBuffer.getChannelData(0));
+      this.pollT = setInterval(() => { const m = this.trx.poll(performance.now()); if (m) this.emit(AMCore.formatMsg(m)); }, 250);
+      const tr = this.stream.getAudioTracks()[0];
+      this.micName = tr ? tr.label : "";
+    }
+    this.scopeT = setInterval(() => { if (this.scopeOn && this.rx) this._scope(); }, 250);
+    this.emit(`DUBURI laptop modem node ${this.node} ready. Mode ${this.mode}, ${this.fs} Hz${this.mic ? ", microphone: " + (this.micName || "default") : ", speaker only"}`);
+    this.info();
+  }
+  stop() {
+    this._abortTx(true);
+    clearInterval(this.pollT); clearInterval(this.scopeT);
+    for (const t of this.timers) clearTimeout(t);
+    this.timers.clear();
+    if (this.proc) this.proc.onaudioprocess = null;
+    if (this.stream) this.stream.getTracks().forEach((t) => t.stop());
+    if (this.ctx) this.ctx.close().catch(() => {});
+  }
+  _later(ms, fn) { const t = setTimeout(() => { this.timers.delete(t); fn(); }, Math.max(0, ms)); this.timers.add(t); return t; }
+  info() {
+    const m = AMCore.MODES[this.mode];
+    this.emit(`INFO node=${this.node} peer=${this.peer} fw=laptop mode=${this.mode} text_max=${AMCore.TEXT_MAX} slot_ms=${Math.round(m.slot * 1000)} pkt_ms=${Math.round(m.slot * 64000)} duty=1.00 burst_s=999.0 fs=${this.fs}`);
+  }
+  /* ---- receiving ---- */
+  _audio(f) {
+    if (!this.buf || this.buf.length !== f.length) this.buf = new Float32Array(f.length);
+    const x = this.buf, L = this.lv;
+    for (let i = 0; i < f.length; i++) {
+      const v = 2048 + 2047 * f[i];                 /* same units as the ESP32 ADC */
+      x[i] = v; L.n++; L.s += v; L.s2 += v * v;
+      if (v < L.mn) L.mn = v;
+      if (v > L.mx) L.mx = v;
+    }
+    if (L.n >= this.fs / 2) {
+      const mean = L.s / L.n;
+      L.out = { mean, rms: Math.sqrt(Math.max(0, L.s2 / L.n - mean * mean)), min: L.mn, max: L.mx };
+      L.n = 0; L.s = 0; L.s2 = 0; L.mn = 4095; L.mx = 0;
+    }
+    this.rx.process(x);
+    const st = this.rx.stats;
+    if (st.preambles !== this.ev.pre) { this.ev.pre = st.preambles; this.emit(`DET n=${st.preambles}`); }
+    if (st.crc_fail !== this.ev.crc) { this.ev.crc = st.crc_fail; this.emit(`CRCFAIL n=${st.crc_fail}`); }
+    let r;
+    while ((r = this.rx.pop())) this._packet(r);
+  }
+  _packet(r) {
+    const p = r.pkt, q = r.q_db.toFixed(1);
+    if (p.dst !== this.node && p.dst !== 15) { this.emit(`RX (not for me) src=${p.src} dst=${p.dst} q=${q}dB`); return; }
+    if (AMCore.isText(p)) {
+      const out = this.trx.feed(p, r.q_db, performance.now());
+      if (out === -1) { this.emit(`REPEAT src=${p.src} seq=${p.seq} (dropped)`); return; }
+      const first = !!(p.flags & AMCore.F_FIRST), last = !!(p.flags & AMCore.F_LAST);
+      const before = first && (out.length === 2 || (out.length === 1 && !last)) ? 1 : 0;
+      for (let i = 0; i < before; i++) this.emit(AMCore.formatMsg(out[i]));
+      const data = hex2(p.cmd) + (last && p.arg === 0 ? "" : hex2(p.arg));
+      this.emit(`TXT src=${p.src} dst=${p.dst} seq=${p.seq} first=${first ? 1 : 0} last=${last ? 1 : 0} data=${data} q=${q}`);
+      for (let i = before; i < out.length; i++) this.emit(AMCore.formatMsg(out[i]));
+    } else if (p.flags & AMCore.F_IS_ACK) {
+      this.emit(`ACK src=${p.src} seq=${p.seq} cmd=${p.cmd} state=${p.arg} q=${q}dB`);
+    } else {
+      this.emit(`RX src=${p.src} dst=${p.dst} seq=${p.seq} cmd=${p.cmd} arg=${p.arg} flags=${p.flags.toString(16).toUpperCase()} q=${q}dB`);
+    }
+  }
+  _scope() { this.emit("SCOPE " + Array.from(this.rx.scope, (v) => Math.round(v)).join(" ") + "  rms=" + Math.round(this.lv.out.rms)); }
+  _stats() {
+    const s = this.rx ? this.rx.stats : { preambles: 0, packets_ok: 0, crc_fail: 0, clipped: 0, last_q_db: 0, last_timing_adj: 0 };
+    const o = this.lv.out;
+    this.emit(`STATS node=${this.node} preambles=${s.preambles} ok=${s.packets_ok} crc_fail=${s.crc_fail} last_q=${s.last_q_db.toFixed(1)}dB timing_adj=${s.last_timing_adj.toFixed(1)}`);
+    this.emit(`ADC fs_measured=${this.fs.toFixed(1)} fs_used=${this.fs.toFixed(1)} overflows=0 clipped=${s.clipped}`);
+    if (this.rx) this.emit(`LEVEL mean=${o.mean.toFixed(0)} rms=${o.rms.toFixed(1)} min=${Math.round(o.min)} max=${Math.round(o.max)} (want rms 20..300, min>100, max<3900)`);
+  }
+  /* ---- sending ---- */
+  _play(samples, at) {
+    const b = this.ctx.createBuffer(1, samples.length, this.fs);
+    b.copyToChannel(samples, 0);
+    const n = this.ctx.createBufferSource();
+    n.buffer = b; n.connect(this.ctx.destination); n.start(at);
+    return n;
+  }
+  _sendText(dst, rep, bytes) {
+    if (this.tx) return;
+    if (bytes.length < 1 || bytes.length > AMCore.TEXT_MAX) { this.emit(`ERR message must be 1..${AMCore.TEXT_MAX} bytes (got ${bytes.length})`); return; }
+    if (bytes.some((b) => b === 0)) { this.emit("ERR message may not contain byte 00"); return; }
+    if (!(dst >= 1 && dst <= 15)) { this.emit("ERR destination must be 1..15 (15 = all)"); return; }
+    if (!(rep >= 1 && rep <= 3)) { this.emit("ERR repeats must be 1..3"); return; }
+    if (this.ctx.state === "suspended") this.ctx.resume();
+    const slot = AMCore.MODES[this.mode].slot, pkt = 64 * slot, gap = 0.4;
+    const n = Math.ceil(bytes.length / 2), seq0 = this.seq, t0 = performance.now();
+    this.tx = { nodes: [], i: 0, n };
+    this.sent = [];
+    this.emit(`TXMSG dst=${dst} len=${bytes.length} n=${n} rep=${rep}`);
+    let at = this.ctx.currentTime + 0.25;
+    for (let i = 0; i < n; i++) {
+      const p = AMCore.textPacket(bytes, i, dst, this.node, seq0);
+      const tones = AMCore.txBuild(p), audio = AMCore.renderPacket(tones, this.fs, slot, this.amp);
+      this.sent.push(audio);
+      const data = hex2(p.cmd) + ((p.flags & AMCore.F_LAST) && p.arg === 0 ? "" : hex2(p.arg));
+      for (let k = 1; k <= rep; k++) {
+        this.tx.nodes.push(this._play(audio, at));
+        const line = `TXPKT i=${i + 1} n=${n} try=${k} seq=${p.seq} flags=${p.flags.toString(16).toUpperCase()} data=${data} tones=${tones.join(",")}`;
+        this._later((at - this.ctx.currentTime) * 1000 - 15, () => { if (this.tx) { this.tx.i = i + 1; this.emit(line); } });
+        at += pkt + (i < n - 1 || k < rep ? gap : 0);
+      }
+    }
+    this.seq = (seq0 + n) & 15;
+    this._later((at - this.ctx.currentTime) * 1000 + 30, () => {
+      if (!this.tx) return;
+      this.tx = null;
+      this.emit(`TXDONE n=${n} ms=${Math.round(performance.now() - t0)}`);
+    });
+  }
+  _abortTx(quiet) {
+    if (!this.tx) return;
+    for (const nd of this.tx.nodes) { try { nd.stop(); } catch (_) { /* not started */ } }
+    if (!quiet) this.emit(`TXABORT i=${Math.max(1, this.tx.i)} n=${this.tx.n}`);
+    this.tx = null;
+  }
+  _tone(hz, ms) {
+    const fs = this.fs, n = Math.round(fs * ms / 1000), a = new Float32Array(n), fade = Math.round(0.005 * fs);
+    for (let i = 0; i < n; i++) a[i] = this.amp * Math.sin(2 * Math.PI * hz * i / fs) * Math.min(1, i / fade, (n - i) / fade);
+    return a;
+  }
+  handle(line) {
+    line = line.trim();
+    if (line === "!") { this._abortTx(false); return; }
+    if (this.tx) return;                            /* like the board: busy while sending */
+    if (line.startsWith("msg ")) { this._sendText(this.peer, 1, Array.from(new TextEncoder().encode(line.slice(4)))); return; }
+    const w = line.split(/\s+/), cmd = w[0];
+    if (cmd === "info") this.info();
+    else if (cmd === "msghex") {
+      const h = w[3] || "";
+      if (w.length < 4 || h.length % 2 || /[^0-9a-fA-F]/.test(h) || h.length > 2 * AMCore.TEXT_MAX) { this.emit(`ERR usage: msghex <dst> <repeats> <hex, up to ${AMCore.TEXT_MAX} bytes>`); return; }
+      const bytes = [];
+      for (let i = 0; i < h.length; i += 2) bytes.push(parseInt(h.substr(i, 2), 16));
+      this._sendText(parseInt(w[1], 10), parseInt(w[2], 10), bytes);
+    } else if (cmd === "mode") {
+      if (!AMCore.MODES[w[1]]) this.emit(`ERR usage: mode air|water (now ${this.mode})`);
+      else if (this.rx && !this.rx.setMode(w[1])) this.emit("ERR busy receiving, try again");
+      else this.mode = w[1];
+      this.info();
+    } else if (cmd === "scope") this.scopeOn = w[1] ? w[1] === "on" : !this.scopeOn;
+    else if (cmd === "stats") this._stats();
+    else if (cmd === "tone" && w.length >= 3) {
+      const hz = +w[1], ms = +w[2];
+      if (!(hz >= 100 && hz <= 20000 && ms >= 1 && ms <= 5000)) { this.emit("ERR usage: tone <100..20000 Hz> <1..5000 ms>"); return; }
+      if (this.ctx.state === "suspended") this.ctx.resume();
+      this._play(this._tone(hz, ms), this.ctx.currentTime + 0.05);
+      this.emit(`TONE ${hz} Hz (real ${hz} Hz) for ${ms} ms`);
+    } else if (cmd === "sweep") {
+      this.emit("SWEEP: each tone ~300 ms. Watch 'scope' on the other side.");
+      let at = this.ctx.currentTime + 0.1;
+      for (let k = 0; k < AMCore.NTONES; k++) {
+        this._play(this._tone(AMCore.toneHz(k), 300), at);
+        const kk = k;
+        this._later((at - this.ctx.currentTime) * 1000, () => this.emit(`SWEEP tone ${kk} = ${AMCore.toneHz(kk)} Hz`));
+        at += 0.45;
+      }
+    } else if (["on", "off", "toggle", "ping", "send"].includes(cmd)) {
+      this.emit("ERR LED commands need two ESP32 boards (they wait for a reply). Send a text message instead.");
+    } else {
+      this.emit("Commands: msg <text> ; msghex <dst> <rep> <hex> ; ! ; mode air|water ; info ; tone <Hz> <ms> ; sweep ; scope [on|off] ; stats");
+    }
+  }
+}
+class AudioLink {
+  constructor(onLine, onClose, opts) { this.onLine = onLine; this.onClose = onClose; this.isDemo = false; this.isAudio = true; this.board = new AudioBoard(opts); }
+  async connect() { await this.board.start((l) => setTimeout(() => this.onLine(l), 0)); }
+  send(line) { setTimeout(() => this.board.handle(line), 0); return Promise.resolve(); }
+  async reset() { this.board.info(); }
+  async disconnect() { this.board.stop(); }
+}
+
 /* ---------- Log panel ---------- */
 class LogPanel {
   constructor() {
@@ -783,8 +1383,8 @@ class LogPanel {
 
 /* ---------- Connection controller (header buttons, banners, link) ---------- */
 class Conn {
-  constructor({ demoOpts, onLine, onState, errBanner }) {
-    this.demoOpts = demoOpts; this.onLineCb = onLine; this.onState = onState; this.errBanner = !!errBanner;
+  constructor({ demoOpts, audioOpts, onLine, onState, errBanner }) {
+    this.demoOpts = demoOpts; this.audioOpts = audioOpts || demoOpts; this.onLineCb = onLine; this.onState = onState; this.errBanner = !!errBanner;
     this.link = null; this.state = "off"; this.node = null; this.log = new LogPanel();
     this.mode = null; this.info = null; this.pendingMode = null; this.busy = false; this.errT = null;
     for (const b of document.querySelectorAll(".segbtn")) b.onclick = () => this.askMode(b.dataset.mode);
@@ -793,22 +1393,26 @@ class Conn {
     $("btnConnect").onclick = () => this.connectReal();
     $("btnDisconnect").onclick = () => this.disconnect();
     $("btnReset").onclick = () => this.reset();
+    $("btnAudio").onclick = () => this.setAudio();
     $("demoToggle").onchange = (e) => this.setDemo(e.target.checked);
     $("cmdForm").onsubmit = (e) => { e.preventDefault(); const v = $("cmdInput").value.trim(); if (v) { this.send(v); $("cmdInput").value = ""; } };
     if (!this.hasSerial) $("btnConnect").disabled = true;
     this._render(true);
   }
-  get connected() { return this.state === "on" || this.state === "demo"; }
+  get connected() { return this.state === "on" || this.state === "demo" || this.state === "audio"; }
   _err(msg) { const b = $("connError"); b.innerHTML = msg; b.hidden = !msg; }
   _render(skipCallback) {
     const p = $("connPill");
     p.className = "pill" + (this.state === "off" ? "" : " " + this.state);
     p.textContent = this.state === "on" ? "Connected" + (this.node != null ? " · node " + this.node : "")
       : this.state === "demo" ? "Demo board" + (this.node != null ? " · node " + this.node : "")
+      : this.state === "audio" ? "Computer audio" + (this.node != null ? " · node " + this.node : "")
       : this.state === "lost" ? "Board disconnected" : "Not connected";
-    $("btnConnect").hidden = this.state === "on" || this.state === "demo";
-    $("btnDisconnect").hidden = this.state !== "on";
-    $("btnReset").hidden = !this.connected;
+    $("btnConnect").hidden = this.connected;
+    $("btnAudio").hidden = this.connected;
+    $("btnDisconnect").hidden = this.state !== "on" && this.state !== "audio";
+    $("audioBanner").hidden = this.state !== "audio";
+    $("btnReset").hidden = !this.connected || this.state === "audio";
     $("demoBanner").hidden = this.state !== "demo";
     $("demoToggle").checked = this.state === "demo";
     $("btnConnect").disabled = !this.hasSerial;
@@ -833,10 +1437,10 @@ class Conn {
     }
     const lp = linkParams(this.info);
     const d = $("modeDesc");
-    if (!c) d.innerHTML = "Mode unknown · connect the board to see it.";
+    if (!c) d.innerHTML = "Mode unknown · connect the board (or use this computer's audio) to see it.";
     else if (this.pendingMode) d.innerHTML = `Switching to <b>${AM.MODES[this.pendingMode].label}</b>…`;
     else if (!this.mode) d.innerHTML = "Mode unknown · waiting for the board's INFO line.";
-    else d.innerHTML = `Board is in <b>${AM.MODES[this.mode].label}</b> mode (${AM.MODES[this.mode].what}) · ${lp.slot} ms per tone · ${(lp.pkt / 1000).toFixed(2)} s per packet`;
+    else d.innerHTML = `${this.state === "audio" ? "This computer is" : "Board is"} in <b>${AM.MODES[this.mode].label}</b> mode (${AM.MODES[this.mode].what}) · ${lp.slot} ms per tone · ${(lp.pkt / 1000).toFixed(2)} s per packet`;
   }
   _line(line) {
     const m = parseLine(line);
@@ -887,6 +1491,24 @@ class Conn {
     await this.link.connect();
     this.state = "demo"; this._render();
     this.log.add("demo board started (pretend ESP32)", "o");
+  }
+  async setAudio() {
+    this._err("");
+    if (this.link) await this.disconnect(true);
+    const link = new AudioLink((l) => this._line(l), (r) => this._closed(r), this.audioOpts);
+    try {
+      await link.connect();
+    } catch (e) {
+      try { await link.disconnect(); } catch (_) { /* ignore */ }
+      const denied = e && (e.name === "NotAllowedError" || e.name === "SecurityError");
+      this.state = "off"; this._render();
+      this._err(denied
+        ? "<b>The microphone was blocked.</b> Click the camera/microphone icon in the address bar, choose <b>Allow</b>, and press the button again."
+        : "<b>Could not use this computer's audio.</b> " + esc(e && e.message ? e.message : e));
+      return;
+    }
+    this.link = link; this.state = "audio"; this._render();
+    this.log.add("using this computer's " + (this.audioOpts.mic ? "microphone" : "speaker") + " (no board)", "o");
   }
   async disconnect(quiet) {
     const l = this.link;
@@ -939,7 +1561,7 @@ const LP = () => linkParams(S.info);
 const slotMs = () => LP().slot;
 const pktMs = () => LP().pkt;
 
-const conn = new Conn({ demoOpts: { node: 1, peer: 2, autoHear: false }, onLine, onState });
+const conn = new Conn({ demoOpts: { node: 1, peer: 2, autoHear: false }, audioOpts: { node: 1, peer: 2, mic: false }, onLine, onState });
 
 function fillDst() {
   const sel = $("dst"), keep = sel.value;
@@ -972,7 +1594,7 @@ $("btnScope").onclick = () => {
 $("miniScopeLabels").innerHTML = scopeLabelsHtml();
 
 function onState(st) {
-  if (st !== "on" && st !== "demo") {
+  if (st !== "on" && st !== "demo" && st !== "audio") {
     if (S.sending) finishTx("Connection closed while sending.", "bad");
     S.info = null; S.scopeOn = false;
     $("btnScope").textContent = "Show mic bars"; $("miniScopeWrap").hidden = true;

@@ -180,9 +180,30 @@ receiver page-এ "clipping" দেখালে GAIN পিন GND-এ (50 dB) �
   সেকেন্ড লাগবে। **Send** চাপলে প্রতিটা packet-এর 64টা tone piano-roll-এ বাজতে দেখা যাবে।
 * Receiver-এ packet আসা শুরু হলেই "packet arriving" দেখাবে, প্রতিটা packet-এর লেখা সাথে সাথে বসবে, শেষে পুরো
   message, link quality (q, dB) graph, counter আর mic level দেখাবে।
-* Board ছাড়াই কেমন দেখায় দেখতে চাইলে দুই page-এই **Demo** switch আছে।
+* Board ছাড়াই কেমন দেখায় দেখতে চাইলে দুই page-এই **Demo** switch আছে (নকল board, কোনো শব্দ হয় না)।
+  সত্যিকারের শব্দ দিয়ে, কিন্তু board ছাড়া পরীক্ষা করতে নিচের 6.1 দেখো।
 * বাংলাও পাঠানো যায়। প্রতিটা বাংলা অক্ষর UTF-8-এ 3 byte, তাই এক message-এ সর্বোচ্চ 64 byte ≈ 21টা বাংলা অক্ষর
   বা 64টা ইংরেজি অক্ষর।
+
+### 6.1 বোর্ড ছাড়া, শুধু ল্যাপটপের speaker আর mic দিয়ে
+
+কোনো ESP32 না কিনেই code কাজ করে কি না দেখা যায়। Page দুটো নিজেরাই modem চালায় (`pc/amcore.js`, firmware-এর
+C code-এর হুবহু JavaScript রূপ, একই recording-এ C আর JavaScript একই ফল দেয়)।
+
+**এক ল্যাপটপে:**
+1. Chrome/Edge-এ `pc/receiver.html` আর `pc/sender.html` **দুটো আলাদা window-এ** পাশাপাশি খোলো (tab না,
+   পেছনের tab-কে browser ধীর করে দেয়)।
+2. Receiver-এ **Use this computer's microphone** → browser জিজ্ঞেস করলে **Allow**।
+3. Sender-এ **Use this computer's speaker**। দুই page-এ মোড **AIR** দেখাবে।
+4. ল্যাপটপের volume 50–70 %। Headphone/Bluetooth speaker খুলে রাখো (শব্দ যেন ল্যাপটপের নিজের speaker থেকে বের হয়)।
+5. Receiver-এ **Show live tone bars**, sender-এ **Tone test (5 kHz)**: 5k-এর কাছের বার লাফাবে।
+6. Sender-এ `Hi` লিখে **Send**। ~3 সেকেন্ড পর receiver-এ "Hi" আসবে।
+
+**দুই ল্যাপটপে:** একটায় sender.html (speaker), অন্যটায় receiver.html (microphone), 1–3 m দূরে, একই ধাপ।
+একটা ল্যাপটপ আর একটা ESP32 board-ও একে অপরের সাথে কথা বলতে পারে (একই মোডে)।
+
+বার না লাফালে: Chrome-এর ঠিকানা-বারের mic আইকন থেকে ঠিক microphone বেছে নাও; Windows-এ Sound settings →
+Microphone → "Audio enhancements" বন্ধ করো (কিছু ল্যাপটপ নিজে থেকে noise কাটে, তাতে আমাদের tone-ও কেটে যায়)।
 
 ---
 

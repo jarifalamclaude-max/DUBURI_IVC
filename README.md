@@ -13,6 +13,8 @@
 PC 1-এর web page-এ লেখা টাইপ করো → speaker দিয়ে tone হয়ে যায় → PC 2-এর microphone শোনে → dashboard-এ লেখা দেখায়।
 Firmware-এ দুই মোড: **AIR** (speaker → MAX9814 mic, ঘরের মধ্যে, 40 ms slot) আর **WATER** (পুল, 20 ms slot)।
 কেনাকাটার তালিকা, breadboard wiring ছবি, ব্যবহার আর পরীক্ষার ধাপ: **[`docs/TEXT_MODEM_GUIDE.md`](docs/TEXT_MODEM_GUIDE.md)**।
+**Board ছাড়াই পরীক্ষা:** `pc/sender.html`-এ "Use this computer's speaker" আর `pc/receiver.html`-এ "Use this computer's microphone"
+চাপলে ল্যাপটপের নিজের speaker/mic দিয়েই একই modem চলে (এক ল্যাপটপে দুই window-এ, বা দুই ল্যাপটপে)। গাইডের 6.1 দেখো।
 
 ## Folder
 
@@ -21,7 +23,8 @@ Firmware-এ দুই মোড: **AIR** (speaker → MAX9814 mic, ঘরের
 | `firmware/DuburiModem/` | ESP32 Arduino sketch। শুধু `config.h` বদলাতে হয় (NODE_ID, PEER_ID, মোড, pin) |
 | `firmware/DuburiModem/am_core.c/.h` | Modem-এর মূল code, সাধারণ C। একই file PC test-এ চলে |
 | `firmware/DuburiModem/am_text.c/.h` | টেক্সট message ভাগ করা ও জোড়া লাগানো (2 byte/packet) |
-| `pc/` | `sender.html` আর `receiver.html`: Chrome/Edge-এ USB দিয়ে board-এর সাথে কথা বলে, internet লাগে না |
+| `pc/` | `sender.html` আর `receiver.html`: Chrome/Edge-এ USB দিয়ে board-এর সাথে, বা ল্যাপটপের speaker/mic দিয়ে সরাসরি; internet লাগে না |
+| `pc/amcore.js` | Modem-এর JavaScript রূপ (am_core.c + am_text.c-এর হুবহু port), দুই page-এ ঢোকানো থাকে (`pc/sync_common.py`) |
 | `tests/` | PC-তে unit test: `make -C tests && ./tests/test_core && ./tests/test_text` |
 | `sim/` | Virtual pool: `python3 sim/run_sim.py`; virtual ঘর (AIR): `python3 sim/air_sim.py` |
 | `docs/` | গাইডের উৎস, [`TEXT_MODEM_GUIDE.md`](docs/TEXT_MODEM_GUIDE.md), [`SERIAL_PROTOCOL.md`](docs/SERIAL_PROTOCOL.md), `wiring/` (breadboard ছবি) |
@@ -46,6 +49,8 @@ python3 sim/run_sim.py                  # ~5 min, writes sim/results/
 python3 sim/air_sim.py                  # AIR timing sweep in virtual rooms (~4 min)
 python3 sim/air_sim.py text             # multi-packet text messages, room + pool
 node pc/test/ui_test.js                 # web page tests (Playwright + Chromium)
+python3 pc/test/make_vectors.py && node pc/test/amcore_test.js   # JavaScript modem == C modem
+node pc/test/audio_test.js              # laptop speaker/mic mode end to end (fake microphone)
 python3 docs/wiring/wiring.py           # breadboard wiring pictures + connection check
 python3 docs/figures.py                 # schematics + figures
 python3 docs/build_pdf.py               # needs Chrome/Chromium (set CHROME=/path if not found)

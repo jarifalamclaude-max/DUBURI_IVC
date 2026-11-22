@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Copy the COMMON CSS / COMMON JS blocks from sender.html into receiver.html.
+"""Copy the COMMON CSS / COMMON JS blocks from sender.html into receiver.html,
+and put pc/amcore.js (the JavaScript modem) into both pages.
 
 Both pages must stay single self-contained files, so the shared code is
-duplicated. Edit it in sender.html, then run:  python3 pc/sync_common.py
+duplicated. Edit it in sender.html / amcore.js, then run:  python3 pc/sync_common.py
 """
 import os
 import re
@@ -20,8 +21,23 @@ def block(text, start, end):
     return i, j
 
 
+AM_START, AM_END = "/* ===== AMCORE START", "/* ===== AMCORE END ===== */"
+
+
+def put_amcore(text, core):
+    if AM_START in text:
+        a, b = block(text, AM_START, AM_END)
+        return text[:a] + core + text[b:]
+    i = text.index("/* ===== COMMON JS START")
+    return text[:i] + core + "\n" + text[i:]
+
+
 def main():
-    src = open(os.path.join(HERE, "sender.html"), encoding="utf-8").read()
+    core = open(os.path.join(HERE, "amcore.js"), encoding="utf-8").read()
+    core = core[core.index(AM_START):core.index(AM_END) + len(AM_END)]
+    spath = os.path.join(HERE, "sender.html")
+    src = put_amcore(open(spath, encoding="utf-8").read(), core)
+    open(spath, "w", encoding="utf-8").write(src)
     path = os.path.join(HERE, "receiver.html")
     dst = open(path, encoding="utf-8").read()
     for start, end, placeholder in BLOCKS:
@@ -32,8 +48,9 @@ def main():
         else:
             a, b = block(dst, start, end)
             dst = dst[:a] + common + dst[b:]
+    dst = put_amcore(dst, core)
     open(path, "w", encoding="utf-8").write(dst)
-    print("receiver.html updated")
+    print("sender.html and receiver.html updated")
 
 
 if __name__ == "__main__":
