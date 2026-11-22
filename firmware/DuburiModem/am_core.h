@@ -29,8 +29,8 @@ extern "C" {
 
 /* ---------------- Fixed signal parameters (TX and RX must match) -------- */
 #define AM_FS_NOMINAL     50000.0f  /* RX ADC sample rate we ask for (Hz)   */
-#define AM_T_SLOT         0.020f    /* one symbol slot (s)                  */
-#define AM_T_WIN          0.016f    /* analysis window inside a slot (s)    */
+#define AM_T_SLOT         0.020f    /* WATER mode slot (s), see modes below */
+#define AM_T_WIN          0.016f    /* WATER mode analysis window (s)       */
 #define AM_T_HOP          0.0025f   /* preamble search step (s)             */
 #define AM_T_TRACK        0.001f    /* early/late offset for timing (s)     */
 
@@ -49,6 +49,25 @@ extern "C" {
 #define AM_DATA_SLOTS     (AM_CODED_BITS / 2)               /* 54           */
 #define AM_TOTAL_SLOTS    (AM_PRE_LEN + AM_DATA_SLOTS)   /* 64 -> 1.28 s     */
 
+/* ---------------- Medium modes ------------------------------------------
+ * WATER: the original pool design (20 ms slots).
+ * AIR  : sound is 4.3x slower in air and room walls reflect more, so echoes
+ *        last much longer; AIR uses longer slots with a longer guard time.
+ * Tones, packet format and error correction are the same in both modes.
+ * BOTH boards must be in the same mode. */
+#define AM_MODE_WATER     0
+#define AM_MODE_AIR       1
+#define AM_NMODES         2
+
+typedef struct {
+    const char *name;     /* "water" or "air"                           */
+    float t_slot;         /* one symbol slot (s)                        */
+    float t_win;          /* analysis window inside a slot (s)          */
+} am_mode_info_t;
+
+/* Returns the timing of a mode (unknown mode -> WATER). */
+const am_mode_info_t *am_mode_info(int mode);
+
 /* ---------------- Receiver tuning (validated by sim/run_sim.py) --------- */
 #ifndef AM_DET_SCORE_MIN
 #define AM_DET_SCORE_MIN  0.14f     /* preamble score threshold (0..1)      */
@@ -62,8 +81,8 @@ extern "C" {
 
 /* ---------------- Buffers (sized for Fs up to ~60 kHz) ------------------ */
 #define AM_RING           4096      /* power of two                         */
-#define AM_W_MAX          1024
-#define AM_HIST           128       /* preamble search history (hops)       */
+#define AM_W_MAX          2048      /* longest window: AIR mode at 62 kHz   */
+#define AM_HIST           256       /* preamble search history (hops)       */
 #define AM_OUTQ           4         /* decoded packets waiting to be read   */
 
 /* ---------------- Packet ------------------------------------------------ */
@@ -117,7 +136,9 @@ typedef struct {
 } am_rx_result_t;
 
 typedef struct {
-    /* configuration derived from the sample rate */
+    /* configuration derived from the mode and the sample rate */
+    int      mode;                  /* AM_MODE_WATER / AM_MODE_AIR         */
+    float    t_slot, t_win;         /* timing of that mode (s)             */
     float    fs;
     int      W, H, D;               /* window, hop, early/late offset      */
     float    S;                     /* samples per slot (not an integer)   */
@@ -167,7 +188,12 @@ typedef struct {
     am_stats_t stats;
 } am_rx_t;
 
+/* Starts in WATER mode; call am_rx_set_mode() to change. */
 void am_rx_init(am_rx_t *rx, float fs);
+/* Switch medium mode. Ignored while a packet is being decoded; returns 1 if
+ * applied. The noise floor is learned again (~0.1 s). */
+int  am_rx_set_mode(am_rx_t *rx, int mode);
+int  am_rx_mode(const am_rx_t *rx);
 /* Change the sample rate estimate (firmware measures the real ADC rate).
  * Ignored while a packet is being decoded; returns 1 if applied. */
 int  am_rx_set_fs(am_rx_t *rx, float fs);

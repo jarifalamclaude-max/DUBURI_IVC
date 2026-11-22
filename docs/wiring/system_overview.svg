@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="640" viewBox="0 0 1800 640">
+<defs><radialGradient id="cone0" cx="0.45" cy="0.4"><stop offset="0" stop-color="#8d939b"/><stop offset="1" stop-color="#26292e"/></radialGradient></defs>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<rect x="384.0" y="146.0" width="300.0" height="240.0" rx="14.0" fill="#000" stroke="none" stroke-width="1.0" opacity="0.08"/>
+<rect x="380.0" y="140.0" width="300.0" height="240.0" rx="14.0" fill="#ffffff" stroke="#2f6fdb" stroke-width="2" />
+<rect x="380.0" y="140.0" width="300.0" height="34.0" rx="14.0" fill="#2f6fdb" stroke="none" stroke-width="1.0" />
+<rect x="380.0" y="160.0" width="300.0" height="14.0" rx="0.0" fill="#2f6fdb" stroke="none" stroke-width="1.0" />
+<text x="530.0" y="163.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold" >TRANSMITTER node</text>
+<rect x="1084.0" y="146.0" width="300.0" height="240.0" rx="14.0" fill="#000" stroke="none" stroke-width="1.0" opacity="0.08"/>
+<rect x="1080.0" y="140.0" width="300.0" height="240.0" rx="14.0" fill="#ffffff" stroke="#d9822b" stroke-width="2" />
+<rect x="1080.0" y="140.0" width="300.0" height="34.0" rx="14.0" fill="#d9822b" stroke="none" stroke-width="1.0" />
+<rect x="1080.0" y="160.0" width="300.0" height="14.0" rx="0.0" fill="#d9822b" stroke="none" stroke-width="1.0" />
+<text x="1230.0" y="163.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold" >RECEIVER node</text>
+<rect x="44.0" y="176.0" width="250.0" height="155.0" rx="10.0" fill="#000" stroke="none" stroke-width="1.0" opacity="0.12"/>
+<rect x="40.0" y="170.0" width="250.0" height="155.0" rx="10.0" fill="#2b2f36" stroke="#15181c" stroke-width="1.2" />
+<rect x="52.0" y="182.0" width="226.0" height="131.0" rx="3.0" fill="#f7f9fc" stroke="none" stroke-width="1.0" />
+<rect x="52.0" y="182.0" width="226.0" height="18.0" rx="3.0" fill="#dfe5ee" stroke="none" stroke-width="1.0" />
+<circle cx="62.0" cy="191.0" r="3.6" fill="#ff5f57" stroke="none" stroke-width="1.0" />
+<circle cx="73.0" cy="191.0" r="3.6" fill="#febc2e" stroke="none" stroke-width="1.0" />
+<circle cx="84.0" cy="191.0" r="3.6" fill="#28c840" stroke="none" stroke-width="1.0" />
+<rect x="96.0" y="186.0" width="172.0" height="10.0" rx="5.0" fill="#ffffff" stroke="none" stroke-width="1.0" />
+<text x="102.0" y="194.0" font-family="DejaVu Sans Mono, Liberation Mono, monospace" font-size="7.5" fill="#5a6472" text-anchor="start" font-weight="normal" >file:///.../pc/sender.html</text>
+<text x="64.0" y="222.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="13" fill="#1f2328" text-anchor="start" font-weight="bold" >DUBURI Sender</text>
+<text x="64.0" y="243.0" font-family="DejaVu Sans Mono, Liberation Mono, monospace" font-size="10" fill="#24292f" text-anchor="start" font-weight="normal" >Text : Hello</text>
+<text x="64.0" y="264.0" font-family="DejaVu Sans Mono, Liberation Mono, monospace" font-size="9" fill="#0b6bcb" text-anchor="start" font-weight="normal" >01001000 01100101 ...</text>
+<text x="64.0" y="285.0" font-family="DejaVu Sans Mono, Liberation Mono, monospace" font-size="9" fill="#1a7f37" text-anchor="start" font-weight="bold" >[ Send ]</text>
+<path d="M 18.0 327.0 L 312.0 327.0 L 298.0 345.0 L 32.0 345.0 Z" fill="#c9ced6" stroke="#8e959f" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round" />
+<rect x="131.0" y="329.0" width="68.0" height="5.0" rx="2.0" fill="#a8afba" stroke="none" stroke-width="1.0" />
+<rect x="302.0" y="333.0" width="7.0" height="6.0" rx="1.0" fill="#555b63" stroke="none" stroke-width="1.0" />
+<rect x="400.0" y="196.0" width="64.0" height="112.0" rx="6.0" fill="#1c232c" stroke="#0b0f14" stroke-width="1.2" />
+<rect x="412.0" y="202.0" width="40.0" height="52.0" rx="2.0" fill="#c3c8ce" stroke="#80868e" stroke-width="1" />
+<text x="432.0" y="232.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="9" fill="#4a5058" text-anchor="middle" font-weight="bold" >ESP32</text>
+<rect x="403.0" y="260.0" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="457.0" y="260.0" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="403.0" y="264.4" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="457.0" y="264.4" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="403.0" y="268.8" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="457.0" y="268.8" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="403.0" y="273.2" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="457.0" y="273.2" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="403.0" y="277.6" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="457.0" y="277.6" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="403.0" y="282.0" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="457.0" y="282.0" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="403.0" y="286.4" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="457.0" y="286.4" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="403.0" y="290.8" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="457.0" y="290.8" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="403.0" y="295.2" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="457.0" y="295.2" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="403.0" y="299.6" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="457.0" y="299.6" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="424.0" y="300.0" width="16.0" height="10.0" rx="1.0" fill="#c3c8ce" stroke="#7a8087" stroke-width="1" />
+<rect x="490.0" y="214.0" width="76.0" height="58.0" rx="5.0" fill="#1f7a3e" stroke="#0f4a24" stroke-width="1.2" />
+<text x="528.0" y="240.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="9.5" fill="#fff" text-anchor="middle" font-weight="bold" >PAM8403</text>
+<text x="528.0" y="254.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="9" fill="#d7eadc" text-anchor="middle" font-weight="normal" >amp</text>
+<text x="528.0" y="300.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="9.5" fill="#57606a" text-anchor="middle" font-weight="normal" >RC filter</text>
+<text x="528.0" y="313.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="9.5" fill="#57606a" text-anchor="middle" font-weight="normal" >+ volume</text>
+<line x1="466.0" y1="243.0" x2="490.0" y2="243.0" stroke="#f39c12" stroke-width="3" stroke-linecap="round" />
+<circle cx="764.0" cy="266.0" r="58.0" fill="#000" stroke="none" stroke-width="1.0" opacity="0.13"/>
+<circle cx="760.0" cy="260.0" r="58.0" fill="#3a3d42" stroke="#1d1f22" stroke-width="1.5" />
+<circle cx="795.3" cy="295.3" r="4.0" fill="#d0d3d7" stroke="#777" stroke-width="1" />
+<circle cx="724.7" cy="295.3" r="4.0" fill="#d0d3d7" stroke="#777" stroke-width="1" />
+<circle cx="724.7" cy="224.7" r="4.0" fill="#d0d3d7" stroke="#777" stroke-width="1" />
+<circle cx="795.3" cy="224.7" r="4.0" fill="#d0d3d7" stroke="#777" stroke-width="1" />
+<circle cx="760.0" cy="260.0" r="45.2" fill="#5a5e65" stroke="#2a2c30" stroke-width="1" />
+<circle cx="760.0" cy="260.0" r="39.4" fill="url(#cone0)" stroke="#202226" stroke-width="1" />
+<circle cx="760.0" cy="260.0" r="14.5" fill="#1d1f23" stroke="#0c0d0f" stroke-width="1" />
+<circle cx="756.5" cy="255.9" r="5.2" fill="#fff" stroke="none" stroke-width="1.0" opacity="0.18"/>
+<rect x="690.0" y="238.0" width="16.0" height="12.0" rx="2.0" fill="#d0d3d7" stroke="#7a8087" stroke-width="1" />
+<circle cx="696.0" cy="244.0" r="2.4" fill="#555" stroke="none" stroke-width="1.0" />
+<text x="702.0" y="234.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="12" fill="#e53935" text-anchor="middle" font-weight="bold" >+</text>
+<rect x="690.0" y="270.0" width="16.0" height="12.0" rx="2.0" fill="#d0d3d7" stroke="#7a8087" stroke-width="1" />
+<circle cx="696.0" cy="276.0" r="2.4" fill="#555" stroke="none" stroke-width="1.0" />
+<text x="702.0" y="296.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="12" fill="#2e2e2e" text-anchor="middle" font-weight="bold" >−</text>
+<line x1="566.0" y1="243.0" x2="640.0" y2="243.0" stroke="#e53935" stroke-width="3" stroke-linecap="round" />
+<path d="M 640 243 L 690 243 L 690 244.0 L 690.0 244.0" fill="none" stroke="#e53935" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
+<path d="M 566 255 L 680 255 L 680 276.0 L 690.0 276.0" fill="none" stroke="#2e2e2e" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
+<rect x="1100.0" y="210.0" width="92.0" height="74.0" rx="6.0" fill="#3b2357" stroke="#21122f" stroke-width="1.2" />
+<circle cx="1132.0" cy="247.0" r="22.0" fill="#c8ccd2" stroke="#808690" stroke-width="1" />
+<circle cx="1132.0" cy="247.0" r="18.0" fill="#161616" stroke="none" stroke-width="1.0" />
+<text x="1170.0" y="230.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="8" fill="#f2ecf8" text-anchor="middle" font-weight="bold" >MAX</text>
+<text x="1170.0" y="241.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="8" fill="#f2ecf8" text-anchor="middle" font-weight="bold" >9814</text>
+<text x="1146.0" y="304.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="9.5" fill="#57606a" text-anchor="middle" font-weight="normal" >mic + AGC</text>
+<line x1="1192.0" y1="247.0" x2="1290.0" y2="247.0" stroke="#f7d438" stroke-width="3" stroke-linecap="round" />
+<text x="1236.0" y="240.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="9" fill="#57606a" text-anchor="middle" font-weight="normal" >RC</text>
+<rect x="1296.0" y="196.0" width="64.0" height="112.0" rx="6.0" fill="#1c232c" stroke="#0b0f14" stroke-width="1.2" />
+<rect x="1308.0" y="202.0" width="40.0" height="52.0" rx="2.0" fill="#c3c8ce" stroke="#80868e" stroke-width="1" />
+<text x="1328.0" y="232.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="9" fill="#4a5058" text-anchor="middle" font-weight="bold" >ESP32</text>
+<rect x="1299.0" y="260.0" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1353.0" y="260.0" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1299.0" y="264.4" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1353.0" y="264.4" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1299.0" y="268.8" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1353.0" y="268.8" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1299.0" y="273.2" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1353.0" y="273.2" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1299.0" y="277.6" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1353.0" y="277.6" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1299.0" y="282.0" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1353.0" y="282.0" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1299.0" y="286.4" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1353.0" y="286.4" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1299.0" y="290.8" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1353.0" y="290.8" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1299.0" y="295.2" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1353.0" y="295.2" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1299.0" y="299.6" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1353.0" y="299.6" width="4.0" height="2.4" rx="0.0" fill="#d8a62a" stroke="none" stroke-width="1.0" />
+<rect x="1320.0" y="300.0" width="16.0" height="10.0" rx="1.0" fill="#c3c8ce" stroke="#7a8087" stroke-width="1" />
+<rect x="1504.0" y="176.0" width="250.0" height="155.0" rx="10.0" fill="#000" stroke="none" stroke-width="1.0" opacity="0.12"/>
+<rect x="1500.0" y="170.0" width="250.0" height="155.0" rx="10.0" fill="#2b2f36" stroke="#15181c" stroke-width="1.2" />
+<rect x="1512.0" y="182.0" width="226.0" height="131.0" rx="3.0" fill="#f7f9fc" stroke="none" stroke-width="1.0" />
+<rect x="1512.0" y="182.0" width="226.0" height="18.0" rx="3.0" fill="#dfe5ee" stroke="none" stroke-width="1.0" />
+<circle cx="1522.0" cy="191.0" r="3.6" fill="#ff5f57" stroke="none" stroke-width="1.0" />
+<circle cx="1533.0" cy="191.0" r="3.6" fill="#febc2e" stroke="none" stroke-width="1.0" />
+<circle cx="1544.0" cy="191.0" r="3.6" fill="#28c840" stroke="none" stroke-width="1.0" />
+<rect x="1556.0" y="186.0" width="172.0" height="10.0" rx="5.0" fill="#ffffff" stroke="none" stroke-width="1.0" />
+<text x="1562.0" y="194.0" font-family="DejaVu Sans Mono, Liberation Mono, monospace" font-size="7.5" fill="#5a6472" text-anchor="start" font-weight="normal" >file:///.../pc/receiver.html</text>
+<text x="1524.0" y="222.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="13" fill="#1f2328" text-anchor="start" font-weight="bold" >DUBURI Receiver</text>
+<text x="1524.0" y="243.0" font-family="DejaVu Sans Mono, Liberation Mono, monospace" font-size="10" fill="#24292f" text-anchor="start" font-weight="normal" >From 1:  Hello</text>
+<text x="1524.0" y="264.0" font-family="DejaVu Sans Mono, Liberation Mono, monospace" font-size="9" fill="#1a7f37" text-anchor="start" font-weight="normal" >q = 14.2 dB</text>
+<text x="1524.0" y="285.0" font-family="DejaVu Sans Mono, Liberation Mono, monospace" font-size="9" fill="#0b6bcb" text-anchor="start" font-weight="normal" >3/3 packets OK</text>
+<path d="M 1478.0 327.0 L 1772.0 327.0 L 1758.0 345.0 L 1492.0 345.0 Z" fill="#c9ced6" stroke="#8e959f" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round" />
+<rect x="1591.0" y="329.0" width="68.0" height="5.0" rx="2.0" fill="#a8afba" stroke="none" stroke-width="1.0" />
+<rect x="1482.0" y="333.0" width="7.0" height="6.0" rx="1.0" fill="#555b63" stroke="none" stroke-width="1.0" />
+<path d="M 305.0 336.0 L 327.0 336.0 Q 335.0 336.0 335.0 328.0 L 335.0 328.0 Q 335.0 320.0 343.0 320.0 L 426.0 320.0 Q 432.0 320.0 432.0 314.0 L 432.0 308.0" fill="none" stroke="#1b1d20" stroke-width="8" stroke-linejoin="round" stroke-linecap="round" />
+<path d="M 305.0 336.0 L 327.0 336.0 Q 335.0 336.0 335.0 328.0 L 335.0 328.0 Q 335.0 320.0 343.0 320.0 L 426.0 320.0 Q 432.0 320.0 432.0 314.0 L 432.0 308.0" fill="none" stroke="#3d4248" stroke-width="5.5" stroke-linejoin="round" stroke-linecap="round" />
+<path d="M 1328.0 308.0 L 1328.0 324.0 Q 1328.0 340.0 1344.0 340.0 L 1448.0 340.0 Q 1450.0 340.0 1450.0 338.0 L 1450.0 338.0 Q 1450.0 336.0 1452.0 336.0 L 1485.0 336.0" fill="none" stroke="#1b1d20" stroke-width="8" stroke-linejoin="round" stroke-linecap="round" />
+<path d="M 1328.0 308.0 L 1328.0 324.0 Q 1328.0 340.0 1344.0 340.0 L 1448.0 340.0 Q 1450.0 340.0 1450.0 338.0 L 1450.0 338.0 Q 1450.0 336.0 1452.0 336.0 L 1485.0 336.0" fill="none" stroke="#3d4248" stroke-width="5.5" stroke-linejoin="round" stroke-linecap="round" />
+<text x="40.0" y="46.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="24" fill="#1f2328" text-anchor="start" font-weight="bold" >DUBURI text modem — how the link works</text>
+<text x="40.0" y="72.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="13" fill="#57606a" text-anchor="start" font-weight="normal" >Type on PC 1, the ESP32 turns the text into sound, the other ESP32 hears it and PC 2 shows it. Same firmware on both boards.</text>
+<path d="M 816.2 206.2 A 78.0 78.0 0 0 1 816.2 313.8" fill="none" stroke="#2f6fdb" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" opacity="0.90"/>
+<path d="M 834.9 188.2 A 104.0 104.0 0 0 1 834.9 331.8" fill="none" stroke="#2f6fdb" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" opacity="0.72"/>
+<path d="M 853.6 170.3 A 130.0 130.0 0 0 1 853.6 349.7" fill="none" stroke="#2f6fdb" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" opacity="0.54"/>
+<path d="M 872.3 152.4 A 156.0 156.0 0 0 1 872.3 367.6" fill="none" stroke="#2f6fdb" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" opacity="0.36"/>
+<path d="M 1066.8 218.6 A 60.0 60.0 0 0 0 1066.8 301.4" fill="none" stroke="#d9822b" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" opacity="0.90"/>
+<path d="M 1048.1 200.7 A 86.0 86.0 0 0 0 1048.1 319.3" fill="none" stroke="#d9822b" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" opacity="0.68"/>
+<path d="M 1029.4 182.7 A 112.0 112.0 0 0 0 1029.4 337.3" fill="none" stroke="#d9822b" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" opacity="0.46"/>
+<path d="M 880 372 L 1032 372" fill="none" stroke="#57606a" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" />
+<path d="M 888 366 L 880 372 L 888 378 M 1024 366 L 1032 372 L 1024 378" fill="none" stroke="#57606a" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" />
+<text x="956.0" y="168.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="15" fill="#1f2328" text-anchor="middle" font-weight="bold" >through AIR</text>
+<text x="956.0" y="188.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="13" fill="#57606a" text-anchor="middle" font-weight="normal" >1 – 5 m</text>
+<text x="956.0" y="404.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="11.5" fill="#57606a" text-anchor="middle" font-weight="normal" >24 tones, 3 – 8.75 kHz</text>
+<text x="956.0" y="420.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="11.5" fill="#57606a" text-anchor="middle" font-weight="normal" >2.56 s per packet (2 bytes), AIR mode</text>
+<text x="372.0" y="398.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="11" fill="#57606a" text-anchor="middle" font-weight="bold" >USB</text>
+<text x="1440.0" y="362.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="11" fill="#57606a" text-anchor="middle" font-weight="bold" >USB</text>
+<rect x="15.0" y="470.0" width="320.0" height="104.0" rx="10.0" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.2" />
+<text x="175.0" y="500.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="14" fill="#1f2328" text-anchor="middle" font-weight="bold" >1. Type a message</text>
+<text x="175.0" y="526.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="12" fill="#57606a" text-anchor="middle" font-weight="normal" >sender.html in Chrome / Edge</text>
+<text x="175.0" y="546.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="12" fill="#57606a" text-anchor="middle" font-weight="normal" >sends it over USB (Web Serial)</text>
+<rect x="370.0" y="470.0" width="320.0" height="104.0" rx="10.0" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.2" />
+<text x="530.0" y="500.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="14" fill="#1f2328" text-anchor="middle" font-weight="bold" >2. Text → bits → tones</text>
+<text x="530.0" y="526.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="12" fill="#57606a" text-anchor="middle" font-weight="normal" >2 bytes + CRC per packet, error-</text>
+<text x="530.0" y="546.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="12" fill="#57606a" text-anchor="middle" font-weight="normal" >correction code, 64 tones each</text>
+<rect x="740.0" y="470.0" width="320.0" height="104.0" rx="10.0" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.2" />
+<text x="900.0" y="500.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="14" fill="#1f2328" text-anchor="middle" font-weight="bold" >3. Sound through the air</text>
+<text x="900.0" y="526.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="12" fill="#57606a" text-anchor="middle" font-weight="normal" >speaker plays the tones,</text>
+<text x="900.0" y="546.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="12" fill="#57606a" text-anchor="middle" font-weight="normal" >microphone hears them</text>
+<rect x="1100.0" y="470.0" width="320.0" height="104.0" rx="10.0" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.2" />
+<text x="1260.0" y="500.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="14" fill="#1f2328" text-anchor="middle" font-weight="bold" >4. Tones → bits → text</text>
+<text x="1260.0" y="526.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="12" fill="#57606a" text-anchor="middle" font-weight="normal" >ESP32 finds the packet, decodes,</text>
+<text x="1260.0" y="546.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="12" fill="#57606a" text-anchor="middle" font-weight="normal" >checks the CRC, joins the parts</text>
+<rect x="1465.0" y="470.0" width="320.0" height="104.0" rx="10.0" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.2" />
+<text x="1625.0" y="500.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="14" fill="#1f2328" text-anchor="middle" font-weight="bold" >5. Dashboard</text>
+<text x="1625.0" y="526.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="12" fill="#57606a" text-anchor="middle" font-weight="normal" >receiver.html shows the message,</text>
+<text x="1625.0" y="546.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="12" fill="#57606a" text-anchor="middle" font-weight="normal" >link quality and live levels</text>
+</svg>

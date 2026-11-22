@@ -1,28 +1,31 @@
 /*
- * DuburiModem.ino - underwater acoustic link between two ROVs (ESP32).
+ * DuburiModem.ino - acoustic text/command link between two boards (ESP32).
+ *                   AIR mode (speaker -> mic) or WATER mode (speaker -> hydrophone).
  *
  * Board : "ESP32 Dev Module" (Arduino-ESP32 core 3.x, tested with 3.3.12)
  * Needs : no extra libraries.
  *
- * Same firmware on every vehicle; set NODE_ID in config.h.
- *
- * Serial Monitor (115200 baud, "Newline") commands:
- *   on [id]        turn LED on at vehicle id (default PEER_ID, 15 = all)
- *   off [id]       turn LED off
- *   toggle [id]    toggle LED
- *   ping [id]      ask for a reply, prints link quality
+ * Same firmware on every board; set NODE_ID / PEER_ID in config.h.
+ * Use it from the web pages in pc/ (sender.html, receiver.html) or from the
+ * Arduino Serial Monitor (115200 baud, "Newline"):
+ *   msg <text>     send a text message (UTF-8, up to 64 bytes) to PEER_ID
+ *   msghex D R H   send hex bytes H to node D, every packet R times (web pages)
+ *   !              stop a message that is being sent
+ *   mode air|water switch medium (saved in flash; both boards must match)
+ *   info           one-line summary of this board
+ *   on|off|toggle|ping [id]  LED commands (need two-way hardware, they wait for ACK)
  *   send C A [id]  send command number C (0..255) with argument A (0..255)
  *   sweep          play every tone once (frequency response test)
  *   tone F MS      play F Hz for MS milliseconds
- *   scope          start/stop printing per-tone levels every 0.25 s
- *   stats          print counters, ADC level and measured sample rate
- *   help
- * Received packets are printed as:  RX src=2 dst=1 seq=3 cmd=1 arg=0 q=18.5dB
- * so a Jetson / Raspberry Pi can read the same serial port.
+ *   scope [on|off] print per-tone levels every 0.25 s
+ *   stats          counters, ADC level and measured sample rate
+ * Every line the board prints is described in docs/SERIAL_PROTOCOL.md.
  */
 #include <Arduino.h>
+#include <Preferences.h>
 #include "config.h"
 #include "am_core.h"
+#include "am_text.h"
 #include "esp_adc/adc_continuous.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
@@ -34,6 +37,8 @@
 #error "Install Arduino-ESP32 core 3.x (Tools > Board > Boards Manager > esp32 by Espressif)"
 #endif
 
+#define FW_VERSION "2.0"
+
 /* Command numbers (you can add your own: 10..255 are free) */
 enum {
   CMD_LED_ON = 1,
@@ -43,9 +48,23 @@ enum {
 };
 
 /* ------------------------------------------------------------------------ */
+/* Medium mode                                                              */
+/* ------------------------------------------------------------------------ */
+static Preferences g_prefs;
+static int g_mode = DEFAULT_MODE;
+
+static float slotS() { return am_mode_info(g_mode)->t_slot; }
+static uint32_t packetMs() { return (uint32_t)lrintf(AM_TOTAL_SLOTS * slotS() * 1000.0f); }
+static uint32_t muteTailMs() { return g_mode == AM_MODE_AIR ? AIR_MUTE_TAIL_MS : WATER_MUTE_TAIL_MS; }
+static uint32_t textGapMs() { return TEXT_GAP_MS; }
+static float txDuty() { return g_mode == AM_MODE_AIR ? AIR_TX_DUTY : WATER_TX_DUTY; }
+static float burstS() { return g_mode == AM_MODE_AIR ? AIR_BURST_S : WATER_BURST_S; }
+static uint32_t ackTimeoutMs() { return packetMs() + TURNAROUND_MS + 1000; }
+
+/* ------------------------------------------------------------------------ */
 /* Receiver task (core 0): ADC DMA -> modem core -> queue                     */
 /* ------------------------------------------------------------------------ */
-static am_rx_t g_rx;                       /* ~40 kB, keep it off the stack */
+static am_rx_t g_rx;                       /* ~45 kB, keep it off the stack */
 static SemaphoreHandle_t g_rx_lock;
 static QueueHandle_t g_pkt_queue;
 static adc_continuous_handle_t g_adc;
@@ -65,8 +84,8 @@ static bool IRAM_ATTR onAdcOverflow(adc_continuous_handle_t, const adc_continuou
 
 static bool startAdc() {
   adc_unit_t unit;
-  if (adc_continuous_io_to_channel(PIN_HYDROPHONE, &unit, &g_adc_chan) != ESP_OK || unit != ADC_UNIT_1) {
-    Serial.println("ERROR: PIN_HYDROPHONE must be an ADC1 pin (32..39)");
+  if (adc_continuous_io_to_channel(PIN_RX_AUDIO, &unit, &g_adc_chan) != ESP_OK || unit != ADC_UNIT_1) {
+    Serial.println("ERR PIN_RX_AUDIO must be an ADC1 pin (32..39)");
     return false;
   }
   adc_continuous_handle_cfg_t hcfg = {};
@@ -161,10 +180,11 @@ static void rxTask(void *) {
 /* ------------------------------------------------------------------------ */
 /* Transmitter                                                              */
 /* ------------------------------------------------------------------------ */
-static int64_t g_tx_allowed_at = 0;   /* heat guard */
-static uint8_t g_seq = 0;
+static uint8_t g_seq = 0;        /* command sequence number              */
+static uint8_t g_text_seq = 0;   /* text packet counter (never reset)    */
 static bool g_scope = false;
 static bool g_led = false;
+static volatile bool g_abort = false;
 
 static void ampEnable(bool on) {
 #if PIN_AMP_ENABLE >= 0
@@ -189,25 +209,60 @@ static void waitUntil(int64_t t_us) {
   }
 }
 
-/* Heat guard: after a transmission of T seconds the speaker must rest
- * T * (1 - duty) / duty seconds before the next one. */
-static void heatGuard() {
-  int64_t wait = g_tx_allowed_at - esp_timer_get_time();
-  if (wait > 0) {
-    Serial.printf("HEAT-GUARD wait %d ms\n", (int)(wait / 1000));
-    waitUntil(g_tx_allowed_at);
+/* While a message is going out, the only input we accept is '!' (stop). */
+static void pollAbort() {
+  while (Serial.available()) {
+    if (Serial.read() == '!') g_abort = true;
   }
 }
 
-static void heatGuardUpdate(int64_t t_start, int64_t t_end) {
-  float on = (float)(t_end - t_start);
-  g_tx_allowed_at = t_end + (int64_t)(on * (1.0f - MAX_TX_DUTY) / MAX_TX_DUTY);
+static void sleepAbortable(uint32_t ms) {
+  uint32_t t0 = millis();
+  while (millis() - t0 < ms) {
+    pollAbort();
+    delay(5);
+  }
 }
 
+/* Heat bucket (seconds). Sound fills it at (1 - duty)/s, silence empties it
+ * at duty/s. Long-run on-time is <= duty; a burst of BURST_S is allowed. */
+static float g_heat = 0.0f;
+static int64_t g_heat_t = 0;
+
+static void heatCool(int64_t now) {
+  g_heat -= (float)(now - g_heat_t) * 1e-6f * txDuty();
+  if (g_heat < 0.0f) g_heat = 0.0f;
+  g_heat_t = now;
+}
+
+/* Wait until the speaker may play for `seconds`. Returns false if aborted. */
+static bool heatGuard(float seconds, bool abortable) {
+  const float d = txDuty();
+  heatCool(esp_timer_get_time());
+  float need = g_heat + seconds * (1.0f - d) - burstS() * (1.0f - d);
+  if (need <= 0.0f) return true;
+  uint32_t wait_ms = (uint32_t)(need / d * 1000.0f) + 1;
+  Serial.printf("HEAT-GUARD wait %lu ms\n", (unsigned long)wait_ms);
+  if (abortable) {
+    sleepAbortable(wait_ms);
+    if (g_abort) return false;
+  } else {
+    delay(wait_ms);
+  }
+  heatCool(esp_timer_get_time());
+  return true;
+}
+
+static void heatAdd(int64_t t_start, int64_t t_end) {
+  heatCool(t_start);
+  g_heat += (float)(t_end - t_start) * 1e-6f * (1.0f - txDuty());
+  g_heat_t = t_end;
+}
+
+/* Plays tones[i] for one slot each. The caller has passed the heat guard. */
 static void playTones(const uint8_t *tones, int count) {
-  const int64_t slot_us = (int64_t)(AM_T_SLOT * 1e6f);
-  heatGuard();
-  uint32_t mute_ms = (uint32_t)(count * AM_T_SLOT * 1000.0f) + 40 + MUTE_TAIL_MS;
+  const int64_t slot_us = (int64_t)lrintf(slotS() * 1e6f);
+  uint32_t mute_ms = (uint32_t)(count * slotS() * 1000.0f) + 40 + muteTailMs();
   muteRx(mute_ms);
   ampEnable(true);
   int64_t t0 = esp_timer_get_time() + 2000;
@@ -218,13 +273,47 @@ static void playTones(const uint8_t *tones, int count) {
   }
   ledcWrite(PIN_TX_AUDIO, 0);
   ampEnable(false);
-  heatGuardUpdate(t0, esp_timer_get_time());
+  heatAdd(t0, esp_timer_get_time());
 }
 
 static void sendPacket(const am_packet_t &p) {
   uint8_t tones[AM_TOTAL_SLOTS];
   am_tx_build(&p, tones);
+  heatGuard(AM_TOTAL_SLOTS * slotS(), false);
   playTones(tones, AM_TOTAL_SLOTS);
+}
+
+/* Send a text message (bytes) as packets of 2 bytes. */
+static void sendText(uint8_t dst, const uint8_t *msg, int len, int repeats) {
+  const int n = am_text_npackets(len);
+  const uint8_t seq0 = g_text_seq;
+  g_abort = false;
+  uint32_t t_start = millis();
+  Serial.printf("TXMSG dst=%d len=%d n=%d rep=%d\n", dst, len, n, repeats);
+  for (int i = 0; i < n; i++) {
+    am_packet_t p;
+    am_text_packet(msg, len, i, dst, NODE_ID, seq0, &p);
+    uint8_t tones[AM_TOTAL_SLOTS];
+    am_tx_build(&p, tones);
+    for (int k = 1; k <= repeats; k++) {
+      pollAbort();
+      if (g_abort || !heatGuard(AM_TOTAL_SLOTS * slotS(), true)) {
+        Serial.printf("TXABORT i=%d n=%d\n", i + 1, n);
+        g_text_seq = (uint8_t)((seq0 + i) & 0xF);
+        return;
+      }
+      Serial.printf("TXPKT i=%d n=%d try=%d seq=%d flags=%X data=%02X", i + 1, n, k, p.seq, p.flags, p.cmd);
+      if (!((p.flags & AM_FLAG_LAST) && p.arg == 0)) Serial.printf("%02X", p.arg);
+      Serial.print(" tones=");
+      for (int s = 0; s < AM_TOTAL_SLOTS; s++) Serial.printf(s ? ",%d" : "%d", tones[s]);
+      Serial.println();
+      Serial.flush();
+      playTones(tones, AM_TOTAL_SLOTS);
+      if (i < n - 1 || k < repeats) sleepAbortable(textGapMs());
+    }
+  }
+  g_text_seq = (uint8_t)((seq0 + n) & 0xF);
+  Serial.printf("TXDONE n=%d ms=%lu\n", n, (unsigned long)(millis() - t_start));
 }
 
 /* ------------------------------------------------------------------------ */
@@ -232,10 +321,35 @@ static void sendPacket(const am_packet_t &p) {
 /* ------------------------------------------------------------------------ */
 static int16_t g_last_seq[16];
 static uint32_t g_last_seq_ms[16];
+static am_text_rx_t g_text;
 
 static void setLed(bool on) {
   g_led = on;
   digitalWrite(PIN_LED, on ? HIGH : LOW);
+}
+
+static void printMsg(const am_text_msg_t &m) {
+  static char line[400];
+  am_text_format_msg(&m, line, sizeof(line));
+  Serial.println(line);
+}
+
+static void handleText(const am_rx_result_t &r) {
+  const am_packet_t &p = r.pkt;
+  am_text_msg_t out[2];
+  int k = am_text_rx_feed(&g_text, &p, r.q_db, millis(), out);
+  if (k < 0) {
+    Serial.printf("REPEAT src=%d seq=%d (dropped)\n", p.src, p.seq);
+    return;
+  }
+  /* A FIRST packet may close an older, unfinished message: print that first. */
+  int before = ((p.flags & AM_FLAG_FIRST) && (k == 2 || (k == 1 && !(p.flags & AM_FLAG_LAST)))) ? 1 : 0;
+  for (int i = 0; i < before; i++) printMsg(out[i]);
+  Serial.printf("TXT src=%d dst=%d seq=%d first=%d last=%d data=%02X", p.src, p.dst, p.seq,
+                (p.flags & AM_FLAG_FIRST) ? 1 : 0, (p.flags & AM_FLAG_LAST) ? 1 : 0, p.cmd);
+  if (!((p.flags & AM_FLAG_LAST) && p.arg == 0)) Serial.printf("%02X", p.arg);
+  Serial.printf(" q=%.1f\n", r.q_db);
+  for (int i = before; i < k; i++) printMsg(out[i]);
 }
 
 static void sendAck(const am_packet_t &in) {
@@ -256,6 +370,10 @@ static bool handlePacket(const am_rx_result_t &r, int wait_src, int wait_seq) {
   const am_packet_t &p = r.pkt;
   if (p.dst != NODE_ID && p.dst != AM_ADDR_BROADCAST) {
     Serial.printf("RX (not for me) src=%d dst=%d q=%.1fdB\n", p.src, p.dst, r.q_db);
+    return false;
+  }
+  if (am_is_text(&p)) {          /* text first: it reuses the ACK flag bits */
+    handleText(r);
     return false;
   }
   if (p.flags & AM_FLAG_IS_ACK) {
@@ -288,6 +406,23 @@ static bool handlePacket(const am_rx_result_t &r, int wait_src, int wait_seq) {
 static void pollPackets() {
   am_rx_result_t r;
   while (xQueueReceive(g_pkt_queue, &r, 0) == pdTRUE) handlePacket(r, -1, -1);
+  am_text_msg_t m;
+  while (am_text_rx_poll(&g_text, millis(), &m)) printMsg(m);
+}
+
+/* Prints DET / CRCFAIL when the receiver hears a preamble / a damaged packet. */
+static void pollEvents() {
+  static uint32_t last_pre = 0, last_crc = 0;
+  static uint32_t t_last = 0;
+  if (millis() - t_last < 20) return;
+  t_last = millis();
+  xSemaphoreTake(g_rx_lock, portMAX_DELAY);
+  uint32_t pre = g_rx.stats.preambles, crc = g_rx.stats.crc_fail;
+  xSemaphoreGive(g_rx_lock);
+  if (pre != last_pre) Serial.printf("DET n=%lu\n", (unsigned long)pre);
+  if (crc != last_crc) Serial.printf("CRCFAIL n=%lu\n", (unsigned long)crc);
+  last_pre = pre;
+  last_crc = crc;
 }
 
 static void sendCommand(int dst, uint8_t cmd, uint8_t arg) {
@@ -308,7 +443,7 @@ static void sendCommand(int dst, uint8_t cmd, uint8_t arg) {
       continue;
     }
     uint32_t t0 = millis();
-    while (millis() - t0 < ACK_TIMEOUT_MS) {
+    while (millis() - t0 < ackTimeoutMs()) {
       am_rx_result_t r;
       if (xQueueReceive(g_pkt_queue, &r, pdMS_TO_TICKS(20)) == pdTRUE && handlePacket(r, dst, p.seq)) {
         Serial.printf("OK delivered to %d (try %d)\n", dst, attempt);
@@ -323,6 +458,12 @@ static void sendCommand(int dst, uint8_t cmd, uint8_t arg) {
 /* ------------------------------------------------------------------------ */
 /* Diagnostics                                                              */
 /* ------------------------------------------------------------------------ */
+static void printInfo() {
+  Serial.printf("INFO node=%d peer=%d fw=%s mode=%s text_max=%d slot_ms=%lu pkt_ms=%lu duty=%.2f burst_s=%.1f\n",
+                NODE_ID, PEER_ID, FW_VERSION, am_mode_info(g_mode)->name, AM_TEXT_MAX,
+                (unsigned long)lrintf(slotS() * 1000.0f), (unsigned long)packetMs(), txDuty(), burstS());
+}
+
 static void printStats() {
   xSemaphoreTake(g_rx_lock, portMAX_DELAY);
   am_stats_t s = g_rx.stats;
@@ -347,24 +488,31 @@ static void printScope() {
   Serial.printf("  rms=%.0f\n", g_lvl_rms);
 }
 
+static void playTest(const uint8_t *t, int count) {
+  heatGuard(count * slotS(), false);
+  playTones(t, count);
+}
+
 static void doSweep() {
-  Serial.println("SWEEP: each tone 300 ms. Watch 'scope' on the other vehicle.");
+  int per = (int)lrintf(0.3f / slotS());          /* ~300 ms per tone */
+  if (per > 16) per = 16;
+  Serial.println("SWEEP: each tone ~300 ms. Watch 'scope' on the other board.");
   for (int i = 0; i < AM_NTONES; i++) {
-    uint8_t t[15];
-    for (int k = 0; k < 15; k++) t[k] = (uint8_t)i;
+    uint8_t t[16];
+    for (int k = 0; k < per; k++) t[k] = (uint8_t)i;
     Serial.printf("SWEEP tone %d = %.0f Hz\n", i, am_tone_hz(i));
-    playTones(t, 15);
+    playTest(t, per);
     delay(150);
   }
 }
 
 static void doTone(int hz, int ms) {
   if (hz < 100 || hz > 20000 || ms < 1 || ms > 5000) {
-    Serial.println("usage: tone <100..20000 Hz> <1..5000 ms>");
+    Serial.println("ERR usage: tone <100..20000 Hz> <1..5000 ms>");
     return;
   }
-  heatGuard();
-  muteRx((uint32_t)ms + MUTE_TAIL_MS);
+  heatGuard(ms / 1000.0f, false);
+  muteRx((uint32_t)ms + muteTailMs());
   ampEnable(true);
   int64_t t0 = esp_timer_get_time();
   uint32_t real = ledcWriteTone(PIN_TX_AUDIO, (uint32_t)hz);
@@ -372,26 +520,82 @@ static void doTone(int hz, int ms) {
   delay(ms);
   ledcWrite(PIN_TX_AUDIO, 0);
   ampEnable(false);
-  heatGuardUpdate(t0, esp_timer_get_time());
+  heatAdd(t0, esp_timer_get_time());
+}
+
+static bool setMode(int mode) {
+  for (int tries = 0; tries < 400; tries++) {     /* wait up to ~4 s for a packet to finish */
+    xSemaphoreTake(g_rx_lock, portMAX_DELAY);
+    int ok = am_rx_set_mode(&g_rx, mode);
+    xSemaphoreGive(g_rx_lock);
+    if (ok) {
+      g_mode = mode;
+      g_prefs.putUChar("mode", (uint8_t)mode);
+      return true;
+    }
+    delay(10);
+  }
+  return false;
 }
 
 static void printHelp() {
-  Serial.println("Commands: on|off|toggle|ping [id] ; send <cmd> <arg> [id] ; sweep ; tone <Hz> <ms> ; scope ; stats ; help");
+  Serial.println("Commands: msg <text> ; msghex <dst> <rep> <hex> ; ! ; mode air|water ; info ; "
+                 "on|off|toggle|ping [id] ; send <cmd> <arg> [id] ; sweep ; tone <Hz> <ms> ; scope [on|off] ; stats ; help");
+}
+
+/* Checks and sends a text message given as raw bytes. */
+static void startText(int dst, int repeats, const uint8_t *b, int len) {
+  if (len < 1 || len > AM_TEXT_MAX) {
+    Serial.printf("ERR message must be 1..%d bytes (got %d)\n", AM_TEXT_MAX, len);
+    return;
+  }
+  for (int i = 0; i < len; i++)
+    if (b[i] == 0) {
+      Serial.println("ERR message may not contain byte 00");
+      return;
+    }
+  if (dst < 1 || dst > 15) {
+    Serial.println("ERR destination must be 1..15 (15 = all)");
+    return;
+  }
+  if (repeats < 1 || repeats > 3) {
+    Serial.println("ERR repeats must be 1..3");
+    return;
+  }
+  sendText((uint8_t)dst, b, len, repeats);
 }
 
 static void handleLine(char *line) {
+  /* "msg <text>": everything after the first space is the message */
+  if (!strncmp(line, "msg ", 4)) {
+    startText(PEER_ID, TEXT_REPEATS, (const uint8_t *)line + 4, (int)strlen(line + 4));
+    return;
+  }
   char *w = strtok(line, " \t");
   if (!w) return;
   char *a1 = strtok(NULL, " \t"), *a2 = strtok(NULL, " \t"), *a3 = strtok(NULL, " \t");
   int id = a1 ? atoi(a1) : PEER_ID;
-  if (!strcmp(w, "on")) sendCommand(id, CMD_LED_ON, 0);
+  if (!strcmp(w, "msghex")) {
+    static uint8_t b[AM_TEXT_MAX + 1];
+    int len = (a1 && a2 && a3) ? am_hex_decode(a3, b, AM_TEXT_MAX) : -1;
+    if (len < 0) Serial.printf("ERR usage: msghex <dst> <repeats> <hex, up to %d bytes>\n", AM_TEXT_MAX);
+    else startText(atoi(a1), atoi(a2), b, len);
+  } else if (!strcmp(w, "!")) {
+    /* nothing is being sent right now */
+  } else if (!strcmp(w, "mode")) {
+    int m = !a1 ? -1 : !strcmp(a1, "air") ? AM_MODE_AIR : !strcmp(a1, "water") ? AM_MODE_WATER : -1;
+    if (m < 0) Serial.printf("ERR usage: mode air|water (now %s)\n", am_mode_info(g_mode)->name);
+    else if (!setMode(m)) Serial.println("ERR busy receiving, try again");
+    printInfo();
+  } else if (!strcmp(w, "info")) printInfo();
+  else if (!strcmp(w, "on")) sendCommand(id, CMD_LED_ON, 0);
   else if (!strcmp(w, "off")) sendCommand(id, CMD_LED_OFF, 0);
   else if (!strcmp(w, "toggle")) sendCommand(id, CMD_LED_TOGGLE, 0);
   else if (!strcmp(w, "ping")) sendCommand(id, CMD_PING, 0);
   else if (!strcmp(w, "send") && a1 && a2) sendCommand(a3 ? atoi(a3) : PEER_ID, (uint8_t)atoi(a1), (uint8_t)atoi(a2));
   else if (!strcmp(w, "sweep")) doSweep();
   else if (!strcmp(w, "tone") && a1 && a2) doTone(atoi(a1), atoi(a2));
-  else if (!strcmp(w, "scope")) g_scope = !g_scope;
+  else if (!strcmp(w, "scope")) g_scope = a1 ? !strcmp(a1, "on") : !g_scope;
   else if (!strcmp(w, "stats")) printStats();
   else printHelp();
 }
@@ -410,34 +614,48 @@ void setup() {
   ledcAttach(PIN_TX_AUDIO, 5000, 10);
   ledcWrite(PIN_TX_AUDIO, 0);
   for (int i = 0; i < 16; i++) g_last_seq[i] = -1;
+  am_text_rx_init(&g_text);
+
+  g_prefs.begin("duburi", false);
+  g_mode = g_prefs.getUChar("mode", (uint8_t)DEFAULT_MODE);
+  if (g_mode != AM_MODE_AIR && g_mode != AM_MODE_WATER) g_mode = DEFAULT_MODE;
 
   g_rx_lock = xSemaphoreCreateMutex();
   g_pkt_queue = xQueueCreate(8, sizeof(am_rx_result_t));
   am_rx_init(&g_rx, AM_FS_NOMINAL);
+  am_rx_set_mode(&g_rx, g_mode);
   if (!startAdc()) {
-    Serial.println("ERROR: ADC start failed");
+    Serial.println("ERR ADC start failed");
     for (;;) delay(1000);
   }
   /* core 0, above Arduino loop priority; it blocks on the ADC most of the time */
   xTaskCreatePinnedToCore(rxTask, "amrx", 6144, NULL, 5, NULL, 0);
+  g_heat_t = esp_timer_get_time();
 
-  Serial.printf("\nDUBURI modem node %d ready. Tones %.0f..%.0f Hz, packet %.2f s\n",
-                NODE_ID, am_tone_hz(0), am_tone_hz(AM_NTONES - 1), AM_TOTAL_SLOTS * AM_T_SLOT);
+  Serial.printf("\nDUBURI modem node %d ready. Mode %s, tones %.0f..%.0f Hz, packet %.2f s\n",
+                NODE_ID, am_mode_info(g_mode)->name, am_tone_hz(0), am_tone_hz(AM_NTONES - 1),
+                packetMs() / 1000.0f);
+  printInfo();
   printHelp();
 }
 
 void loop() {
-  static char line[64];
+  static char line[320];
   static int len = 0;
+  static bool overflow = false;
   while (Serial.available()) {
     char c = (char)Serial.read();
     if (c == '\r') continue;
     if (c == '\n') {
       line[len] = 0;
-      handleLine(line);
+      if (overflow) Serial.println("ERR line too long");
+      else handleLine(line);
       len = 0;
+      overflow = false;
     } else if (len < (int)sizeof(line) - 1) {
       line[len++] = c;
+    } else {
+      overflow = true;
     }
   }
 
@@ -452,6 +670,7 @@ void loop() {
     scope_ms = millis();
     printScope();
   }
+  pollEvents();
   pollPackets();
   delay(2);
 }
