@@ -17,6 +17,7 @@
 | `tests/` | PC-তে unit test: `make -C tests && ./tests/test_core` |
 | `sim/` | Virtual pool simulation: `python3 sim/run_sim.py` (আগে `make -C tests`) |
 | `docs/` | গাইডের উৎস (`guide_bn.html`), চিত্র (`figures.py`), PDF build (`build_pdf.py`) |
+| `auv_simulator/` | 5-thruster AUV browser simulator v4 (MuJoCo hydrodynamics, SPH water, Vector Mode)। `auv_5thruster_arena_v4.html` browser-এ খোলো |
 
 ## দ্রুত শুরু
 
