@@ -836,7 +836,7 @@ def draw_board_parts(s, bb, parts):
             info[ref] = cap_off(s, xy["1"], xy["2"], mark, opts.get("style", "disc"),
                                 opts.get("off", (0.0, 0.0)))
         elif kind == "dip8":
-            info[ref] = dip8(s, bb, pins, value)
+            info[ref] = dip8(s, bb, pins, f"{ref}  {value}")
     return info
 
 
@@ -1224,7 +1224,7 @@ def dip8(s, bb, pins, name="LM358"):
     dx = -9 if right else 9
     dy = 8 if p1y < ym else -8
     s.circle("parts", nx + dx, (y0 if p1y < ym else y1) + dy, 2.8, "#a7adb4")
-    s.text("parts", (x0 + x1) / 2 - (5 if right else -5), ym + 4, name, 11, "#d6dade", "middle", "bold")
+    s.text("parts", (x0 + x1) / 2 - (5 if right else -5), ym + 4, name, 10.5, "#d6dade", "middle", "bold")
     for k, (x, y) in xy.items():
         yy = y0 + 9.5 if y < ym else y1 - 3.5
         s.text("parts", x, yy, k, 7, "#9aa0a8", "middle")
@@ -1528,12 +1528,11 @@ def build_tx_water():
                                               ("pins d12 · d13 (wiper) · d14", "#57606a")],
         ((rv[0] + rv[2]) / 2 + 20, rv[3]))
     gnd = "top − rail = GND"
-    s.text("labels", bb.cx(30) + 8, bb.rowy("TR1") - 19, gnd, 10, "#2f62c9", "end", "bold")
-    s.text("labels", bb.cx(30) + 8 - len(gnd) * 6.3 - 18, bb.rowy("TR1") - 19, "top + rail: not used", 10,
+    s.text("labels", bb.cx(28), bb.rowy("TR1") - 19, gnd, 10, "#2f62c9", "end", "bold")
+    s.text("labels", bb.cx(28) - len(gnd) * 6.3 - 18, bb.rowy("TR1") - 19, "top + rail: not used", 10,
            "#8a877f", "end", "bold")
-    s.text("labels", 1157, 410, "DC jack → screw terminal", 10, "#57606a", "middle")
-    s.text("labels", 1093, 140, "2-core round cable", 10, "#57606a", "start", "bold")
-    s.text("labels", 1093, 112, "OUT → exciter", 10, "#57606a", "start")
+    s.text("labels", 1222, 286, "DC jack → screw terminal", 10, "#57606a", "middle")
+    s.text("labels", 1240, 127, "2-core round cable:  OUT → exciter", 10.5, "#57606a", "start", "bold")
     s.text("labels", 1212, 333, "water side", 11, "#1f6fb2", "middle", "bold")
     s.text("labels", 1475, 324, "3\" PVC tube, side cut-away view", 11.5, "#1f2328", "middle", "bold")
     s.text("labels", 1420, 370, "exciter 4 Ω 25 W (40 mm)", 11, "#1f2328", "start", "bold")
@@ -1618,7 +1617,7 @@ RXW_PARTS = [
      {"off": (0.0, 1.15 * P), "covers": ["d60", "e59", "e60", "e61"]}),
     ("Rt", "resistor", "10 kΩ", ["brown", "black", "orange", "gold"], {"1": "b59", "2": "b55"}),
     ("Rd", "resistor", "6.8 kΩ", ["blue", "grey", "red", "gold"], {"1": "c55", "2": "c52"}),
-    ("Cv", "elko", "10 µF 16 V", "", {"+": "TR1-53", "-": "TR2-53"}),
+    ("Cv", "elko", "10 µF 16 V", "", {"+": "TR1-46", "-": "TR2-46"}),
 ]
 RXW_WIRES = [
     ("ESP32.VIN", "BR2-61", "red", "+5 V (VIN) to bottom + rail"),
@@ -1678,6 +1677,13 @@ def board_830():
     return Breadboard(BBX_W, BBY_W, NCOLS_830, RAIL_830)
 
 
+def tag2(s, x, y, l1, l2=None, anchor=None, w=None):
+    """Two-line callout (bold ref + value, grey detail) centred at (x, y), leader to anchor."""
+    lines = [(l1,)] + ([(l2, "#57606a")] if l2 else [])
+    width = w or max(len(l1) * 6.7, len(l2 or "") * 5.75) + 16
+    tag(s, x, y, lines, anchor, w=width)
+
+
 def build_rx_water():
     s = Svg(*CANVAS_RXW)
     bb = board_830()
@@ -1686,16 +1692,15 @@ def build_rx_water():
           "Piezo hydrophone → 2-stage LM358 preamp → RC filter → ESP32 GPIO34 (ADC).  "
           "830-point breadboard, no soldering.")
     H = lambda h: bb.xy(h)
-    # group zones
     zone(s, bb, 23, 31, "top", "input", "#2f81f7")
     zone(s, bb, 32, 39, "top", "stage 1", "#1a7f37")
     zone(s, bb, 28, 41, "bottom", "stage 2", "#d9822b")
     zone(s, bb, 52, 62, "top", "VREF", "#8e44ad")
     info = draw_board_parts(s, bb, RXW_PARTS)
 
-    # ESP32 on the right: left pin column faces the board
+    # ESP32 on the right: its left pin column (D34, GND, VIN) faces the board
     e = esp32(s, 1556, BBY_W - 4.4, highlight=("D34", "VIN", "GND", "3V3"))
-    # hydrophone
+    # hydrophone + shielded cable
     ex = hydrophone(s, 210, 205)
     sh_end = coax(s, [ex, (ex[0] + 60, ex[1] + 18), (bb.cx(24), ex[1] + 18), (bb.cx(24), BBY_W - 64)])
     hot, t23 = H("a25"), H("TR2-23")
@@ -1703,14 +1708,18 @@ def build_rx_water():
               plug_start=False, width=4.5)
     draw_wire(s, [sh_end, (sh_end[0], sh_end[1] + 10), (t23[0], sh_end[1] + 24), t23], "grey",
               plug_start=False, width=4.5)
+    s.text("labels", 312, 150, "piezo hydrophone,", 12.5, "#1f2328", "start", "bold")
+    s.text("labels", 312, 167, "sealed in epoxy / liquid tape", 11.5, "#1f2328", "start")
+    s.text("labels", 312, 190, "shielded cable:", 11, "#57606a", "start", "bold")
+    s.text("labels", 312, 206, "core → input (a25), shield → GND", 11, "#57606a", "start")
 
-    # power wires from the ESP32
+    # wires from the ESP32
     draw_wire(s, [e["VIN"], H("BR2-61")], "red")
     draw_wire(s, [e["GND_L"], H("BR1-61")], "black")
     a62 = H("a62")
-    draw_wire(s, orth(e["3V3"], [("h", 1840), ("v", 336), ("h", a62[0])], a62), "red")
+    draw_wire(s, orth(e["3V3"], [("h", 1840), ("v", 360), ("h", 1527), ("v", a62[1])], a62), "red")
     f41 = H("f41")
-    draw_wire(s, orth(f41, [("v", bb.y + 9.1 * P), ("h", 1515), ("v", e["D34"][1])], e["D34"]), "green")
+    draw_wire(s, orth(f41, [("v", bb.y + 9.1 * P), ("h", 1505), ("v", e["D34"][1])], e["D34"]), "green")
     # jumpers on the board
     for a, b, col, desc in RXW_WIRES:
         if "." in a or "." in b:
@@ -1723,33 +1732,104 @@ def build_rx_water():
         else:
             draw_wire(s, [H(a), H(b)], col)
 
-    # rail legend
-    y0 = bb.rowy("TR1") - 19
-    s.text("labels", bb.cx(63) + 8, y0, "top − rail = GND", 10, "#2f62c9", "end", "bold")
-    s.text("labels", bb.cx(63) - 112, y0, "top + rail = VREF ≈ 1.34 V (not a power rail)", 10, "#8e44ad",
-           "end", "bold")
+    # rail legends
+    s.text("labels", bb.x + 8, bb.rowy("TR1") - 19, "top + rail = VREF ≈ 1.34 V (NOT a power rail)", 10,
+           "#8e44ad", "start", "bold")
+    s.text("labels", bb.x + 300, bb.rowy("TR1") - 19, "top − rail = GND", 10, "#2f62c9", "start", "bold")
     yb = bb.y + bb.h + 16
     s.text("labels", bb.cx(63) + 8, yb, "bottom + rail = +5 V (ESP32 VIN)", 10, "#d93a32", "end", "bold")
     s.text("labels", bb.cx(63) - 210, yb, "bottom − rail = GND", 10, "#2f62c9", "end", "bold")
-    # zone pills
-    pill(s, bb.cx(27), bb.y + 3.02 * P - 0.0, "input", "#2f81f7")
-    return s, bb, info, e
 
+    # group labels
+    ch = bb.y + 9.1 * P + 4
+    s.text("labels", bb.cx(25.6), ch, "INPUT", 10, "#1f6fd1", "middle", "bold")
+    s.text("labels", bb.cx(36.4), ch, "STAGE 1 · gain ≈ 31", 10, "#1a7f37", "middle", "bold")
+    pill(s, 585, 822, "STAGE 2 · gain 1–46 (RV2)", "#d9822b", 10)
+    vx, vy = bb.cx(55.2), bb.rowy("d") + 2
+    s.rect("labels", vx - 74, vy - 9, 148, 18, "#ffffff", "#8e44ad", 1, rx=9, extra='opacity="0.95"')
+    s.text("labels", vx, vy + 3.5, "VREF ≈ 1.34 V + 3V3A filter", 9.5, "#8e44ad", "middle", "bold")
 
-def finish_rx_water(s, bb, info, e):
-    H = lambda h: bb.xy(h)
+    # callouts: input (inside the empty top-left of the board)
+    c = info
+    tag2(s, 470, 490, "Cin  100 nF", "ceramic, marked 104", (c["Cin"][0] - 12, c["Cin"][1]))
+    tag2(s, 470, 548, "Rs  10 kΩ", "brown-black-orange-gold", (bb.cx(27.7), bb.rowy("c")))
+    # callouts above the board (lower row y=362, upper row y=316)
+    tag2(s, 700, 362, "Rb  1 MΩ", "brown-black-green-gold", (bb.cx(29.2), bb.rowy("b") - 7))
+    tag2(s, 860, 362, "Rg1  3.3 kΩ", "orange-orange-red-gold", (bb.cx(37.9), bb.rowy("d") - 7))
+    tag2(s, 1000, 362, "Cg1  33 nF", "ceramic, marked 333", (c["Cg1"][0] + 4, c["Cg1"][1] - 9))
+    cv = c["Cv"]
+    tag2(s, cv[0] - 2, 312, "Cv  10 µF 16 V", "VREF to GND, stripe (−) down", (cv[0], cv[1]))
+    tag2(s, 1205, 362, "Rd  6.8 kΩ", "blue-grey-red-gold", (bb.cx(53.5), bb.rowy("c") - 7))
+    tag2(s, 1300, 312, "Rt  10 kΩ", "brown-black-orange-gold", (bb.cx(57.0), bb.rowy("b") - 7))
+    tag2(s, 1405, 362, "Rp  10 Ω", "brown-black-black-gold", (bb.cx(60.0), bb.rowy("c") - 7))
+    # stage 1 and Cp (empty top-middle of the board)
+    tag2(s, 1012, 492, "Cf1  150 pF", "ceramic, marked 151", (c["Cf1"][0] + 12, c["Cf1"][1]))
+    tag2(s, 1012, 538, "Rf1  100 kΩ", "brown-black-yellow-gold", (bb.cx(35.6), bb.rowy("c")))
+    cp = c["Cp"]
+    tag2(s, 1120, 575, "Cp  100 µF 16 V", "stripe (−) side in d61", (cp[0] - 17, cp[1]))
+    # stage 2 (empty bottom-right of the board, and below the board)
+    rv = c["RV2"]
+    tag2(s, 1062, 651, "RV2  100 kΩ trimmer (104)", "= receiver gain · g38 not connected",
+         (rv[2], (rv[1] + rv[3]) / 2 + 4))
+    tag2(s, 1062, 704, "Ro  3.3 kΩ", "orange-orange-red-gold", (bb.cx(39.4), bb.rowy("h")))
+    tag2(s, 742, 822, "Cd  100 nF", "marked 104, +5 V to GND", (c["Cd"][0] - 4, c["Cd"][1] + 6))
+    tag2(s, 870, 822, "Cf2  100 pF", "marked 101", (c["Cf2"][0] + 4, c["Cf2"][1] + 9))
+    tag2(s, 990, 822, "Caa  4.7 nF", "marked 472", (c["Caa"][0] + 4, c["Caa"][1] + 9))
+    # bottom-left of the board
+    tag2(s, 205, 652, "GND join", "top − rail ↔ bottom − rail", (bb.cx(3), 652))
+    tag2(s, 520, 628, "yellow jumper", "U1 pin 1 → pin 5", (bb.cx(28.5), bb.y + 9.6 * P))
+    tag2(s, 530, 684, "Rg2  2.2 kΩ", "red-red-red-gold", (bb.cx(28.2), bb.rowy("i")))
+    tag2(s, 360, 714, "Cg2  47 nF", "ceramic, marked 473", (c["Cg2"][0] - 12, c["Cg2"][1]))
+
+    # notes, parts, power
+    s.rect("labels", 660, 96, 640, 132, "#fffbea", "#d4a72c", 1.4, rx=8)
+    s.text("labels", 676, 120, "Notes", 13, "#7a5a00", "start", "bold")
+    for i, t in enumerate([
+            "• RV2 = receiver gain: raise it if the tone bars stay low.",
+            "• LM358 runs from 5 V; Ro 3.3 kΩ protects the ESP32 pin.",
+            "• MCP602 / MCP6002 also fit (same pins): then power pin 8 from 3V3A instead of 5 V.",
+            "• Keep the hydrophone cable away from the amplifier and its power wires."]):
+        s.text("labels", 676, 144 + i * 21, t, 12, "#3d3000", "start")
+    legend_table(s, 40, 856, 940, "Parts and holes (receiver, WATER)", [
+        ("U1  LM358 (notch right)", "e30–e33, f30–f33"),
+        ("Cin  100 nF (104)", "b25 ↔ b27"),
+        ("Rs  10 kΩ", "c27 ↔ c31"),
+        ("Rb  1 MΩ", "b28 ↔ b31"),
+        ("Rf1  100 kΩ", "c33 ↔ c36"),
+        ("Cf1  150 pF (151)", "b33 ↔ b36"),
+        ("Rg1  3.3 kΩ", "d36 ↔ d39"),
+        ("Cg1  33 nF (333)", "a39 ↔ top − rail"),
+        ("RV2  100 kΩ (104)", "g36 · g37 wiper · g38 NC"),
+        ("Cf2  100 pF (101)", "j36 ↔ j37"),
+        ("Rg2  2.2 kΩ", "i28 ↔ i31"),
+        ("Cg2  47 nF (473)", "j28 ↔ bottom − rail"),
+        ("Ro  3.3 kΩ", "h37 ↔ h41"),
+        ("Caa  4.7 nF (472)", "j41 ↔ bottom − rail"),
+        ("Cd  100 nF (104)", "bottom + / − rail, col 34"),
+        ("Rp  10 Ω", "c59 ↔ c62"),
+        ("Cp  100 µF 16 V", "+ d59, − d61"),
+        ("Rt  10 kΩ", "b55 ↔ b59"),
+        ("Rd  6.8 kΩ", "c52 ↔ c55"),
+        ("Cv  10 µF 16 V", "top + / − rail, col 46"),
+    ], ncols=2, lh=19, size=10.5, col2=168)
+    note_box(s, 1000, 856, 540, "How it is powered", [
+        "• Bottom + rail = +5 V from ESP32 VIN (USB). Only the",
+        "  LM358 (pin 8) uses it; Cd 100 nF sits next to the chip.",
+        "• ESP32 3V3 → Rp 10 Ω → 3V3A (Cp 100 µF) → Rt / Rd",
+        "  divider → VREF ≈ 1.34 V on the top + rail (violet).",
+        "• Top + rail is VREF, NOT a power rail: never connect",
+        "  3.3 V or 5 V to it.",
+        "• Both − rails are GND, joined by the black wire at col 3.",
+    ], size=11, lh=19)
+
     port = laptop(s, 1560, 905, "file:///.../pc/receiver.html",
                   [("DUBURI Receiver", 13, "#1f2328", "bold"),
                    ("Mode : WATER", 10, "#24292f", "normal"),
                    ("From node 1:  Hello", 9, "#1a7f37", "normal"),
                    ("SCOPE  ▂▃▅▇▅▃▂▁", 9, "#0b6bcb", "normal")], w=280)
     usb_cable(s, [e["USB"], (e["USB"][0], 880), (1866, 880), (1866, port[1]), port])
+    s.text("labels", 1700, 898, "USB cable (data + power)", 10, "#57606a", "middle")
     return s
-
-
-def build_rx_water_full():
-    s, bb, info, e = build_rx_water()
-    return finish_rx_water(s, bb, info, e)
 
 
 # ===========================================================================
@@ -1758,7 +1838,10 @@ def build_rx_water_full():
 def pretty(p):
     names = {"ESP32.GND_R": "ESP32 GND (right side, 2nd from bottom)", "ESP32.D25": "ESP32 D25",
              "ESP32.D34": "ESP32 D34 (GPIO34)", "ESP32.3V3": "ESP32 3V3", "AMP.": "PAM8403 ",
-             "MIC.": "MAX9814 ", "DC.": "DC terminal ", "SPK.": "speaker "}
+             "MIC.": "MAX9814 ", "DC.": "DC terminal ", "SPK.": "speaker ",
+             "ESP32.GND_L": "ESP32 GND (left side, 2nd from bottom)", "ESP32.VIN": "ESP32 VIN",
+             "XH.": "XH-M542 ", "DC12.": "12 V DC terminal ", "EXC.": "exciter ",
+             "HYD.HOT": "hydrophone cable core", "HYD.SHIELD": "hydrophone cable shield"}
     if p in names:
         return names[p]
     for k, v in names.items():
@@ -1766,7 +1849,8 @@ def pretty(p):
             return v + p[len(k):]
     if "-" in p:
         r, c = p.split("-")
-        return {"TR1": "top + rail", "TR2": "top − rail"}.get(r, r) + f" col {c} (`{p}`)"
+        return ({"TR1": "top + rail", "TR2": "top − rail", "BR1": "bottom − rail", "BR2": "bottom + rail"}
+                .get(r, r) + f" col {c} (`{p}`)")
     return f"`{p}`"
 
 
@@ -1775,6 +1859,99 @@ def wire_md(wires):
     for a, b, col, desc in wires:
         out.append(f"| {pretty(a)} | {pretty(b)} | {col} | {desc} |")
     return "\n".join(out)
+
+
+def parts_md(parts, extra=()):
+    """Part | Value / marking | Holes table built from the same data the checker verifies."""
+    out = ["| Part | Value / marking | Holes |", "|---|---|---|"]
+    for ref, kind, value, mark, pins, *rest in parts:
+        hm = {k: pretty(v) for k, v in pins.items()}
+        if kind == "resistor":
+            val, holes = f"{value} ({'-'.join(mark)})", f"{hm['1']} ↔ {hm['2']}"
+        elif kind in ("disc", "mlcc", "cap_off"):
+            val, holes = f"{value} ceramic, marked `{mark}`", f"{hm['1']} ↔ {hm['2']}"
+        elif kind == "trimmer":
+            nc = " (end, not connected)" if ref == "RV2" else " (end)"
+            val = f"{value} trimmer, marked `{mark}`"
+            holes = f"{hm['1']} (end) · {hm['2']} (wiper) · {hm['3']}{nc}"
+        elif kind in ("elko", "elko_top"):
+            val, holes = f"{value} electrolytic", f"+ leg {hm['+']}, − leg (stripe) {hm['-']}"
+        elif kind == "dip8":
+            val = f"{value} dual op-amp, DIP-8"
+            holes = (" · ".join(f"pin {k} {hm[k]}" for k in "1234") + "; " +
+                     " · ".join(f"pin {k} {hm[k]}" for k in "5678") + " (notch to the right)")
+        else:
+            val, holes = value, ", ".join(hm.values())
+        out.append(f"| {ref} | {val} | {holes} |")
+    out += [f"| {a} | {b} | {c} |" for a, b, c in extra]
+    return "\n".join(out)
+
+
+def placement_water_md():
+    txw = parts_md(TXW_PARTS, [
+        ("XH-M542 board", "TPA3116D2 mono amplifier (blue, heatsink, VOL knob)", "off the board (see wires)"),
+        ("12 V 3 A adapter + DC-jack-to-screw-terminal", "", "`+` → XH-M542 VCC +, `−` → VCC −"),
+        ("Exciter tube", "40 mm exciter 4 Ω 25 W glued inside a 4 mm acrylic window; 3\" PVC tube, "
+                         "end cap + cable gland, silica gel", "2-core round cable from XH-M542 OUT + / −"),
+    ])
+    rxw = parts_md(RXW_PARTS, [
+        ("Piezo hydrophone", "brass piezo disc sealed in epoxy / liquid tape, shielded cable",
+         "core → `a25`, shield → top − rail col 23 (`TR2-23`)"),
+    ])
+    return f"""
+---
+
+# Underwater (WATER mode)
+
+Same firmware, web pages and protocol; set both boards to `mode water`.
+
+![Transmitter, underwater](tx_water_wiring.png)
+
+## Transmitter node, underwater (PC 1)
+
+The breadboard part (RC filter + volume) is the same as the AIR transmitter, in the
+same holes. The PAM8403, the 5 V adapter and the 1000 µF are not used. The amplifier
+is an XH-M542 (TPA3116D2) board powered by its own 12 V 3 A adapter; only GND is
+shared with the breadboard (the breadboard + rail is not used).
+
+{txw}
+
+### Wires
+
+{wire_md(TXW_WIRES)}
+
+Two wires go into the XH-M542 `VCC −` screw: the adapter `−` and the black wire to the
+breadboard − rail.
+
+Safety: power at 12 V only (≈15 W into 4 Ω); never a 4S battery direct or 24 V with this
+exciter. The OUT terminals are a bridged output: never connect either to GND. Start
+with RV1 and the board's VOL knob fully down.
+
+![Receiver, underwater](rx_water_wiring.png)
+
+## Receiver node, underwater (PC 2)
+
+Board: 830-point breadboard (MB-102), columns 1–63. Each rail row has 50 holes in 10
+groups of 5, under columns 3–7, 9–13, 15–19, …, 57–61 (no rail hole at columns 1, 2, 8,
+14, 20, 26, 32, 38, 44, 50, 56, 62, 63). On some 830-point boards each rail is split in
+the middle (a gap after column 31): if yours is, bridge the two halves of every rail
+used here with a short jumper.
+
+Rails: bottom + rail = +5 V from ESP32 `VIN` (LM358 only). Top + rail = VREF ≈ 1.34 V
+(from 3V3A through the 10 kΩ / 6.8 kΩ divider): **not a power rail**. Both − rails are GND,
+joined by a wire at column 3. ESP32 `3V3` → 10 Ω → 3V3A (100 µF) feeds only the divider.
+
+{rxw}
+
+### Wires
+
+{wire_md(RXW_WIRES)}
+
+Gain: stage 1 = 1 + 100 k / 3.3 k ≈ 31. Stage 2 = 1 + RV2 / 2.2 k, from 1 to ≈ 46 (RV2 is the
+receiver gain: raise it if the tone bars stay low). Ro 3.3 kΩ protects the ESP32 pin.
+MCP602 / MCP6002 also fit (same pins): then power pin 8 from 3V3A instead of 5 V. Keep
+the hydrophone cable away from the amplifier and its power wires.
+"""
 
 
 def placement_md():
@@ -1891,14 +2068,14 @@ def main():
     jobs = []
     for name, builder in (("tx_wiring", build_tx), ("rx_wiring", build_rx),
                           ("system_overview", build_overview),
-                          ("tx_water_wiring", build_tx_water), ("rx_water_wiring", build_rx_water_full)):
+                          ("tx_water_wiring", build_tx_water), ("rx_water_wiring", build_rx_water)):
         s = builder()
         p = os.path.join(HERE, name + ".svg")
         with open(p, "w", encoding="utf-8") as f:
             f.write(s.svg())
         jobs.append(dict(svg=p, png=os.path.join(HERE, name + ".png"), w=s.w, h=s.h))
     with open(os.path.join(HERE, "placement.md"), "w", encoding="utf-8") as f:
-        f.write(placement_md())
+        f.write(placement_md() + placement_water_md())
     ok = render_png(jobs)
     print("wrote:", ", ".join(os.path.basename(j["svg"]) for j in jobs),
           "+ PNGs" if ok else "(no PNG)", "+ placement.md")

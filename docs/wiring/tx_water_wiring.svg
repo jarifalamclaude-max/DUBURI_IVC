@@ -863,11 +863,10 @@
 <rect x="851.8" y="585.7" width="195.2" height="35.0" rx="5.0" fill="#ffffff" stroke="#9aa0a8" stroke-width="1.0" opacity="0.96"/>
 <text x="949.4" y="600.2" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="10.5" fill="#1f2328" text-anchor="middle" font-weight="bold" >RV1  10 kΩ trimmer = volume</text>
 <text x="949.4" y="613.7" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="9.5" fill="#57606a" text-anchor="middle" font-weight="normal" >pins d12 · d13 (wiper) · d14</text>
-<text x="1123.4" y="303.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="10" fill="#2f62c9" text-anchor="end" font-weight="bold" >top − rail = GND</text>
-<text x="1004.6" y="303.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="bold" >top + rail: not used</text>
-<text x="1157.0" y="410.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="10" fill="#57606a" text-anchor="middle" font-weight="normal" >DC jack → screw terminal</text>
-<text x="1093.0" y="140.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="10" fill="#57606a" text-anchor="start" font-weight="bold" >2-core round cable</text>
-<text x="1093.0" y="112.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="10" fill="#57606a" text-anchor="start" font-weight="normal" >OUT → exciter</text>
+<text x="1071.4" y="303.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="10" fill="#2f62c9" text-anchor="end" font-weight="bold" >top − rail = GND</text>
+<text x="952.6" y="303.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="10" fill="#8a877f" text-anchor="end" font-weight="bold" >top + rail: not used</text>
+<text x="1222.0" y="286.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="10" fill="#57606a" text-anchor="middle" font-weight="normal" >DC jack → screw terminal</text>
+<text x="1240.0" y="127.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="10.5" fill="#57606a" text-anchor="start" font-weight="bold" >2-core round cable:  OUT → exciter</text>
 <text x="1212.0" y="333.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="11" fill="#1f6fb2" text-anchor="middle" font-weight="bold" >water side</text>
 <text x="1475.0" y="324.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="11.5" fill="#1f2328" text-anchor="middle" font-weight="bold" >3" PVC tube, side cut-away view</text>
 <text x="1420.0" y="370.0" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="11" fill="#1f2328" text-anchor="start" font-weight="bold" >exciter 4 Ω 25 W (40 mm)</text>
