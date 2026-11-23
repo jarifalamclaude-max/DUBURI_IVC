@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1f2a">
+<title>DUBURI phone receiver</title>
+<!--
+  DUBURI IVC - phone receiver.
+  Uses the phone's own microphone to hear the tones from sender.html (or from an
+  ESP32 transmitter) and shows the text. The same modem as the ESP32 (am_core.c),
+  ported to JavaScript (pc/amcore.js, copied in below by pc/sync_common.py).
+
+  Phones only give a web page the microphone when the page comes from an
+  https:// address. A file opened from the phone's storage cannot use it.
+  Phones have no USB serial in the browser, so this page never talks to a board.
+-->
+<style>
+:root { --bg:#eef3f6; --panel:#ffffff; --ink:#132029; --muted:#5b6b77; --line:#d6e0e7; --soft:#e4ecf1;
+  --accent:#0a7c76; --accent-ink:#ffffff; --ok:#1a7f37; --ok-soft:#dcf2e3; --warn:#9a5b00; --warn-soft:#fdf0d7;
+  --bad:#c0362c; --bad-soft:#fbe1de; --bar:#0a7c76; --bar-hi:#e0a100; color-scheme:light; }
+@media (prefers-color-scheme: dark) { :root { --bg:#0b141a; --panel:#131f27; --ink:#e3ebf0; --muted:#94a6b3;
+  --line:#25343e; --soft:#1a2831; --accent:#2bb5ab; --accent-ink:#04201e; --ok:#4cc46e; --ok-soft:#12301c;
+  --warn:#e6a542; --warn-soft:#33240c; --bad:#f0675b; --bad-soft:#3a1714; --bar:#2bb5ab; --bar-hi:#f2c14e; color-scheme:dark; } }
+* { box-sizing:border-box; }
+html, body { margin:0; background:var(--bg); color:var(--ink); }
+body { font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Noto Sans Bengali",sans-serif;
+  padding:max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  max-width:640px; margin:0 auto; -webkit-text-size-adjust:100%; }
+h1 { font-size:20px; margin:4px 0 2px; } .sub { color:var(--muted); font-size:14px; margin:0 0 12px; }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px; margin-bottom:12px; }
+.big { width:100%; border:0; border-radius:14px; padding:16px; font:inherit; font-size:18px; font-weight:700; cursor:pointer;
+  background:var(--accent); color:var(--accent-ink); }
+.big.stop { background:var(--soft); color:var(--ink); border:1px solid var(--line); }
+.big:disabled { opacity:.5; }
+.status { display:flex; align-items:center; gap:8px; margin-top:10px; font-size:15px; }
+.dot { width:11px; height:11px; border-radius:50%; background:var(--muted); flex:none; }
+.dot.on { background:var(--ok); box-shadow:0 0 0 4px var(--ok-soft); animation:pulse 1.6s infinite; }
+.dot.det { background:var(--bar-hi); box-shadow:0 0 0 4px var(--warn-soft); }
+@keyframes pulse { 50% { box-shadow:0 0 0 7px transparent; } }
+.alert { border-radius:12px; padding:10px 12px; font-size:14px; margin-top:10px; }
+.alert.bad { background:var(--bad-soft); color:var(--bad); } .alert.warn { background:var(--warn-soft); color:var(--warn); }
+.alert b { display:block; margin-bottom:2px; } .alert ol, .alert ul { margin:4px 0 0 18px; padding:0; }
+.alert p { margin:4px 0 0; }
+.row { display:flex; gap:10px; flex-wrap:wrap; }
+.row > label { flex:1 1 130px; font-size:13px; color:var(--muted); }
+select { width:100%; margin-top:4px; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--panel); color:var(--ink); font:inherit; }
+.meter { height:12px; background:var(--soft); border-radius:8px; overflow:hidden; margin:6px 0 2px; }
+.meter > div { height:100%; width:0; background:var(--ok); transition:width .2s; }
+.meter.low > div { background:var(--muted); } .meter.hot > div { background:var(--bad); }
+.small { font-size:13px; color:var(--muted); }
+canvas { width:100%; height:110px; display:block; }
+.msgs { display:flex; flex-direction:column; gap:8px; }
+.msg { border:1px solid var(--line); border-radius:12px; padding:10px 12px; }
+.msg.new { animation:flash 1.2s; } @keyframes flash { from { background:var(--ok-soft); } }
+.msg .text { font-size:20px; font-weight:650; word-break:break-word; white-space:pre-wrap; }
+.msg .text i { font-style:normal; color:var(--bad); background:var(--bad-soft); border-radius:4px; padding:0 2px; }
+.msg .meta { font-size:12.5px; color:var(--muted); margin-top:4px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.pill { border-radius:999px; padding:1px 8px; font-weight:700; font-size:12px; }
+.pill.ok { background:var(--ok-soft); color:var(--ok); } .pill.bad { background:var(--bad-soft); color:var(--bad); }
+.empty { color:var(--muted); font-style:italic; font-size:14px; }
+details summary { cursor:pointer; font-weight:600; } details p, details li { font-size:14px; }
+#log { font:12px/1.4 ui-monospace,Menlo,Consolas,monospace; color:var(--muted); max-height:160px; overflow:auto; white-space:pre-wrap; margin:8px 0 0; }
+</style>
+</head>
+<body>
+<h1>DUBURI phone receiver</h1>
+<p class="sub">The phone's microphone listens for the modem tones and shows the text.</p>
+
+<div class="card">
+  <button class="big" id="go">🎤 Start listening</button>
+  <div class="status"><span class="dot" id="dot"></span><span id="state">Not listening</span></div>
+  <div id="alert"></div>
+</div>
+
+<div class="card">
+  <div class="row">
+    <label>Mode (same as the sender)
+      <select id="mode"><option value="air">AIR</option><option value="water">WATER</option></select></label>
+    <label>This phone is node
+      <select id="node"></select></label>
+    <label>Mic boost
+      <select id="boost"><option value="1">1× (normal)</option><option value="4">4×</option><option value="16">16× (quiet mic)</option></select></label>
+  </div>
+  <p class="small" id="modeNote" style="margin:8px 0 0"></p>
+</div>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:baseline"><b>Sound level</b><span class="small" id="lvlTxt">—</span></div>
+  <div class="meter low" id="meter"><div></div></div>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:10px"><b>24 tones (3–8.75 kHz)</b><span class="small" id="snr"></span></div>
+  <canvas id="bars" width="600" height="110"></canvas>
+</div>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:baseline"><b>Received messages</b><span class="small" id="count">0</span></div>
+  <div class="msgs" id="msgs"><p class="empty">Nothing yet. Start listening, then press Send on the sender.</p></div>
+</div>
+
+<div class="card">
+  <details>
+    <summary>Help: the microphone does not start</summary>
+    <ul>
+      <li><b>Open this page from its https:// link</b> (not from Files / Downloads). Phones only give the microphone to https pages.</li>
+      <li><b>Android (Chrome):</b> tap the icon left of the address → Permissions → Microphone → Allow. Or Settings → Apps → Chrome → Permissions → Microphone.</li>
+      <li><b>iPhone (Safari):</b> tap <b>aA</b> in the address bar → Website Settings → Microphone → Allow. Also Settings → Safari → Microphone → Ask/Allow.</li>
+      <li>Close other apps that use the microphone (calls, voice recorder).</li>
+      <li>Keep this page open and the screen on while receiving.</li>
+    </ul>
+  </details>
+  <details style="margin-top:8px">
+    <summary>Details / log</summary>
+    <pre id="log"></pre>
+  </details>
+</div>
+
+<script>
+/* ===== AMCORE START: JavaScript port of the modem core (generated into the pages by pc/sync_common.py) =====
+ * amcore.js - DUBURI modem in JavaScript, a line-by-line port of
+ *   firmware/DuburiModem/am_core.c  (tones, coding, receiver)
+ *   firmware/DuburiModem/am_text.c  (text messages)
+ * so a laptop's own speaker and microphone can talk to each other (or to an
+ * ESP32 board) without any hardware. pc/test/amcore_test.js checks it against
+ * the C code on the same recordings. Edit here, then run pc/sync_common.py.
+ */
+var AMCore = (function () {
+  "use strict";
+  const NTONES = 24, NSETS = 6, M = 4, PRE_LEN = 10, FRAME_BYTES = 6, PAYLOAD_BYTES = 4;
+  const INFO_BITS = 54, CODED_BITS = 108, DATA_SLOTS = 54, TOTAL_SLOTS = 64;
+  const T_HOP = 0.0025, T_TRACK = 0.001;
+  const DET_SCORE_MIN = 0.14, DET_MATCH_MIN = 5;
+  const PEAK_HOPS = 14, NOISE_INIT_HOPS = 40, NOISE_ALPHA = 1 / 256, NOISE_CLIP = 8, LLR_CLAMP = 20;
+  const RING = 8192, RING_MASK = RING - 1, HIST = 256, OUTQ = 4;
+  const PREAMBLE = [0, 14, 6, 22, 9, 17, 4, 21, 5, 11];
+  const MODES = {
+    water: { name: "water", slot: 0.020, win: 0.016 },
+    air: { name: "air", slot: 0.040, win: 0.032 },
+  };
+  const F_TEXT = 0x2, F_FIRST = 0x8, F_LAST = 0x1, F_ACK_REQ = 0x8, F_IS_ACK = 0x4;
+  const TEXT_MAX = 64, TEXT_TIMEOUT_MS = 8000, TEXT_DUP_MS = 6000;
+
+  const toneHz = (k) => 3000 + 250 * k;
+  const round = (x) => Math.round(x);
+
+  function crc16(bytes) {
+    let c = 0xFFFF;
+    for (let i = 0; i < bytes.length; i++) {
+      c ^= (bytes[i] & 255) << 8;
+      for (let b = 0; b < 8; b++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
+    }
+    return c;
+  }
+  function parity7(v) { v ^= v >> 4; v ^= v >> 2; v ^= v >> 1; return v & 1; }
+  function convEncode(bits) {
+    const out = new Uint8Array(2 * bits.length);
+    let st = 0;
+    for (let t = 0; t < bits.length; t++) {
+      const reg = ((bits[t] & 1) << 6) | st;
+      out[2 * t] = parity7(reg & 0x79);
+      out[2 * t + 1] = parity7(reg & 0x5B);
+      st = reg >> 1;
+    }
+    return out;
+  }
+  /* Soft Viterbi, llr > 0 means bit 0; ends in state 0 (zero tail). */
+  function viterbi(llr, n) {
+    const dec = new Uint8Array(n * 64);
+    let pm = new Float64Array(64).fill(-1e30), npm = new Float64Array(64);
+    pm[0] = 0;
+    for (let t = 0; t < n; t++) {
+      const l0 = llr[2 * t], l1 = llr[2 * t + 1];
+      for (let ns = 0; ns < 64; ns++) {
+        const u = ns >> 5;
+        let best = -1e30, bestb = 0;
+        for (let b = 0; b < 2; b++) {
+          const ps = ((ns & 31) << 1) | b;
+          const reg = (u << 6) | ps;
+          const m = pm[ps] + (parity7(reg & 0x79) ? -l0 : l0) + (parity7(reg & 0x5B) ? -l1 : l1);
+          if (m > best) { best = m; bestb = b; }
+        }
+        npm[ns] = best;
+        dec[t * 64 + ns] = bestb;
+      }
+      const tmp = pm; pm = npm; npm = tmp;
+    }
+    const bits = new Uint8Array(n);
+    let s = 0;
+    for (let t = n - 1; t >= 0; t--) {
+      bits[t] = s >> 5;
+      s = ((s & 31) << 1) | dec[t * 64 + s];
+    }
+    return bits;
+  }
+  const interleave = (c) => 2 * ((37 * c) % DATA_SLOTS) + (c >= DATA_SLOTS ? 1 : 0);
+
+  function pack(p) {
+    const f = [((p.dst & 15) << 4) | (p.src & 15), ((p.seq & 15) << 4) | (p.flags & 15), p.cmd & 255, p.arg & 255];
+    const c = crc16(f);
+    return f.concat([c >> 8, c & 255]);
+  }
+  function unpack(f) {
+    const c = crc16(f.slice(0, PAYLOAD_BYTES));
+    const p = { dst: f[0] >> 4, src: f[0] & 15, seq: f[1] >> 4, flags: f[1] & 15, cmd: f[2], arg: f[3] };
+    return { p, ok: f[4] === (c >> 8) && f[5] === (c & 255) };
+  }
+  /* am_tx_build(): packet -> 64 tone indexes */
+  function txBuild(p) {
+    const frame = pack(p);
+    const info = new Uint8Array(INFO_BITS);
+    for (let i = 0; i < FRAME_BYTES * 8; i++) info[i] = (frame[i >> 3] >> (7 - (i & 7))) & 1;
+    const coded = convEncode(info);
+    const stream = new Uint8Array(CODED_BITS);
+    for (let c = 0; c < CODED_BITS; c++) stream[interleave(c)] = coded[c];
+    const t = PREAMBLE.slice();
+    for (let k = 0; k < DATA_SLOTS; k++) t.push((k % NSETS) + NSETS * ((stream[2 * k] << 1) | stream[2 * k + 1]));
+    return t;
+  }
+
+  /* ---------------------------------------------------------------- receiver */
+  const ST_SEARCH = 0, ST_PEAK = 1, ST_DECODE = 2;
+
+  class Rx {
+    constructor(fs, mode) {
+      this.ring = new Float64Array(RING);
+      this.win = new Float64Array(4096);
+      this.xw = new Float64Array(4096);
+      this.coef = new Float64Array(NTONES);
+      this.noise = new Float64Array(NTONES);
+      this.scope = new Float64Array(NTONES);
+      this.histFrac = new Float64Array(HIST * PRE_LEN);
+      this.histAmax = new Uint8Array(HIST);
+      this.pkScore = new Float64Array(24);
+      this.pkEnd = new Float64Array(24);
+      this.llr = new Float64Array(CODED_BITS);
+      this.slotQ = new Float64Array(DATA_SLOTS);
+      this.preOff = new Int32Array(PRE_LEN);
+      this.n = 0; this.dc = -1; this.noiseInit = 0;
+      this.out = [];
+      this.stats = { preambles: 0, packets_ok: 0, crc_fail: 0, clipped: 0, last_q_db: 0, last_timing_adj: 0 };
+      this.muteUntil = 0; this.muted = false;
+      this.mode = MODES[mode] ? mode : "water";
+      this._timing();
+      this._configure(fs);
+      this._resetSearch();
+    }
+    _timing() { this.tSlot = MODES[this.mode].slot; this.tWin = MODES[this.mode].win; }
+    _configure(fs) {
+      this.fs = fs;
+      this.W = Math.min(round(this.tWin * fs), this.win.length);
+      this.H = round(T_HOP * fs);
+      this.D = round(T_TRACK * fs);
+      this.S = this.tSlot * fs;
+      for (let n = 0; n < this.W; n++) this.win[n] = 0.5 - 0.5 * Math.cos(2 * Math.PI * (n + 0.5) / this.W);
+      for (let k = 0; k < NTONES; k++) this.coef[k] = 2 * Math.cos(2 * Math.PI * toneHz(k) / fs);
+      for (let j = 0; j < PRE_LEN; j++) this.preOff[j] = round((PRE_LEN - 1 - j) * this.S / this.H);
+    }
+    _resetSearch() { this.state = ST_SEARCH; this.hopCount = 0; this.pkN = 0; this.nextHop = this.n + this.H; }
+    setMode(mode) {
+      if (this.state !== ST_SEARCH || !MODES[mode]) return false;
+      this.mode = mode; this._timing(); this._configure(this.fs);
+      this.noiseInit = 0; this.noise.fill(0);
+      this._resetSearch();
+      return true;
+    }
+    mute(samples) { this.muteUntil = this.n + samples; this.muted = true; this.state = ST_SEARCH; }
+    pop() { return this.out.shift() || null; }
+
+    _energies(end, tones, E) {
+      const W = this.W, start = end - W, ring = this.ring, win = this.win, xw = this.xw;
+      for (let i = 0; i < W; i++) xw[i] = ring[(start + i) & RING_MASK] * win[i];
+      for (let t = 0; t < tones.length; t++) {
+        const c = this.coef[tones[t]];
+        let s1 = 0, s2 = 0;
+        for (let i = 0; i < W; i++) { const s0 = xw[i] + c * s1 - s2; s2 = s1; s1 = s0; }
+        E[t] = s1 * s1 + s2 * s2 - c * s1 * s2 + 1e-3;
+      }
+    }
+    _slotEnd(slot) { return this.syncBase + round(this.syncFrac + this.trackAdj + (slot + 1) * this.S); }
+
+    _hop() {
+      const E = new Float64Array(NTONES), z = new Float64Array(NTONES);
+      this._energies(this.n, ALL_TONES, E);
+      if (this.state === ST_SEARCH) {
+        if (this.noiseInit < NOISE_INIT_HOPS) {
+          const k = 1 / (this.noiseInit + 1);
+          for (let i = 0; i < NTONES; i++) this.noise[i] += (E[i] - this.noise[i]) * k;
+          this.noiseInit++;
+          this.nextHop += this.H;
+          return;
+        }
+        for (let i = 0; i < NTONES; i++) {
+          let e = E[i];
+          if (e > NOISE_CLIP * this.noise[i]) e = NOISE_CLIP * this.noise[i];
+          this.noise[i] += (e - this.noise[i]) * NOISE_ALPHA;
+        }
+      }
+      let sum = 0, zmax = 0, amax = 0;
+      for (let i = 0; i < NTONES; i++) {
+        z[i] = E[i] / this.noise[i];
+        this.scope[i] = 10 * Math.log10(z[i]);
+        sum += z[i];
+        if (z[i] > zmax) { zmax = z[i]; amax = i; }
+      }
+      const hi = this.hopCount % HIST;
+      for (let j = 0; j < PRE_LEN; j++) this.histFrac[hi * PRE_LEN + j] = z[PREAMBLE[j]] / sum;
+      this.histAmax[hi] = amax;
+      if (this.hopCount >= this.preOff[0]) {
+        let score = 0, match = 0;
+        for (let j = 0; j < PRE_LEN; j++) {
+          const h = (this.hopCount - this.preOff[j]) % HIST;
+          score += this.histFrac[h * PRE_LEN + j];
+          match += this.histAmax[h] === PREAMBLE[j] ? 1 : 0;
+        }
+        score /= PRE_LEN;
+        if (this.state === ST_SEARCH && score >= DET_SCORE_MIN && match >= DET_MATCH_MIN) {
+          this.state = ST_PEAK; this.pkN = 0;
+        }
+        if (this.state === ST_PEAK) {
+          this.pkScore[this.pkN] = score; this.pkEnd[this.pkN] = this.n; this.pkN++;
+        }
+      }
+      this.hopCount++;
+      this.nextHop += this.H;
+      if (this.state === ST_PEAK && this.pkN >= PEAK_HOPS) this._finishPeak();
+    }
+    _finishPeak() {
+      let m = 0;
+      for (let i = 1; i < this.pkN; i++) if (this.pkScore[i] > this.pkScore[m]) m = i;
+      const top = this.pkScore[m], lim = 0.85 * top;
+      let l = m, r = m;
+      while (l > 0 && this.pkScore[l - 1] >= lim) l--;
+      while (r < this.pkN - 1 && this.pkScore[r + 1] >= lim) r++;
+      const base = 0.7 * top;
+      let wsum = 0, isum = 0;
+      for (let i = l; i <= r; i++) { const w = this.pkScore[i] - base; wsum += w; isum += w * (i - l); }
+      const c = wsum > 0 ? isum / wsum : 0;
+      this.syncBase = this.pkEnd[l];
+      this.syncFrac = c * this.H;
+      this.trackAdj = 0;
+      this.slot = 0;
+      this.state = ST_DECODE;
+      this.stats.preambles++;
+      this.nextHop = this._slotEnd(0) + this.D;
+    }
+    _finishPacket() {
+      const cl = new Float64Array(CODED_BITS);
+      for (let c = 0; c < CODED_BITS; c++) cl[c] = this.llr[interleave(c)];
+      const info = viterbi(cl, INFO_BITS);
+      const frame = [0, 0, 0, 0, 0, 0];
+      for (let i = 0; i < FRAME_BYTES * 8; i++) frame[i >> 3] |= info[i] << (7 - (i & 7));
+      const q = Array.from(this.slotQ).sort((a, b) => a - b);
+      const qmed = 0.5 * (q[DATA_SLOTS / 2 - 1] + q[DATA_SLOTS / 2]);
+      const u = unpack(frame);
+      if (u.ok) {
+        this.stats.packets_ok++;
+        this.stats.last_q_db = qmed;
+        this.stats.last_timing_adj = this.trackAdj;
+        if (this.out.length < OUTQ) this.out.push({ pkt: u.p, q_db: qmed, at: this.n });
+      } else {
+        this.stats.crc_fail++;
+      }
+      this._resetSearch();
+    }
+    _decodeSlot() {
+      const i = this.slot, set = i % NSETS;
+      const tones = [set, set + NSETS, set + 2 * NSETS, set + 3 * NSETS];
+      const Ec = new Float64Array(M), z = new Float64Array(M), lz = new Float64Array(M);
+      const e = this._slotEnd(i);
+      this._energies(e, tones, Ec);
+      let vhat = 0;
+      for (let v = 0; v < M; v++) {
+        z[v] = Ec[v] / this.noise[tones[v]];
+        lz[v] = Math.log(z[v]);
+        if (z[v] > z[vhat]) vhat = v;
+      }
+      const clamp = (x) => Math.max(-LLR_CLAMP, Math.min(LLR_CLAMP, x));
+      this.llr[2 * i] = clamp(Math.max(lz[0], lz[1]) - Math.max(lz[2], lz[3]));
+      this.llr[2 * i + 1] = clamp(Math.max(lz[0], lz[2]) - Math.max(lz[1], lz[3]));
+      this.slotQ[i] = 10 * Math.log10(Math.max(z[vhat] - 1, 1e-3));
+      if (z[vhat] > 4) {                       /* early/late timing tracking */
+        const tv = [tones[vhat]], Ee = new Float64Array(1), El = new Float64Array(1);
+        this._energies(e - this.D, tv, Ee);
+        this._energies(e + this.D, tv, El);
+        const err = (El[0] - Ee[0]) / (El[0] + Ee[0]);
+        this.trackAdj += 0.25 * this.D * err;
+        const lim = 0.25 * this.S;
+        if (this.trackAdj > lim) this.trackAdj = lim;
+        if (this.trackAdj < -lim) this.trackAdj = -lim;
+      }
+      this.slot++;
+      if (this.slot >= DATA_SLOTS) this._finishPacket();
+      else this.nextHop = this._slotEnd(this.slot) + this.D;
+    }
+    /* x: samples in ESP32 ADC counts (0..4095, any offset; floats allowed) */
+    process(x) {
+      for (let k = 0; k < x.length; k++) {
+        const xf = x[k];
+        if (xf <= 8 || xf >= 4087) this.stats.clipped++;
+        if (this.dc < 0) this.dc = xf;
+        this.dc += (xf - this.dc) * (1 / 1024);
+        this.ring[this.n & RING_MASK] = xf - this.dc;
+        this.n++;
+        if (this.muted) {
+          if (this.n < this.muteUntil) continue;
+          this.muted = false; this._resetSearch(); continue;
+        }
+        while (this.n >= this.nextHop) {
+          if (this.state === ST_DECODE) this._decodeSlot();
+          else this._hop();
+        }
+      }
+    }
+  }
+  const ALL_TONES = Array.from({ length: NTONES }, (_, i) => i);
+
+  /* ------------------------------------------------------------ text layer */
+  function textPacket(msg, i, dst, src, seq0) {
+    const n = Math.ceil(msg.length / 2);
+    let flags = F_TEXT;
+    if (i === 0) flags |= F_FIRST;
+    if (i === n - 1) flags |= F_LAST;
+    return { dst: dst & 15, src: src & 15, seq: (seq0 + i) & 15, flags, cmd: msg[2 * i], arg: 2 * i + 1 < msg.length ? msg[2 * i + 1] : 0 };
+  }
+  const isText = (p) => (p.flags & F_TEXT) !== 0;
+
+  class TextRx {
+    constructor() { this.s = Array.from({ length: 16 }, () => ({ active: false, haveSeq: false, lastSeq: 0, lastMs: 0 })); }
+    _start(s, p, started) {
+      s.active = true; s.started = started; s.qSum = 0; s.qN = 0;
+      s.msg = { src: p.src, dst: p.dst, ok: 0, lost: 0, data: [], lostmask: [], q_db: 0 };
+    }
+    _put(s, b, lost) { if (s.msg.data.length < TEXT_MAX) { s.msg.data.push(lost ? 0 : b); s.msg.lostmask.push(lost ? 1 : 0); } }
+    _lostPk(s, n) { for (let k = 0; k < n; k++) { this._put(s, 0, 1); this._put(s, 0, 1); } s.msg.lost += n; }
+    _finish(s) {
+      s.msg.ok = s.started && s.msg.lost === 0 ? 1 : 0;
+      s.msg.q_db = s.qN ? s.qSum / s.qN : 0;
+      s.active = false;
+      return s.msg;
+    }
+    /* returns -1 for a repeat, else a list of finished messages (0..2) */
+    feed(p, q, now) {
+      if (!isText(p)) return [];
+      const s = this.s[p.src & 15], seq = p.seq & 15, out = [];
+      const recent = s.haveSeq && now - s.lastMs < TEXT_TIMEOUT_MS;
+      if (s.haveSeq && seq === s.lastSeq && now - s.lastMs < TEXT_DUP_MS) return -1;
+      if (p.flags & F_FIRST) {
+        if (s.active) { const miss = (seq - s.lastSeq - 1) & 15; this._lostPk(s, miss < 1 ? 1 : miss); out.push(this._finish(s)); }
+        this._start(s, p, true);
+      } else if (!s.active) {
+        this._start(s, p, false);
+        let miss = recent ? ((seq - s.lastSeq - 1) & 15) : 1;
+        if (miss < 1) miss = 1;
+        this._lostPk(s, miss);
+      } else {
+        const miss = (seq - ((s.lastSeq + 1) & 15)) & 15;
+        if (miss) this._lostPk(s, miss);
+      }
+      this._put(s, p.cmd, 0);
+      if (!((p.flags & F_LAST) && p.arg === 0)) this._put(s, p.arg, 0);
+      s.qSum += q; s.qN++;
+      s.lastSeq = seq; s.haveSeq = true; s.lastMs = now;
+      if (p.flags & F_LAST) out.push(this._finish(s));
+      return out;
+    }
+    poll(now) {
+      for (const s of this.s) {
+        if (s.active && now - s.lastMs > TEXT_TIMEOUT_MS) { this._lostPk(s, 1); return this._finish(s); }
+      }
+      return null;
+    }
+  }
+  const HX = "0123456789ABCDEF";
+  function formatMsg(m) {
+    let hex = "", text = "";
+    for (let i = 0; i < m.data.length; i++) {
+      hex += m.lostmask[i] ? "__" : HX[m.data[i] >> 4] + HX[m.data[i] & 15];
+    }
+    const bytes = m.data.map((b, i) => (m.lostmask[i] ? 0x3F : b < 0x20 || b === 0x7F ? 0x2E : b));
+    try { text = new TextDecoder().decode(new Uint8Array(bytes)); } catch (_) { text = ""; }
+    return `MSG src=${m.src} dst=${m.dst} ok=${m.ok} lost=${m.lost} len=${m.data.length} q=${m.q_db.toFixed(1)} hex=${hex} text=${text}`;
+  }
+
+  /* ---------------------------------------------------- audio for a laptop */
+  /* One packet as audio: a phase-continuous sine, one tone per slot, with a
+   * 3 ms fade at the very start and end (no clicks). */
+  function renderPacket(tones, fs, slotS, amp) {
+    const n = Math.round(tones.length * slotS * fs);
+    const out = new Float32Array(n), fade = Math.round(0.003 * fs);
+    let ph = 0;
+    for (let i = 0; i < n; i++) {
+      const k = Math.min(tones.length - 1, Math.floor(i / (slotS * fs)));
+      ph += 2 * Math.PI * toneHz(tones[k]) / fs;
+      if (ph > 2 * Math.PI) ph -= 2 * Math.PI;
+      let g = amp;
+      if (i < fade) g *= i / fade;
+      if (i > n - fade) g *= (n - i) / fade;
+      out[i] = g * Math.sin(ph);
+    }
+    return out;
+  }
+
+  return {
+    NTONES, PRE_LEN, TOTAL_SLOTS, DATA_SLOTS, PREAMBLE, MODES, TEXT_MAX,
+    F_TEXT, F_FIRST, F_LAST, F_ACK_REQ, F_IS_ACK,
+    toneHz, crc16, convEncode, viterbi, interleave, pack, unpack, txBuild,
+    Rx, textPacket, isText, TextRx, formatMsg, renderPacket,
+  };
+})();
+if (typeof module !== "undefined" && module.exports) module.exports = AMCore;
+/* ===== AMCORE END ===== */
+</script>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (_) { return d; } },
+                set(k, v) { try { localStorage.setItem(k, v); } catch (_) { /* private mode */ } } };
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+for (let i = 1; i <= 14; i++) $("node").insertAdjacentHTML("beforeend", `<option value="${i}">${i}${i === 2 ? " (default receiver)" : ""}</option>`);
+$("node").insertAdjacentHTML("beforeend", `<option value="0">any (show every message)</option>`);
+$("mode").value = store.get("duburi-phone-mode", "air");
+$("node").value = store.get("duburi-phone-node", "2");
+$("boost").value = store.get("duburi-phone-boost", "1");
+
+function log(s) {
+  const el = $("log"), t = new Date().toLocaleTimeString();
+  el.textContent = (t + "  " + s + "\n" + el.textContent).slice(0, 6000);
+}
+function alertBox(kind, title, html) {
+  $("alert").innerHTML = kind ? `<div class="alert ${kind}"><b>${esc(title)}</b>${html}</div>` : "";
+}
+function modeNote() {
+  $("modeNote").textContent = $("mode").value === "water"
+    ? "WATER mode: use this only for a test in air. A phone microphone cannot hear underwater; underwater needs the piezo receiver board."
+    : "AIR mode: put the phone 0.5–3 m from the sender's speaker, microphone facing it.";
+}
+modeNote();
+
+const R = {
+  ctx: null, stream: null, src: null, proc: null, sink: null, rx: null, trx: null,
+  fs: 0, running: false, boost: 1, node: 2, lv: { n: 0, s: 0, s2: 0, out: null }, pre: 0, crc: 0,
+  detUntil: 0, wake: null, nmsg: 0, timers: [],
+};
+
+async function start() {
+  alertBox();
+  if (!window.isSecureContext) {
+    alertBox("bad", "This page was not opened from an https:// link",
+      "<p>Phones only give the microphone to pages opened from <b>https://</b>. A file opened from Files or Downloads cannot use it.</p>" +
+      "<p>Open the page's https:// link instead (see the guide, chapter 6.2).</p>");
+    log("not a secure context: " + location.protocol);
+    return;
+  }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alertBox("bad", "This browser cannot record audio", "<p>Use Chrome on Android or Safari on iPhone (updated).</p>");
+    return;
+  }
+  $("go").disabled = true; setState("Asking for the microphone…");
+  try {
+    /* The AudioContext must be made inside the tap (iPhone rule). */
+    R.ctx = new AC();
+    if (R.ctx.state === "suspended") await R.ctx.resume();
+    /* Echo cancelling / noise removal / auto gain would remove our tones. */
+    R.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+  } catch (e) {
+    $("go").disabled = false; stopAudio();
+    const n = e && e.name;
+    if (n === "NotAllowedError" || n === "SecurityError") {
+      alertBox("bad", "Microphone permission was refused",
+        "<ol><li><b>Android:</b> tap the icon left of the address → Permissions → Microphone → Allow.</li>" +
+        "<li><b>iPhone:</b> tap <b>aA</b> → Website Settings → Microphone → Allow.</li><li>Then tap Start listening again.</li></ol>");
+    } else if (n === "NotFoundError" || n === "OverconstrainedError") {
+      alertBox("bad", "No microphone found", "<p>Close other apps that use the microphone and try again.</p>");
+    } else {
+      alertBox("bad", "Could not start the microphone", `<p>${esc(n || "")} ${esc(e && e.message || e)}</p>`);
+    }
+    setState("Not listening"); log("getUserMedia failed: " + (n || "") + " " + (e && e.message || e));
+    return;
+  }
+  R.fs = R.ctx.sampleRate;
+  R.src = R.ctx.createMediaStreamSource(R.stream);
+  R.proc = R.ctx.createScriptProcessor(2048, 1, 1);
+  R.sink = R.ctx.createGain(); R.sink.gain.value = 0;     /* keeps the processor running, silent */
+  R.src.connect(R.proc); R.proc.connect(R.sink); R.sink.connect(R.ctx.destination);
+  newModem();
+  R.proc.onaudioprocess = (ev) => audio(ev.inputBuffer.getChannelData(0));
+  R.timers.push(setInterval(poll, 250), setInterval(draw, 250));
+  const tr = R.stream.getAudioTracks()[0];
+  if (tr) tr.addEventListener("ended", () => { stop(); alertBox("warn", "The microphone was taken by another app", "<p>Tap Start listening again.</p>"); });
+  R.running = true;
+  $("go").disabled = false; $("go").textContent = "■ Stop listening"; $("go").classList.add("stop");
+  setState("Listening");
+  log(`listening: ${R.fs} Hz, mode ${$("mode").value}, node ${R.node || "any"}, mic "${tr ? tr.label : ""}"`);
+  keepAwake();
+}
+
+function newModem() {
+  R.rx = new AMCore.Rx(R.fs, $("mode").value);
+  R.trx = new AMCore.TextRx();
+  R.pre = 0; R.crc = 0;
+  R.node = +$("node").value; R.boost = +$("boost").value;
+}
+
+function stopAudio() {
+  for (const t of R.timers) clearInterval(t);
+  R.timers = [];
+  if (R.proc) R.proc.onaudioprocess = null;
+  if (R.stream) R.stream.getTracks().forEach((t) => t.stop());
+  if (R.ctx) R.ctx.close().catch(() => {});
+  R.ctx = R.stream = R.proc = R.src = R.sink = null;
+  if (R.wake) { R.wake.release().catch(() => {}); R.wake = null; }
+}
+function stop() {
+  R.running = false; stopAudio();
+  $("go").textContent = "🎤 Start listening"; $("go").classList.remove("stop");
+  setState("Not listening"); $("meter").firstElementChild.style.width = "0"; $("lvlTxt").textContent = "—";
+}
+function setState(t) {
+  $("state").textContent = t;
+  $("dot").className = "dot" + (R.running ? (performance.now() < R.detUntil ? " det" : " on") : "");
+}
+
+/* ---- audio in: same units as the ESP32 ADC (12 bit, centred at 2048) ---- */
+let buf = null;
+function audio(f) {
+  if (!buf || buf.length !== f.length) buf = new Float32Array(f.length);
+  const L = R.lv, g = R.boost;
+  for (let i = 0; i < f.length; i++) {
+    let v = 2048 + 2047 * f[i] * g;
+    if (v < 0) v = 0; else if (v > 4095) v = 4095;
+    buf[i] = v; L.n++; L.s += v; L.s2 += v * v;
+  }
+  if (L.n >= R.fs / 4) {
+    const m = L.s / L.n; L.out = Math.sqrt(Math.max(0, L.s2 / L.n - m * m)); L.n = 0; L.s = 0; L.s2 = 0;
+  }
+  R.rx.process(buf);
+  const st = R.rx.stats;
+  if (st.preambles !== R.pre) { R.pre = st.preambles; R.detUntil = performance.now() + 3500; log("heard the start of a packet"); }
+  if (st.crc_fail !== R.crc) { R.crc = st.crc_fail; log("a packet arrived damaged (CRC fail)"); }
+  let r;
+  while ((r = R.rx.pop())) packet(r);
+}
+
+function packet(r) {
+  const p = r.pkt;
+  if (R.node && p.dst !== R.node && p.dst !== 15) { log(`packet for node ${p.dst} (this phone is ${R.node}): ignored`); return; }
+  if (!AMCore.isText(p)) { log(`command packet src=${p.src} cmd=${p.cmd} arg=${p.arg} q=${r.q_db.toFixed(1)} dB`); return; }
+  const out = R.trx.feed(p, r.q_db, performance.now());
+  if (out === -1) { log(`repeat of packet ${p.seq} (dropped)`); return; }
+  log(`packet ${p.seq} from node ${p.src}, q=${r.q_db.toFixed(1)} dB`);
+  for (const m of out) show(m);
+}
+function poll() {
+  if (!R.trx) return;
+  const m = R.trx.poll(performance.now());
+  if (m) show(m);
+  setState(performance.now() < R.detUntil ? "Receiving…" : "Listening");
+}
+
+/* ---- messages ---- */
+function decode(m) {
+  /* UTF-8 text; lost bytes are shown as a red ? */
+  let html = "", run = [];
+  const flush = () => { if (run.length) { html += esc(new TextDecoder().decode(new Uint8Array(run))); run = []; } };
+  for (let i = 0; i < m.data.length; i++) {
+    if (m.lostmask[i]) { flush(); html += "<i>?</i>"; continue; }
+    const b = m.data[i];
+    run.push(b < 0x20 || b === 0x7f ? 0x2e : b);
+  }
+  flush();
+  return html;
+}
+function show(m) {
+  const box = $("msgs");
+  if (!R.nmsg) box.innerHTML = "";
+  R.nmsg++; $("count").textContent = R.nmsg + (R.nmsg === 1 ? " message" : " messages");
+  const ok = m.ok && !m.lost;
+  const el = document.createElement("div");
+  el.className = "msg new";
+  el.innerHTML = `<div class="text">${decode(m) || "<span class='empty'>(empty)</span>"}</div>
+    <div class="meta"><span class="pill ${ok ? "ok" : "bad"}">${ok ? "complete" : (m.lost * 2) + " bytes lost"}</span>
+    <span>from node ${m.src}</span><span>q ${m.q_db.toFixed(1)} dB</span><span>${new Date().toLocaleTimeString()}</span></div>`;
+  box.prepend(el);
+  log("MESSAGE " + AMCore.formatMsg(m));
+  if (navigator.vibrate) { try { navigator.vibrate(60); } catch (_) { /* not allowed */ } }
+}
+
+/* ---- level meter + 24 tone bars ---- */
+function draw() {
+  const rms = R.lv.out;
+  if (rms !== null && rms !== undefined) {
+    const pct = Math.min(100, 100 * Math.log10(1 + rms) / Math.log10(1 + 1200));
+    const me = $("meter");
+    me.firstElementChild.style.width = pct.toFixed(0) + "%";
+    me.className = "meter" + (rms < 8 ? " low" : rms > 900 ? " hot" : "");
+    $("lvlTxt").textContent = rms < 8 ? "very quiet: move closer or use Mic boost" : rms > 900 ? "too loud: move away or lower boost" : "OK";
+  }
+  const c = $("bars"), g = c.getContext("2d"), W = c.width, H = c.height;
+  const css = getComputedStyle(document.documentElement);
+  g.clearRect(0, 0, W, H);
+  if (!R.rx) return;
+  const s = Array.from(R.rx.scope), mx = Math.max(...s), mn = Math.min(...s);
+  const span = Math.max(12, mx - mn), bw = W / s.length;
+  $("snr").textContent = isFinite(mx - mn) ? `strongest ${Math.max(0, mx - mn).toFixed(0)} dB above the quietest` : "";
+  for (let i = 0; i < s.length; i++) {
+    const h = Math.max(2, (H - 14) * (s[i] - mn) / span);
+    g.fillStyle = s[i] === mx && mx - mn > 10 ? css.getPropertyValue("--bar-hi") : css.getPropertyValue("--bar");
+    g.fillRect(i * bw + 2, H - 12 - h, bw - 4, h);
+  }
+  g.fillStyle = css.getPropertyValue("--muted"); g.font = "11px system-ui"; g.textAlign = "left"; g.fillText("3 kHz", 2, H - 1);
+  g.textAlign = "right"; g.fillText("8.75 kHz", W - 2, H - 1);
+}
+
+/* ---- keep the screen on while listening (if the phone allows it) ---- */
+async function keepAwake() {
+  try { if ("wakeLock" in navigator && R.running) R.wake = await navigator.wakeLock.request("screen"); } catch (_) { /* not allowed: fine */ }
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && R.running) {
+    if (R.ctx && R.ctx.state !== "running") R.ctx.resume().catch(() => {});
+    keepAwake();
+  }
+});
+
+$("go").onclick = () => (R.running ? stop() : start());
+$("mode").onchange = () => { store.set("duburi-phone-mode", $("mode").value); modeNote(); if (R.running) { newModem(); log("mode " + $("mode").value); } };
+$("node").onchange = () => { store.set("duburi-phone-node", $("node").value); R.node = +$("node").value; };
+$("boost").onchange = () => { store.set("duburi-phone-boost", $("boost").value); R.boost = +$("boost").value; };
+if (!window.isSecureContext) {
+  alertBox("warn", "Opened as a file: the microphone will not work here",
+    "<p>Open this page from its <b>https://</b> link instead (see the guide, chapter 6.2).</p>");
+}
+</script>
+</body>
+</html>

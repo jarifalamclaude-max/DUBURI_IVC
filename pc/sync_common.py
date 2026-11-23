@@ -2,7 +2,7 @@
 """Copy the COMMON CSS / COMMON JS blocks from sender.html into receiver.html,
 and put pc/amcore.js (the JavaScript modem) into both pages.
 
-Both pages must stay single self-contained files, so the shared code is
+phone_receiver.html gets only amcore.js. All pages must stay single self-contained files, so the shared code is
 duplicated. Edit it in sender.html / amcore.js, then run:  python3 pc/sync_common.py
 """
 import os
@@ -50,7 +50,10 @@ def main():
             dst = dst[:a] + common + dst[b:]
     dst = put_amcore(dst, core)
     open(path, "w", encoding="utf-8").write(dst)
-    print("sender.html and receiver.html updated")
+    ppath = os.path.join(HERE, "phone_receiver.html")        # phone page: only the modem
+    phone = put_amcore(open(ppath, encoding="utf-8").read(), core)   # read first, then write
+    open(ppath, "w", encoding="utf-8").write(phone)
+    print("sender.html, receiver.html and phone_receiver.html updated")
 
 
 if __name__ == "__main__":
