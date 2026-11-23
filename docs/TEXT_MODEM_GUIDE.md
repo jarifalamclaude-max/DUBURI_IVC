@@ -205,6 +205,33 @@ C code-এর হুবহু JavaScript রূপ, একই recording-এ C �
 বার না লাফালে: Chrome-এর ঠিকানা-বারের mic আইকন থেকে ঠিক microphone বেছে নাও; Windows-এ Sound settings →
 Microphone → "Audio enhancements" বন্ধ করো (কিছু ল্যাপটপ নিজে থেকে noise কাটে, তাতে আমাদের tone-ও কেটে যায়)।
 
+### 6.2 ফোন দিয়ে receive (ফোনের নিজের microphone)
+
+`pc/phone_receiver.html`: ফোনের জন্য আলাদা page। ফোনের mic tone শুনে লেখা দেখায় (একই modem, `amcore.js`)।
+
+**কেন file হিসেবে খুললে কাজ করে না:** ফোনের browser শুধু **https://** ঠিকানা থেকে খোলা page-কে microphone দেয়।
+Files/Downloads থেকে html খুললে mic পাওয়া যায় না (iPhone-এ তো JavaScript-ই চলে না)। তাই page-টা link থেকে খোলো:
+
+* **এখনই চলবে এমন link** (GitHub-এর public file, raw.githack দিয়ে https-এ):
+  `https://raw.githack.com/jarifalamclaude-max/DUBURI_IVC/text-modem-air-water/pc/phone_receiver.html`
+  প্রথমবার একটা "One more step" পাতা আসে → **Open the page** চাপো।
+* **স্থায়ী নিজের link (GitHub Pages, একবার চালু করতে হয়):** GitHub-এ repo → **Settings → Pages** →
+  Source: *Deploy from a branch* → Branch: `text-modem-air-water` (বা `main`), folder `/ (root)` → **Save**।
+  1–2 মিনিট পর: `https://jarifalamclaude-max.github.io/DUBURI_IVC/pc/phone_receiver.html`
+
+**ব্যবহার:**
+1. Android-এ **Chrome**, iPhone-এ **Safari** দিয়ে link খোলো।
+2. **Start listening** → microphone চাইলে **Allow**।
+3. মোড sender-এর মতো (**AIR**), node **2** (sender-এর default peer)।
+4. ফোন sender-এর speaker থেকে 0.5–3 m দূরে, mic speaker-এর দিকে। Level "OK" না হলে কাছে আনো বা **Mic boost** বাড়াও।
+5. Sender-এ লিখে **Send**। লেখা ফোনে আসবে; হারানো byte লাল `?` হয়ে দেখাবে।
+
+Permission ভুলে "Block" দিলে: Android Chrome-এ ঠিকানার বাম পাশের আইকন → Permissions → Microphone → Allow;
+iPhone-এ ঠিকানা-বারের **aA** → Website Settings → Microphone → Allow।
+
+সীমা: ফোনের browser-এ USB serial নেই, তাই ফোন ESP32 board-এর সাথে যুক্ত হয় না; শুধু নিজের mic দিয়ে **বাতাসে (AIR)** শোনে।
+পানির নিচে ফোনের mic কাজ করে না।
+
 ---
 
 ## 7. প্রথম পরীক্ষা, ধাপে ধাপে (AIR)

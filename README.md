@@ -28,6 +28,7 @@ Firmware-এ দুই মোড: **AIR** (speaker → MAX9814 mic, ঘরের
 | `firmware/DuburiModem/am_core.c/.h` | Modem-এর মূল code, সাধারণ C। একই file PC test-এ চলে |
 | `firmware/DuburiModem/am_text.c/.h` | টেক্সট message ভাগ করা ও জোড়া লাগানো (2 byte/packet) |
 | `pc/` | `sender.html` আর `receiver.html`: Chrome/Edge-এ USB দিয়ে board-এর সাথে, বা ল্যাপটপের speaker/mic দিয়ে সরাসরি; internet লাগে না |
+| `pc/phone_receiver.html` | ফোনের mic দিয়ে receive (https link থেকে খুলতে হয়; গাইড অধ্যায় 6.2) |
 | `pc/amcore.js` | Modem-এর JavaScript রূপ (am_core.c + am_text.c-এর হুবহু port), দুই page-এ ঢোকানো থাকে (`pc/sync_common.py`) |
 | `tests/` | PC-তে unit test: `make -C tests && ./tests/test_core && ./tests/test_text` |
 | `sim/` | Virtual pool: `python3 sim/run_sim.py`; virtual ঘর (AIR): `python3 sim/air_sim.py` |
@@ -55,6 +56,7 @@ python3 sim/air_sim.py text             # multi-packet text messages, room + poo
 node pc/test/ui_test.js                 # web page tests (Playwright + Chromium)
 python3 pc/test/make_vectors.py && node pc/test/amcore_test.js   # JavaScript modem == C modem
 node pc/test/audio_test.js              # laptop speaker/mic mode end to end (fake microphone)
+node pc/test/phone_test.js              # phone page: fake microphone, Pixel 5 screen
 python3 docs/wiring/wiring.py           # breadboard wiring pictures + connection check
 python3 docs/figures.py                 # schematics + figures
 python3 docs/build_pdf.py               # needs Chrome/Chromium (set CHROME=/path if not found)
