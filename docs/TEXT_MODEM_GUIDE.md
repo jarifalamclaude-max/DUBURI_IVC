@@ -21,7 +21,7 @@ PC 1-এ একটা web page-এ লেখা টাইপ করো → ESP32
 | | **AIR** (এখন যেটা বানাচ্ছ) | **WATER** (পুল, ROV) |
 |---|---|---|
 | Transmitter | PAM8403 + ছোট speaker, খোলা বাতাসে | XH-M542 amp + exciter, পানিরোধী tube-এর জানালায় লাগানো (অধ্যায় 9) |
-| Receiver | MAX9814 microphone module | Piezo hydrophone + LM358 preamp (অধ্যায় 9) |
+| Receiver | MAX9814 microphone module | Piezo hydrophone + LM358 preamp, **বা** একই MAX9814 module (mic খুলে piezo লাগানো) (অধ্যায় 9) |
 | এক slot | 40 ms (32 ms window) | 20 ms (16 ms window) |
 | এক packet (2 byte লেখা) | 2.56 s | 1.28 s |
 | দূরত্ব | ঘরে 1–5 m (simulation-এ যাচাই) | 10–25 m |
@@ -248,6 +248,7 @@ Firmware-এ WATER মোড তৈরি আছে (20 ms slot, পুল simul
 |---|---|
 | Transmitter (exciter tube + XH-M542, 12 V) | ![TX water](wiring/tx_water_wiring.png) |
 | Receiver (piezo hydrophone + LM358 preamp) | ![RX water](wiring/rx_water_wiring.png) |
+| Receiver, সহজ version (piezo hydrophone + MAX9814, mic খোলা; অধ্যায় 9.5) | ![RX water MAX9814](wiring/rx_water_max9814_wiring.png) |
 
 Breadboard-এর প্রতিটা ছিদ্রের তালিকা: [`wiring/placement.md`](wiring/placement.md) (script দিয়ে সব সংযোগ যাচাই করা)।
 
@@ -279,6 +280,10 @@ Breadboard-এর প্রতিটা ছিদ্রের তালিকা
 | Breadboard 830 point, jumper | 150–250 | |
 
 মোট মোটামুটি: **Transmitter ≈ ৳3,000–4,000**, **Receiver ≈ ৳1,300–1,800**।
+
+**LM358 না চাইলে (অধ্যায় 9.5):** LM358, উপরের resistor/capacitor-এর তালিকা আর 830-point board লাগবে না। লাগবে
+শুধু air receiver-এর জিনিসগুলো: **MAX9814 module** (৳360–500), 10 Ω, 3.3 kΩ, 100 µF, 4.7 nF (472), 400-point breadboard।
+Piezo আর সিল করার জিনিস একই।
 
 ### 9.2 Exciter tube বানানো (transmitter)
 
@@ -325,12 +330,34 @@ Piezo-র signal কয়েক mV, ESP32-এর ADC-তে কয়েকশ�
 
 **RV2 = receiver-এর volume।** Tone bar নিচু থাকলে বাড়াও, level meter "clipping" দেখালে কমাও।
 
-### 9.5 পরীক্ষা, ধাপে ধাপে
+### 9.5 সহজ বিকল্প: LM358-এর বদলে MAX9814 module
+
+MAX9814 module-এর উপরে একটা গোল **built-in mic (electret)** থাকে। ওটা খুলে ফেলে তার দুই pad-এ piezo-র তার solder করলে
+module-টাই piezo-র amplifier হয়ে যায়। তখন LM358, VREF, RV2 আর প্রায় সব resistor/capacitor বাদ। Breadboard, ছিদ্র আর তার
+**হুবহু air receiver-এর মতো** (অধ্যায় 4); শুধু mic-এর জায়গায় piezo। ছবি: `wiring/rx_water_max9814_wiring.png`।
+
+1. Module-এর গোল mic-টা soldering iron দিয়ে খোলো (2টা পা), বা পা কেটে ফেলো।
+2. Multimeter beep mode-এ: যে pad module-এর **GND** pin-এর সাথে beep দেয় সেটা **−**, অন্যটা **+**।
+3. Hydrophone-এর shielded cable: ভেতরের তার → **+** pad, shield (জাল) → **−** pad। জোড়াগুলো আঠা/tape দিয়ে ঢেকে দাও।
+4. বাকিটা air receiver: VDD → 3V3A (top + rail), GND → GND, OUT → b15 (3.3 kΩ → GPIO34, 4.7 nF → GND)।
+   **GAIN আর AR খোলা।** Module-এ শুধু **3.3 V**, কখনো 5 V না।
+5. **Firmware বা web page-এ কিছু বদলাতে হবে না।** ESP32 GPIO34-এ শব্দ ঢুকলেই হলো; firmware নিজেই DC বাদ দেয়
+   (MAX9814-এর ≈1.25 V বা LM358-এর 1.34 V, দুটোই চলে)। দুই board-এ শুধু মোড **WATER**।
+
+Gain হাতে ঠিক করতে হয় না: module-এর AGC নিজেই 40–60 dB-এর মধ্যে রাখে (কাছে জোরালো signal হলে কমায়)।
+Tip: pad-এ একটা 2-pin header লাগালে এক module-এ electret mic (AIR) আর piezo (WATER) দুটোই plug করা যায়।
+
+**Simulation (25 × 25 × 8 m pool, `sim/frontend_sim.py`):** 1 থেকে 32 m, তিন noise অবস্থায় (pump বন্ধ, pump চালু,
+নিজের thruster চালু) LM358 আর MAX9814 দুটোই 20/20। Signal ইচ্ছা করে দুর্বল করলে thruster চালু অবস্থায় দুটো একই জায়গায়
+fail করে (তখন পানির noise-ই সীমা); একদম শান্ত পুলে MAX9814 সামান্য ভালো (নিজের noise কম)। এটা simulation, আসল
+পুলে 9.6-এর ধাপে যাচাই করো।
+
+### 9.6 পরীক্ষা, ধাপে ধাপে
 
 1. দুই board-এ মোড **WATER** (web page-এর বোতাম, বা `mode water`)।
 2. **শুকনো:** receiver page-এ Scope on; hydrophone-এ আঙুল দিয়ে আলতো টোকা দিলে level লাফাবে।
 3. **বালতি/ড্রাম:** tube আর hydrophone 0.5–1 m দূরে পানিতে। RV1, VOL কম। **Tone test** → 5 kHz-এর বার উঠবে।
-   Bar 15–25 dB হওয়া পর্যন্ত RV1/VOL বাড়াও; level "OK" রাখতে RV2 ঠিক করো। **Sweep** → 24টা বার একে একে।
+   Bar 15–25 dB হওয়া পর্যন্ত RV1/VOL বাড়াও; level "OK" রাখতে RV2 ঠিক করো (MAX9814 version-এ RV2 নেই, AGC নিজেই করে)। **Sweep** → 24টা বার একে একে।
 4. `Hi` পাঠাও (1.28 s)। আসবে, q দেখো।
 5. **পুল:** 5, 10, 20 m-এ q লিখে রাখো। আনুমানিক range ≈ দূরত্ব × 2^((q − 8) ÷ 6)।
 6. Thruster চালিয়ে আবার দেখো। q অনেক নামলে hydrophone thruster আর amp-এর তার থেকে দূরে, নরম রাবারে লাগাও।

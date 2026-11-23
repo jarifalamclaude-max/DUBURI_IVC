@@ -472,29 +472,42 @@ def pam8403(s, x0, y0, w, h, header_xs):
     return pins
 
 
-def max9814(s, x0, y0, w, h, header_xs):
-    """MAX9814 electret microphone amplifier module (AR OUT GAIN VDD GND)."""
+def max9814(s, x0, y0, w, h, header_xs, mic=True):
+    """MAX9814 electret microphone amplifier module (AR OUT GAIN VDD GND).
+    mic=False: the electret capsule is removed and its two solder pads are shown instead;
+    the third return value is then {'+': (x, y), '−': (x, y)} (pad centres)."""
     s.rect("parts", x0 + 4, y0 + 6, w, h, "#000", rx=8, extra='opacity="0.13"')
     s.rect("parts", x0, y0, w, h, "#3b2357", "#21122f", 1.4, rx=8)
     for hx, hy in ((x0 + 9, y0 + 9), (x0 + w - 9, y0 + 9)):
         s.circle("parts", hx, hy, 4.2, "#e9e2c4", "#b9ae80", 1)
     mcx, mcy, r = x0 + w * 0.36, y0 + h * 0.40, 30
-    gid = "mic%d" % len(s.defs)
-    s.defs.append(f'<radialGradient id="{gid}"><stop offset="0" stop-color="#3a3a3a"/>'
-                  f'<stop offset="1" stop-color="#101010"/></radialGradient>')
-    s.circle("parts", mcx, mcy, r + 3, "#c8ccd2", "#808690", 1.2)
-    s.circle("parts", mcx, mcy, r - 2, f"url(#{gid})")
-    for i in range(-3, 4):
-        for j in range(-3, 4):
-            if i * i + j * j <= 9:
-                s.circle("parts", mcx + i * 7, mcy + j * 7, 1.4, "#555")
+    if mic:
+        gid = "mic%d" % len(s.defs)
+        s.defs.append(f'<radialGradient id="{gid}"><stop offset="0" stop-color="#3a3a3a"/>'
+                      f'<stop offset="1" stop-color="#101010"/></radialGradient>')
+        s.circle("parts", mcx, mcy, r + 3, "#c8ccd2", "#808690", 1.2)
+        s.circle("parts", mcx, mcy, r - 2, f"url(#{gid})")
+        for i in range(-3, 4):
+            for j in range(-3, 4):
+                if i * i + j * j <= 9:
+                    s.circle("parts", mcx + i * 7, mcy + j * 7, 1.4, "#555")
+        where = (mcx, mcy, r)
+    else:
+        # empty footprint (silkscreen ring) with the two pads the capsule was soldered to
+        s.circle("parts", mcx, mcy, r + 3, "none", "#e9e2f2", 1.4, extra='stroke-dasharray="4 3"')
+        where = {"+": (mcx - 10, mcy), "−": (mcx + 10, mcy)}
+        for k, (px, py) in where.items():
+            s.circle("parts", px, py, 6.2, "#d8dce1", "#8c939b", 1.2)
+            s.circle("parts", px, py, 2.2, "#3b2357")
+            s.text("parts", px, py - 11, "+" if k == "+" else "−", 11, "#ffffff", "middle", "bold")
+        s.text("parts", mcx, mcy - 38, "mic removed", 8, "#e9e2f2", "middle", "bold")
     s.text("parts", x0 + w - 12, y0 + 26, "MAX9814", 12, "#f2ecf8", "end", "bold")
-    s.text("parts", x0 + w - 12, y0 + 40, "mic + AGC", 8.5, "#d9cce8", "end")
+    s.text("parts", x0 + w - 12, y0 + 40, "mic + AGC" if mic else "AGC amplifier", 8.5, "#d9cce8", "end")
     s.rect("parts", x0 + w - 44, y0 + 54, 26, 26, "#16181b", "#000", 1, rx=2)
     s.text("parts", x0 + w - 31, y0 + 70, "AGC", 6.5, "#9aa0a8", "middle")
     names = ["AR", "OUT", "GAIN", "VDD", "GND"]
     tips = header_pins(s, header_xs, y0 + h, names)
-    return dict(zip(names, tips)), (mcx, mcy, r)
+    return dict(zip(names, tips)), where
 
 
 def speaker(s, cx, cy, r):
@@ -1832,6 +1845,145 @@ def build_rx_water():
     return s
 
 
+# ---------------------------------------------------------------------------
+# Receiver, underwater, MAX9814 version: the air receiver's board, with the
+# module's electret mic removed and the piezo hydrophone soldered to its pads.
+# Replaces the whole LM358 preamp (no op-amp, no VREF, no gain trimmer).
+# ---------------------------------------------------------------------------
+RXM_PARTS = RX_PARTS                  # R2, C4, R3, C5 in the same holes as the air receiver
+RXM_WIRES = RX_WIRES + [
+    ("HYD.HOT", "MIC.MIC+", "white", "cable core soldered to the mic + pad"),
+    ("HYD.SHIELD", "MIC.MIC−", "grey", "cable shield soldered to the mic − pad (GND)"),
+]
+RXM_OFF = ["ESP32.3V3", "ESP32.GND_R", "ESP32.D34", "MIC.AR", "MIC.OUT", "MIC.GAIN", "MIC.VDD",
+           "MIC.GND", "MIC.MIC+", "MIC.MIC−", "HYD.HOT", "HYD.SHIELD"]
+RXM_NETS = RX_NETS + [
+    {"HYD.HOT", "MIC.MIC+"},
+    {"HYD.SHIELD", "MIC.MIC−"},       # the − pad is the module's GND (joined on the module itself)
+]
+
+
+def build_rx_water_max9814():
+    s = Svg(*CANVAS)
+    bb = Breadboard(BBX, BBY)
+    bb.draw(s)
+    title(s, "DUBURI text modem — RECEIVER, underwater, MAX9814 version (WATER mode)",
+          "Piezo hydrophone soldered onto a MAX9814 module (mic removed) → RC filter → ESP32 GPIO34.  "
+          "Same breadboard as the air receiver.")
+    info = draw_board_parts(s, bb, RXM_PARTS)
+
+    e = esp32(s, 70, BBY, highlight=("D34", "3V3", "GND"))
+    hx = [bb.cx(c) for c in (14, 15, 16, 17, 18)]
+    mic, pads = max9814(s, bb.cx(14) - 30, 118, 190, 148, hx, mic=False)
+
+    H = lambda h: bb.xy(h)
+    a4, t2 = H("a4"), H("TR2-2")
+    draw_wire(s, orth(e["3V3"], [("h", 420), ("v", a4[1])], a4), "red")
+    draw_wire(s, orth(e["GND_R"], [("h", 405), ("v", t2[1])], t2), "black")
+    draw_wire(s, [H("a8"), H("TR1-8")], "red")
+    draw_wire(s, [mic["OUT"], H("b15")], "yellow")
+    draw_wire(s, [mic["VDD"], H("TR1-17")], "red")
+    draw_wire(s, [mic["GND"], H("TR2-18")], "black")
+    d20 = H("d20")
+    draw_wire(s, orth(d20, [("v", 784), ("h", 44), ("v", e["D34"][1])], e["D34"]), "green")
+
+    # the pool, the hydrophone in it, and its shielded cable up to the module's mic pads
+    water_lines(s, 40, 400, 96, 284)
+    hcx, hcy = 236, 178
+    ca, sa = math.cos(math.radians(35)), math.sin(math.radians(35))
+    for k in range(3):
+        rr = 100 + k * 14
+        s.path("labels", f"M {hcx - rr*ca:.1f} {hcy - rr*sa:.1f} A {rr:.1f} {rr:.1f} 0 0 0 "
+                         f"{hcx - rr*ca:.1f} {hcy + rr*sa:.1f}",
+               stroke="#2f81f7", sw=2.4, extra=f'opacity="{0.9 - 0.25*k:.2f}"')
+    ex = hydrophone(s, hcx, hcy)
+    pp, pm = pads["+"], pads["−"]
+    yc = pp[1] + 46                                   # cable runs under the pads, then turns up
+    end = coax(s, [ex, (ex[0] + 40, yc), (pp[0] - 52, yc)], strip_len=14)
+    sx, sy = end
+    draw_wire(s, [(sx, sy), (sx + 10, sy), (pp[0], sy - 4), pp], "white", plug_start=False, plug_end=False,
+              width=3.6)
+    draw_wire(s, [(sx, sy), (sx + 10, sy + 2), (pm[0], sy + 4), pm], "grey", plug_start=False,
+              plug_end=False, width=3.6)
+    for p in (pp, pm):                                # solder joints
+        s.circle("top", p[0], p[1], 5.0, "#cfd3d8", "#7d848c", 1.2)
+    pill(s, 100, 114, "in the pool", "#1f5f99", 10.5)
+    pill(s, 196, 268, "tones from the exciter tube, 3 – 8.75 kHz", "#2f81f7", 9.5)
+    s.text("labels", 424, yc - 14, "piezo hydrophone (sealed) → 2 m shielded cable", 11, "#1f2328",
+           "start", "bold")
+    tag(s, 560, 104, [("solder here: core → +, shield → −",),
+                      ("the − pad beeps to GND with a multimeter", "#57606a")],
+        (pp[0] - 4, pp[1] - 8), w=244)
+
+    r2 = info["R2"]
+    tag(s, r2[0] - 10, bb.rowy("g"), [("R2  10 Ω",), ("brown-black-black-gold", "#57606a")],
+        (r2[0], r2[1] + 7))
+    c4 = info["C4"]
+    r3 = info["R3"]
+    tag(s, bb.cx(15) - 4, bb.rowy("g"), [("R3  3.3 kΩ",), ("orange-orange-red-gold", "#57606a")],
+        (r3[0], r3[1] + 7))
+    c5 = info["C5"]
+    tag(s, bb.cx(26) + 6, bb.rowy("g") - 6, [("C5  4.7 nF",), ("ceramic, marked 472", "#57606a")],
+        (c5[0] + 4, c5[1] + 10))
+    tag(s, bb.cx(7.6), bb.rowy("i") + 6, [("C4  100 µF 16 V",), ("top rails, col 10; stripe (−) to − rail",
+                                                                  "#57606a")],
+        (c4[0], c4[1] + 30), w=212)
+    rail_legend(s, bb, "3V3A")
+    s.text("labels", 640, 774, "green wire: d20 → ESP32 D34 (GPIO34, ADC input)", 10.5, "#16733a", "middle",
+           "bold")
+
+    note_box(s, 1196, 96, 562, "Parts and holes (receiver, WATER · MAX9814)", [
+        ["ESP32 DevKit V1 (30 pin)", "USB cable to PC 2"],
+        ["R2  10 Ω", "c4 ↔ c8"],
+        ["jumper (red)", "a8 → top + rail (3V3A)"],
+        ["C4  100 µF 16 V", "top + / top − rail, col 10"],
+        ["MAX9814  OUT  (yellow)", "→ b15"],
+        ["MAX9814  VDD  (red)", "→ top + rail"],
+        ["MAX9814  GND  (black)", "→ top − rail"],
+        ["MAX9814  GAIN, AR", "not connected"],
+        ["R3  3.3 kΩ", "c15 ↔ c20"],
+        ["C5  4.7 nF  (472)", "a20 ↔ top − rail"],
+        ["ESP32 3V3  (red)", "→ a4"],
+        ["ESP32 GND  (black)", "→ top − rail, col 2"],
+        ["ESP32 D34  (green)", "← d20"],
+        ["Hydrophone core (white)", "soldered to mic + pad"],
+        ["Hydrophone shield (grey)", "soldered to mic − pad"],
+    ], size=11, lh=19, col2=190)
+    note_box(s, 1196, 446, 562, "Convert the MAX9814 (once, soldering iron)", [
+        "1. Unsolder the round electret mic (2 legs), or cut its legs.",
+        "2. Multimeter on beep: the pad that beeps to the GND pin is −.",
+        "3. Shielded cable: core → + pad, shield (braid) → − pad.",
+        "4. Cover the joints with glue / tape so they cannot touch.",
+        "• No LM358, VREF or gain trimmer: the module's AGC sets",
+        "  the gain (40–60 dB) by itself, near or far.",
+        "• Keep GAIN and AR open. Run the module from 3.3 V only.",
+    ], size=11.5, lh=20)
+    note_box(s, 1196, 650, 562, "Same as the air receiver", [
+        "• Board, holes and wires are identical to rx_wiring.png:",
+        "  only the mic is swapped for the piezo hydrophone.",
+        "• Firmware and receiver.html do not change: choose WATER",
+        "  mode on both nodes (button, or 'mode water').",
+        "• Tip: solder a 2-pin header on the pads to plug in either",
+        "  the electret mic (AIR) or the piezo (WATER).",
+    ], size=11.5, lh=20)
+    note_box(s, 440, 820, 724, "How it is powered", [
+        "• ESP32 3V3 pin → 10 Ω → top + rail. With the 100 µF this is a filtered",
+        "  supply (3V3A) for the module, so USB noise stays out of the audio.",
+        "• Top − rail = GND. Only 3.3 V here: never put 5 V on these rails.",
+        "• R3 + C5 (3.3 kΩ, 4.7 nF) is the anti-alias filter in front of the ADC.",
+    ], size=11.5, lh=20)
+
+    port = laptop(s, 40, 838, "file:///.../pc/receiver.html",
+                  [("DUBURI Receiver", 13, "#1f2328", "bold"),
+                   ("Mode : WATER", 10, "#24292f", "normal"),
+                   ("From node 1:  Hello", 9, "#1a7f37", "normal"),
+                   ("SCOPE  ▂▃▅▇▅▃▂▁", 9, "#0b6bcb", "normal")], w=290)
+    usb_cable(s, [e["USB"], (e["USB"][0], 812), (port[0] + 26, 812), (port[0] + 26, port[1]),
+                  (port[0], port[1])])
+    s.text("labels", 196, 830, "USB cable (data + power for ESP32)", 10, "#57606a", "middle")
+    return s
+
+
 # ===========================================================================
 # Placement table (markdown)
 # ===========================================================================
@@ -1841,7 +1993,8 @@ def pretty(p):
              "MIC.": "MAX9814 ", "DC.": "DC terminal ", "SPK.": "speaker ",
              "ESP32.GND_L": "ESP32 GND (left side, 2nd from bottom)", "ESP32.VIN": "ESP32 VIN",
              "XH.": "XH-M542 ", "DC12.": "12 V DC terminal ", "EXC.": "exciter ",
-             "HYD.HOT": "hydrophone cable core", "HYD.SHIELD": "hydrophone cable shield"}
+             "HYD.HOT": "hydrophone cable core", "HYD.SHIELD": "hydrophone cable shield",
+             "MIC.MIC+": "MAX9814 mic + pad (soldered)", "MIC.MIC−": "MAX9814 mic − pad (GND, soldered)"}
     if p in names:
         return names[p]
     for k, v in names.items():
@@ -1951,6 +2104,33 @@ Gain: stage 1 = 1 + 100 k / 3.3 k ≈ 31. Stage 2 = 1 + RV2 / 2.2 k, from 1 to �
 receiver gain: raise it if the tone bars stay low). Ro 3.3 kΩ protects the ESP32 pin.
 MCP602 / MCP6002 also fit (same pins): then power pin 8 from 3V3A instead of 5 V. Keep
 the hydrophone cable away from the amplifier and its power wires.
+
+![Receiver, underwater, MAX9814 version](rx_water_max9814_wiring.png)
+
+## Receiver node, underwater, MAX9814 version (PC 2) — fewer parts
+
+Instead of the LM358 preamp: the air receiver's board and MAX9814 module, with the
+module's built-in electret mic removed and the piezo hydrophone soldered to its two
+pads. No op-amp, VREF or gain trimmer: the module's AGC sets the gain (40–60 dB).
+Breadboard holes and jumper wires are exactly those of the air receiver above.
+
+Convert the module once: unsolder (or cut) the round electret mic; with a multimeter on
+beep, the pad that beeps to the `GND` pin is the − pad; solder the shielded cable's core
+to the + pad and its shield to the − pad; insulate the joints. Keep `GAIN` and `AR` open
+and power the module from 3.3 V only.
+
+{parts_md(RXM_PARTS, [
+        ("MAX9814 module (mic removed)", "AGC amplifier, 40–60 dB",
+         "off the board, wired as in the air receiver; `GAIN`, `AR` not connected"),
+        ("Piezo hydrophone", "brass piezo disc sealed in epoxy / liquid tape, shielded cable",
+         "core soldered to the mic + pad, shield to the mic − pad"),
+    ])}
+
+### Wires
+
+{wire_md(RXM_WIRES)}
+
+Firmware and web pages are unchanged; set both nodes to `mode water`.
 """
 
 
@@ -2064,11 +2244,13 @@ def main():
     check(TXW_PARTS, TXW_WIRES, TXW_OFF, TXW_NETS, "transmitter WATER", multi=TXW_MULTI)
     check_rail_830()
     check(RXW_PARTS, RXW_WIRES, RXW_OFF, RXW_NETS, "receiver WATER", board=board_830())
+    check(RXM_PARTS, RXM_WIRES, RXM_OFF, RXM_NETS, "receiver WATER (MAX9814)")
 
     jobs = []
     for name, builder in (("tx_wiring", build_tx), ("rx_wiring", build_rx),
                           ("system_overview", build_overview),
-                          ("tx_water_wiring", build_tx_water), ("rx_water_wiring", build_rx_water)):
+                          ("tx_water_wiring", build_tx_water), ("rx_water_wiring", build_rx_water),
+                          ("rx_water_max9814_wiring", build_rx_water_max9814)):
         s = builder()
         p = os.path.join(HERE, name + ".svg")
         with open(p, "w", encoding="utf-8") as f:

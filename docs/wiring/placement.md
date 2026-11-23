@@ -191,3 +191,42 @@ Gain: stage 1 = 1 + 100 k / 3.3 k ≈ 31. Stage 2 = 1 + RV2 / 2.2 k, from 1 to �
 receiver gain: raise it if the tone bars stay low). Ro 3.3 kΩ protects the ESP32 pin.
 MCP602 / MCP6002 also fit (same pins): then power pin 8 from 3V3A instead of 5 V. Keep
 the hydrophone cable away from the amplifier and its power wires.
+
+![Receiver, underwater, MAX9814 version](rx_water_max9814_wiring.png)
+
+## Receiver node, underwater, MAX9814 version (PC 2) — fewer parts
+
+Instead of the LM358 preamp: the air receiver's board and MAX9814 module, with the
+module's built-in electret mic removed and the piezo hydrophone soldered to its two
+pads. No op-amp, VREF or gain trimmer: the module's AGC sets the gain (40–60 dB).
+Breadboard holes and jumper wires are exactly those of the air receiver above.
+
+Convert the module once: unsolder (or cut) the round electret mic; with a multimeter on
+beep, the pad that beeps to the `GND` pin is the − pad; solder the shielded cable's core
+to the + pad and its shield to the − pad; insulate the joints. Keep `GAIN` and `AR` open
+and power the module from 3.3 V only.
+
+| Part | Value / marking | Holes |
+|---|---|---|
+| R2 | 10 Ω (brown-black-black-gold) | `c4` ↔ `c8` |
+| C4 | 100 µF 16 V electrolytic | + leg top + rail col 10 (`TR1-10`), − leg (stripe) top − rail col 10 (`TR2-10`) |
+| R3 | 3.3 kΩ (orange-orange-red-gold) | `c15` ↔ `c20` |
+| C5 | 4.7 nF ceramic, marked `472` | `a20` ↔ top − rail col 20 (`TR2-20`) |
+| MAX9814 module (mic removed) | AGC amplifier, 40–60 dB | off the board, wired as in the air receiver; `GAIN`, `AR` not connected |
+| Piezo hydrophone | brass piezo disc sealed in epoxy / liquid tape, shielded cable | core soldered to the mic + pad, shield to the mic − pad |
+
+### Wires
+
+| From | To | Colour | What it is |
+|---|---|---|---|
+| ESP32 3V3 | `a4` | red | 3.3 V from ESP32 |
+| ESP32 GND (right side, 2nd from bottom) | top − rail col 2 (`TR2-2`) | black | common ground |
+| `a8` | top + rail col 8 (`TR1-8`) | red | filtered 3.3 V (3V3A) to top + rail |
+| MAX9814 OUT | `b15` | yellow | audio out |
+| MAX9814 VDD | top + rail col 17 (`TR1-17`) | red | mic power 3V3A |
+| MAX9814 GND | top − rail col 18 (`TR2-18`) | black | mic ground |
+| `d20` | ESP32 D34 (GPIO34) | green | to ADC GPIO34 |
+| hydrophone cable core | MAX9814 mic + pad (soldered) | white | cable core soldered to the mic + pad |
+| hydrophone cable shield | MAX9814 mic − pad (GND, soldered) | grey | cable shield soldered to the mic − pad (GND) |
+
+Firmware and web pages are unchanged; set both nodes to `mode water`.

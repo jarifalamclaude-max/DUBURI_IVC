@@ -32,7 +32,7 @@ NODES = [
                  "Before the first power-on turn RV1 and the board's VOL knob fully down.",
                  "Connect the exciter first, then the input, power last. A small pop at switch-on is normal."]),
     dict(key="rxw", prefixes=("RXW", "RX_WATER", "RXWATER"), svg="rx_water_wiring.svg",
-         title="Underwater receiver", mode="WATER",
+         title="Underwater receiver (LM358)", mode="WATER",
          intro="Piezo hydrophone → two-stage LM358 preamp (gain 30–63 dB, band ≈1.5–10 kHz) → RC filter → ESP32 D34.",
          safety=["The LM358 is powered from the ESP32 VIN pin (≈5 V from USB). VREF and the filter use 3.3 V.",
                  "Check the LM358 notch / pin-1 dot before inserting it: turned around it gets hot.",
@@ -40,6 +40,22 @@ NODES = [
                  "Top + rail = VREF (1.34 V), not a power rail. Bottom + rail = +5 V from VIN. Both − rails = GND.",
                  "RV2 is the receiver volume: raise it if the tone bars stay low, lower it if the level shows clipping.",
                  "Keep the hydrophone cable away from the amplifier and its power wires."]),
+    dict(key="rxm", prefixes=("RXM",), svg="rx_water_max9814_wiring.svg",
+         title="Underwater receiver (MAX9814)", mode="WATER",
+         intro="Fewer parts than the LM358 version: the air receiver's board and MAX9814 module, with the "
+               "module's built-in mic removed and the piezo hydrophone soldered to its two pads. "
+               "The module's AGC sets the gain (40–60 dB) by itself. Firmware and web pages are unchanged.",
+         prep=["Unsolder the round electret mic from the MAX9814 (2 legs), or cut its legs off.",
+               "Multimeter on beep: the mic pad that beeps to the module's GND pin is the − pad, the other is +.",
+               "Solder the hydrophone cable: core (inner wire) → + pad, shield (braid) → − pad. Cover the joints with glue or tape."],
+         safety=["The MAX9814 runs from 3.3 V only (filtered 3V3A on the top + rail): never 5 V, its OUT goes straight to the ESP32.",
+                 "Remove the built-in electret mic first: the piezo replaces it on the same two pads.",
+                 "Core → + pad, shield → − pad. Swapped, it still works but picks up more hum.",
+                 "Keep GAIN and AR open: the AGC turns the gain down by itself when the other node is very close.",
+                 "C4 100 µF: stripe (−) side to the blue (−) rail.",
+                 "Set both nodes to WATER mode (button on the page, or 'mode water')."],
+         module_roles={"HYD": "In the water; its shielded cable is soldered to the MAX9814 mic pads",
+                       "MIC": "Off the breadboard, jumper wires to the board; mic removed, piezo soldered on"}),
     dict(key="tx", prefixes=("TX",), svg="tx_wiring.svg", title="Air transmitter", mode="AIR",
          intro="ESP32 → RC filter + volume → PAM8403 amplifier (5 V adapter) → small speaker.",
          safety=["Never connect a speaker wire to GND: use only L+ and L− (bridged output).",
@@ -77,6 +93,8 @@ PIN_NAMES = {
     "DC12.+": "12 V adapter + (DC jack terminal)", "DC12.−": "12 V adapter − (DC jack terminal)",
     "EXC.+": "Exciter wire 1 (in the tube)", "EXC.−": "Exciter wire 2 (in the tube)",
     "HYD.HOT": "Hydrophone cable core (signal)", "HYD.SHIELD": "Hydrophone cable shield (braid)",
+    "MIC.MIC+": "MAX9814 mic + pad (where the mic was; soldered)",
+    "MIC.MIC−": "MAX9814 mic − pad (GND pad; soldered)",
 }
 PIN_WORD = {"1": "leg 1", "2": "leg 2", "3": "leg 3", "+": "+ leg", "-": "− leg (stripe)"}
 TRIM_WORD = {"1": "end pin", "2": "middle pin (wiper)", "3": "end pin"}
@@ -111,6 +129,7 @@ ROLE_BY_HINT = [  # (substring in ref or value, role) for the underwater parts
     ("Caa", "Anti-alias filter capacitor"), ("Cdec", "Decoupling right at the LM358 power pin"),
 ]
 
+GND_COLOR = "#3b4350"
 NET_INFO = [  # (a pin in the net, name, colour, what it is)
     ("ESP32.D25", "Tone signal", "#e07b39", "Square wave from the ESP32, one tone per slot."),
     ("R1.2", "Smoothed tone", "#c9a227", "After R1/C1: sharp edges removed."),
@@ -129,6 +148,8 @@ NET_INFO = [  # (a pin in the net, name, colour, what it is)
     ("ESP32.VIN", "+5 V for the LM358", "#d32f2f", "From the ESP32 VIN pin (USB 5 V), on the bottom + rail."),
     ("Rp.2", "3V3A (clean 3.3 V)", "#e5534b", "ESP32 3.3 V after the 10 Ω / 100 µF filter; feeds the VREF divider."),
     ("Rt.2", "VREF ≈ 1.34 V", "#8e44ad", "The middle voltage the audio swings around. On the top + rail: NOT a power rail."),
+    ("MIC.MIC+", "Hydrophone signal", "#c9a227", "A few µV to mV from the piezo, soldered onto the MAX9814 mic + pad."),
+    ("MIC.MIC−", "Hydrophone shield", GND_COLOR, "Cable shield on the mic − pad; on the module this pad is GND."),
     ("HYD.HOT", "Hydrophone signal", "#c9a227", "A few µV to mV from the piezo, straight from the cable core."),
     ("Cin.2", "Input after Cin", "#d4a017", "Hydrophone signal without DC, on its way to the LM358."),
     ("U1.3", "Stage 1 input (IN+ A)", "#e07b39", "Hydrophone signal sitting on VREF, into the first stage."),
@@ -139,7 +160,6 @@ NET_INFO = [  # (a pin in the net, name, colour, what it is)
     ("U1.7", "Stage 2 output (OUT B)", "#0a7c76", "Amplified audio (30–63 dB total) before the ADC filter."),
     ("Rg2.2", "Stage 2 hum cut (G2)", "#5b6ad0", "Between Rg2 and Cg2: removes low hum from the gain."),
 ]
-GND_COLOR = "#3b4350"
 
 
 def module_name(ref, pins):
@@ -151,6 +171,8 @@ def module_name(ref, pins):
         return "PAM8403 amplifier (5 V)"
     if {"IN+", "IN-", "VCC+", "VCC-"} & p or ref.upper().startswith(("XH", "TPA")):
         return "XH-M542 amplifier (TPA3116D2, 12 V)"
+    if "MIC+" in p:
+        return "MAX9814 module (mic removed)"
     if "OUT" in p and "VDD" in p and ("GAIN" in p or ref.upper() == "MIC"):
         return "MAX9814 mic module"
     u = ref.upper()
@@ -259,10 +281,12 @@ def node_data(cfg):
             where = ""
             if w:
                 to, col, desc = w
-                where = ("wire (" + col + ") to " + (hole_text(to) if "." not in to else pin_name(to, mods)))
+                how = "soldered" if "soldered" in desc else "wire"
+                where = (how + " (" + col + ") to " + (hole_text(to) if "." not in to else pin_name(to, mods)))
             plist.append(dict(id=pid, label=pin_name(pid, mods), hole="", where=where or "not connected"))
+        role = cfg.get("module_roles", {}).get(m, "Off the breadboard, joined with jumper wires")
         part_list.append(dict(ref=m, kind="module", value=mname, marking="", bands=[],
-                              role="Off the breadboard, joined with jumper wires", pins=plist, onboard=False))
+                              role=role, pins=plist, onboard=False))
     # nets
     net_list = []
     for i, n in enumerate(nets):
@@ -281,7 +305,7 @@ def node_data(cfg):
             name, color, desc = "Connection " + str(i + 1), "#5b6ad0", ""
         net_list.append(dict(id=f"n{i}", name=name, color=color, desc=desc, pins=members, nc=False))
     # checklist: parts first, then wires
-    steps = []
+    steps = [dict(id=f"prep:{i}", text=t) for i, t in enumerate(cfg.get("prep", []))]
     for p in part_list:
         if not p["onboard"]:
             continue
@@ -291,7 +315,8 @@ def node_data(cfg):
     for a, b, col, desc in wires:
         na = pin_name(a, mods) if "." in a else a
         nb = pin_name(b, mods) if "." in b else b
-        steps.append(dict(id="w:" + a + ">" + b, text=f"Wire ({col}): {na} → {nb}  ·  {desc}"))
+        verb = "Solder" if "soldered" in desc else "Wire"
+        steps.append(dict(id="w:" + a + ">" + b, text=f"{verb} ({col}): {na} → {nb}  ·  {desc}"))
     svg_path = os.path.join(HERE, cfg["svg"])
     img = ""
     if os.path.exists(svg_path):
