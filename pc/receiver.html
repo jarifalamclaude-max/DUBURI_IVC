@@ -1,0 +1,1763 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DUBURI Receiver</title>
+<style>
+/* ===== COMMON CSS START (keep identical in sender.html and receiver.html) ===== */
+:root {
+  --bg: #f3f5f8; --panel: #ffffff; --soft: #eef1f6; --soft2: #e6eaf1;
+  --ink: #152033; --muted: #5b6a80; --faint: #8a97aa; --line: #dde3eb;
+  --accent: #0a7c76; --accent-ink: #ffffff; --accent-soft: #dff1ef;
+  --pre: #d9891f; --pre-soft: #fbeedb;
+  --good: #1d8a4a; --good-soft: #def3e6; --warn: #a86a0c; --warn-soft: #fbefd6;
+  --bad: #c0362c; --bad-soft: #fbe1de; --demo: #6a4bc4; --demo-soft: #ece6fb;
+  --hdr: #ffffff; --shadow: 0 1px 2px rgba(20,32,51,.06), 0 4px 14px rgba(20,32,51,.05);
+  --air: #2d7fd3; --water: #164a8a;
+  --chipL: 42%; --chipBgA: .14; --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e131a; --panel: #151c26; --soft: #1b2430; --soft2: #222d3b;
+    --ink: #e5ecf5; --muted: #9aa8bb; --faint: #6f7d91; --line: #263243;
+    --accent: #2bb5ab; --accent-ink: #062321; --accent-soft: #123532;
+    --pre: #f0a445; --pre-soft: #3a2a12;
+    --good: #45c27a; --good-soft: #13301f; --warn: #e3a23b; --warn-soft: #362710;
+    --bad: #f0675b; --bad-soft: #3a1714; --demo: #a68cf5; --demo-soft: #261d42;
+    --hdr: #121922; --shadow: 0 1px 2px rgba(0,0,0,.3);
+    --air: #3b8fe6; --water: #2a64b8;
+    --chipL: 70%; --chipBgA: .18;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Bengali", "Nirmala UI", "Vrinda", sans-serif;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+.mono { font-family: var(--mono); }
+header.top {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 12px 22px; background: var(--hdr); border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 5;
+}
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.logo { width: 38px; height: 38px; flex: none; }
+.title { font-weight: 700; font-size: 17px; letter-spacing: .1px; }
+.role { color: var(--muted); font-size: 13px; }
+.conn { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pill {
+  display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 999px;
+  background: var(--soft); color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.pill.on { background: var(--good-soft); color: var(--good); }
+.pill.on::before { background: var(--good); }
+.pill.demo { background: var(--demo-soft); color: var(--demo); }
+.pill.demo::before { background: var(--demo); }
+.pill.audio { background: var(--accent-soft); color: var(--accent); }
+.pill.audio::before { background: var(--accent); }
+.pill.lost { background: var(--bad-soft); color: var(--bad); }
+.pill.lost::before { background: var(--bad); }
+.btn {
+  border: 1px solid var(--line); background: var(--panel); border-radius: 9px; padding: 7px 13px;
+  cursor: pointer; font-weight: 600; font-size: 14px; white-space: nowrap;
+}
+.btn:hover:not(:disabled) { border-color: var(--faint); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.07); border-color: var(--accent); }
+.btn.primary:disabled { background: var(--soft2); border-color: var(--line); color: var(--faint); opacity: 1; }
+.btn.danger { color: var(--bad); }
+.btn.ghost { background: transparent; }
+.btn.small { padding: 4px 9px; font-size: 13px; border-radius: 7px; }
+.switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--muted); user-select: none; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch .track { width: 36px; height: 20px; border-radius: 999px; background: var(--soft2); position: relative; transition: background .15s; flex: none; }
+.switch .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+.switch input:checked + .track { background: var(--demo); }
+.switch input:checked + .track::after { transform: translateX(16px); }
+.switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.banner { margin: 12px 22px 0; padding: 10px 14px; border-radius: 10px; font-size: 14px; border: 1px solid transparent; }
+.banner b { font-weight: 700; }
+.banner.warn { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+.banner.bad { background: var(--bad-soft); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 30%, transparent); }
+.banner.demo { background: var(--demo-soft); color: var(--demo); border-color: color-mix(in srgb, var(--demo) 30%, transparent); }
+.banner.audio { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
+main.grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 18px; padding: 18px 22px 8px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: var(--shadow); min-width: 0; }
+.card h2 { margin: 0 0 4px; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.card h2 .count { margin-left: auto; }
+.card .sub { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+.hint { color: var(--muted); font-size: 13px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--soft); color: var(--muted); white-space: nowrap; }
+.chip.good { background: var(--good-soft); color: var(--good); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.chip.accent { background: var(--accent-soft); color: var(--accent); }
+.chip.pre { background: var(--pre-soft); color: var(--pre); }
+details.log > summary { cursor: pointer; font-weight: 700; font-size: 16px; list-style: none; display: flex; align-items: center; gap: 8px; }
+details.log > summary::-webkit-details-marker { display: none; }
+details.log > summary::before { content: "▸"; color: var(--muted); font-size: 13px; transition: transform .15s; display: inline-block; }
+details.log[open] > summary::before { transform: rotate(90deg); }
+.logtools { display: flex; align-items: center; gap: 12px; margin: 10px 0 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.logtools label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.logbox {
+  height: 220px; overflow: auto; background: var(--soft); border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px 10px; font: 12.5px/1.5 var(--mono); white-space: pre-wrap; word-break: break-all;
+}
+.logbox .o { color: var(--accent); }
+.logbox .e { color: var(--bad); }
+.logbox .s { color: var(--faint); }
+.logbox .t { color: var(--faint); margin-right: 8px; }
+.cmdform { display: flex; gap: 8px; margin-top: 8px; }
+.cmdform input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--panel); border-radius: 9px; padding: 7px 10px; font-family: var(--mono); font-size: 13px; }
+.scopebars { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; align-items: end; height: 110px; padding: 6px 4px 0; background: var(--soft); border-radius: 10px; border: 1px solid var(--line); position: relative; }
+.scopebars .bar { background: var(--faint); border-radius: 3px 3px 0 0; min-height: 2px; transition: height .2s ease, background .2s; opacity: .55; }
+.scopebars .bar.hot { background: var(--accent); opacity: 1; }
+.scopelabels { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; padding: 3px 4px 0; font-size: 11px; color: var(--muted); }
+.scopelabels span { text-align: center; white-space: nowrap; overflow: visible; }
+footer { color: var(--faint); font-size: 12px; padding: 4px 22px 22px; }
+.modebar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 12px 22px 0; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+.modelab { font-weight: 700; font-size: 14px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--soft); }
+.segbtn { border: 0; background: transparent; padding: 7px 14px; cursor: pointer; font-weight: 800; font-size: 14px; letter-spacing: .4px; color: var(--muted); display: inline-flex; align-items: baseline; gap: 6px; }
+.segbtn small { font-weight: 600; font-size: 12px; letter-spacing: 0; opacity: .85; }
+.segbtn + .segbtn { border-left: 1px solid var(--line); }
+.segbtn:disabled { cursor: not-allowed; opacity: .55; }
+.segbtn.active[data-mode="air"] { background: var(--air); color: #fff; opacity: 1; }
+.segbtn.active[data-mode="water"] { background: var(--water); color: #fff; opacity: 1; }
+.segbtn.pending { outline: 2px dashed var(--faint); outline-offset: -4px; }
+#modeDesc { font-size: 14px; }
+#modeDesc b { font-weight: 700; }
+.modenote { margin-left: auto; color: var(--warn); font-size: 13px; font-weight: 600; }
+@media (max-width: 1040px) { main.grid { grid-template-columns: minmax(0, 1fr); } }
+/* ===== COMMON CSS END ===== */
+
+/* ---- receiver page ---- */
+.tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 18px 22px 0; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; box-shadow: var(--shadow); min-width: 0; }
+.tile .lab { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.tile .val { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.tile .val.good { color: var(--good); } .tile .val.bad { color: var(--bad); } .tile .val.warn { color: var(--warn); }
+.tile .val small { font-size: 14px; color: var(--muted); font-weight: 600; }
+.arrive { border: 1px solid var(--line); background: var(--soft); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; transition: background .2s, border-color .2s; }
+.arrive.flash { background: var(--bad-soft); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
+.arrive.okflash { background: var(--good-soft); border-color: color-mix(in srgb, var(--good) 40%, transparent); }
+.arrtext { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 14px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--faint); flex: none; }
+.dot.live { background: var(--accent); animation: pulse 1.4s ease-in-out infinite; }
+.dot.rx { background: var(--pre); animation: pulse .5s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); } 50% { box-shadow: 0 0 0 6px transparent; } }
+.arrive .progress { height: 6px; border-radius: 99px; background: var(--soft2); overflow: hidden; }
+.arrive .progress > i { display: block; height: 100%; width: 0; background: var(--pre); border-radius: 99px; }
+.partial { margin-top: 12px; }
+.plabel { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 5px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ptext { min-height: 56px; border: 1.5px dashed var(--line); border-radius: 12px; padding: 10px 14px; font-size: 24px; line-height: 1.35; word-break: break-word; }
+.ptext .cursor { display: inline-block; width: 2px; height: 1.05em; background: var(--accent); vertical-align: -0.15em; margin-left: 2px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.lost { display: inline-block; min-width: .9em; padding: 0 .12em; margin: 0 1px; border-radius: 4px; background: var(--bad-soft); color: var(--bad); font-weight: 800; text-align: center; font-size: .8em; vertical-align: .1em; border: 1px solid color-mix(in srgb, var(--bad) 40%, transparent); }
+.empty { color: var(--faint); font-size: 14px; font-style: italic; }
+.lastpkt { margin-top: 10px; font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.lastpkt .mono { color: var(--ink); }
+.msglist { display: flex; flex-direction: column; gap: 10px; max-height: 620px; overflow: auto; padding-right: 2px; }
+.emptybig { border: 1.5px dashed var(--line); border-radius: 12px; padding: 26px 16px; text-align: center; color: var(--faint); }
+.msg { border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px 12px; background: var(--panel); }
+.msg.new { animation: arrivein .6s ease-out; }
+@keyframes arrivein { from { background: var(--accent-soft); transform: translateY(-4px); } to { background: var(--panel); transform: none; } }
+.mhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.mhead .time { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--ink); }
+.mhead .copy { margin-left: auto; }
+.mtext { font-size: 26px; line-height: 1.35; margin-top: 6px; word-break: break-word; }
+.mhex { margin-top: 6px; font-size: 12px; color: var(--muted); }
+.mhex summary { cursor: pointer; width: max-content; }
+.mhex .mono { word-break: break-all; margin-top: 4px; }
+.chartwrap { border: 1px solid var(--line); border-radius: 10px; background: var(--soft); overflow: hidden; }
+#qChart { display: block; width: 100%; height: 210px; }
+.scopehead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.level { margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 14px; }
+.lvhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; font-size: 14px; }
+.lvbar { position: relative; height: 18px; border-radius: 6px; background: var(--bad-soft); overflow: hidden; border: 1px solid var(--line); }
+.lvsafe { position: absolute; top: 0; bottom: 0; left: 2.44%; width: 92.8%; background: var(--good-soft); }
+.lvrange { position: absolute; top: 4px; bottom: 4px; left: 50%; width: 0; background: var(--accent); border-radius: 3px; opacity: .75; transition: left .4s, width .4s; }
+.lvmean { position: absolute; top: 0; bottom: 0; width: 2px; left: 50%; background: var(--ink); transition: left .4s; }
+.lvscale { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); margin-top: 2px; }
+#levelAdvice { margin-top: 4px; font-weight: 600; }
+#levelAdvice.good { color: var(--good); } #levelAdvice.warn { color: var(--warn); } #levelAdvice.bad { color: var(--bad); }
+@media (max-width: 1040px) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 40 40" aria-hidden="true">
+      <rect x="1" y="1" width="38" height="38" rx="10" fill="var(--accent)"/>
+      <path d="M9 22c3-6 6-6 9 0s6 6 9 0" fill="none" stroke="var(--accent-ink)" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M13 12.5a10 10 0 0 0 0 15M9.5 9a15 15 0 0 0 0 22" fill="none" stroke="var(--accent-ink)" stroke-width="2.2" stroke-linecap="round" opacity=".75"/>
+    </svg>
+    <div>
+      <div class="title">DUBURI Acoustic Modem</div>
+      <div class="role">Receiver · PC 2 · shows what the microphone hears</div>
+    </div>
+  </div>
+  <div class="conn">
+    <span id="connPill" class="pill">Not connected</span>
+    <button id="btnConnect" class="btn primary">Connect board</button>
+    <button id="btnAudio" class="btn" title="No ESP32? Listen with this computer's own microphone">Use this computer's microphone</button>
+    <button id="btnDisconnect" class="btn" hidden>Disconnect</button>
+    <button id="btnReset" class="btn ghost" hidden title="Restart the ESP32 (like pressing EN)">Reset board</button>
+    <label class="switch" title="Try the page without a board"><input type="checkbox" id="demoToggle"><span class="track"></span><span>Demo (no board)</span></label>
+  </div>
+</header>
+<div id="noSerialBanner" class="banner warn" hidden><b>This browser cannot talk to the board.</b> Open this file in <b>Google Chrome</b> or <b>Microsoft Edge</b> on a computer (not a phone). Demo mode still works here.</div>
+<div id="demoBanner" class="banner demo" hidden><b>Demo mode:</b> a pretend board is "hearing" made-up messages every few seconds. Turn Demo off and press <b>Connect board</b> to use your ESP32.</div>
+<div id="audioBanner" class="banner audio" hidden><b>No board:</b> listening with <b>this computer's microphone</b>. Keep it pointed at the speaker that plays <b>sender.html</b> (another computer, or a second window on this one). Turn on <b>live tone bars</b> to see the tones arrive. Both must show the same mode.</div>
+<div id="connError" class="banner bad" hidden></div>
+<div id="boardErr" class="banner bad" hidden></div>
+<div class="modebar">
+  <span class="modelab">Medium</span>
+  <div class="seg" role="group" aria-label="Medium (mode)">
+    <button class="segbtn" id="modeAir" data-mode="air" disabled title="Speaker and microphone in a room">AIR <small>room</small></button>
+    <button class="segbtn" id="modeWater" data-mode="water" disabled title="Speaker box and hydrophone in a pool">WATER <small>pool</small></button>
+  </div>
+  <span id="modeDesc">Mode unknown · connect the board to see it.</span>
+  <span class="modenote">Both boards must be in the same mode.</span>
+</div>
+
+<div class="tiles">
+  <div class="tile"><div class="lab">Messages</div><div class="val" id="cMsgs">0</div></div>
+  <div class="tile"><div class="lab">Packets OK</div><div class="val good" id="cOk">0</div></div>
+  <div class="tile"><div class="lab">Damaged packets</div><div class="val bad" id="cBad">0</div></div>
+  <div class="tile"><div class="lab">Packets heard (preambles)</div><div class="val" id="cDet">0</div></div>
+  <div class="tile"><div class="lab">Success</div><div class="val" id="cPct">—</div></div>
+</div>
+
+<main class="grid">
+  <section class="col">
+    <div class="card">
+      <h2>Incoming <span class="chip" id="listenChip">not connected</span></h2>
+      <p class="sub" id="pktSub">Each packet is a short burst of 64 tones and carries 2 bytes of text.</p>
+      <div class="arrive" id="arrive">
+        <div class="arrtext"><span class="dot" id="arriveDot"></span><span id="arriveText">Connect the board to start listening.</span></div>
+        <div class="progress"><i id="arriveBar"></i></div>
+      </div>
+      <div class="partial">
+        <div class="plabel" id="partialLabel">Message being received</div>
+        <div class="ptext" id="partialText"><span class="empty">Nothing yet.</span></div>
+      </div>
+      <div class="lastpkt" id="lastPkt"><span>Last packet:</span><span>—</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Messages <span class="chip" id="msgCount">0</span><span class="count"></span><button id="btnCsv" class="btn small" disabled>Download CSV</button></h2>
+      <p class="sub">Newest on top. Red <span class="lost">?</span> marks bytes that were lost on the way.</p>
+      <div id="msgList" class="msglist"><div class="emptybig">No messages yet. When the sender PC sends text, it appears here.</div></div>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="card">
+      <h2>Link quality</h2>
+      <p class="sub">q (dB) of every packet. 10 dB or more is a safe link, below 7 dB packets start to fail. Red ✕ = damaged packet.</p>
+      <div class="chartwrap"><canvas id="qChart" aria-label="Link quality chart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2>Microphone &amp; tones</h2>
+      <div class="scopehead">
+        <button class="btn" id="btnScope" disabled>Show live tone bars</button>
+        <span class="hint">Each bar = how loud one tone is above the background noise. When a packet plays, one bar at a time jumps up.</span>
+      </div>
+      <div class="scopebars" id="scopeBars"></div>
+      <div class="scopelabels" id="scopeLabels"></div>
+      <div class="level">
+        <div class="lvhead"><b>Microphone level (ADC)</b><span id="levelStatus" class="chip">no data yet</span></div>
+        <div class="lvbar" title="Green = safe range 100..3900"><div class="lvsafe"></div><div class="lvrange" id="lvRange" hidden></div><div class="lvmean" id="lvMean" hidden></div></div>
+        <div class="lvscale"><span>0</span><span>signal swing (min … max), green = safe</span><span>4095</span></div>
+        <div class="hint" id="levelNums">The page asks the board every 3 s.</div>
+        <div class="hint" id="levelAdvice"></div>
+        <div class="hint" id="boardTotals" style="margin-top:6px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <details class="log" id="logDetails">
+        <summary>Serial log <span class="chip" id="logCount">0 lines</span></summary>
+        <div class="logtools">
+          <label><input type="checkbox" id="logStatus"> show status lines (SCOPE, STATS…)</label>
+          <label><input type="checkbox" id="logScroll" checked> auto-scroll</label>
+          <button class="btn small" id="logClear">Clear</button>
+        </div>
+        <div class="logbox" id="logBox"></div>
+        <form class="cmdform" id="cmdForm" autocomplete="off">
+          <input id="cmdInput" placeholder="Type a board command, e.g. info, stats, help" aria-label="Board command">
+          <button class="btn" type="submit">Send line</button>
+        </form>
+      </details>
+    </div>
+  </section>
+</main>
+<footer>DUBURI IVC · Receiver page · works offline · USB serial 115200 baud · protocol: docs/SERIAL_PROTOCOL.md</footer>
+
+<script>
+"use strict";
+/* ===== AMCORE START: JavaScript port of the modem core (generated into the pages by pc/sync_common.py) =====
+ * amcore.js - DUBURI modem in JavaScript, a line-by-line port of
+ *   firmware/DuburiModem/am_core.c  (tones, coding, receiver)
+ *   firmware/DuburiModem/am_text.c  (text messages)
+ * so a laptop's own speaker and microphone can talk to each other (or to an
+ * ESP32 board) without any hardware. pc/test/amcore_test.js checks it against
+ * the C code on the same recordings. Edit here, then run pc/sync_common.py.
+ */
+var AMCore = (function () {
+  "use strict";
+  const NTONES = 24, NSETS = 6, M = 4, PRE_LEN = 10, FRAME_BYTES = 6, PAYLOAD_BYTES = 4;
+  const INFO_BITS = 54, CODED_BITS = 108, DATA_SLOTS = 54, TOTAL_SLOTS = 64;
+  const T_HOP = 0.0025, T_TRACK = 0.001;
+  const DET_SCORE_MIN = 0.14, DET_MATCH_MIN = 5;
+  const PEAK_HOPS = 14, NOISE_INIT_HOPS = 40, NOISE_ALPHA = 1 / 256, NOISE_CLIP = 8, LLR_CLAMP = 20;
+  const RING = 8192, RING_MASK = RING - 1, HIST = 256, OUTQ = 4;
+  const PREAMBLE = [0, 14, 6, 22, 9, 17, 4, 21, 5, 11];
+  const MODES = {
+    water: { name: "water", slot: 0.020, win: 0.016 },
+    air: { name: "air", slot: 0.040, win: 0.032 },
+  };
+  const F_TEXT = 0x2, F_FIRST = 0x8, F_LAST = 0x1, F_ACK_REQ = 0x8, F_IS_ACK = 0x4;
+  const TEXT_MAX = 64, TEXT_TIMEOUT_MS = 8000, TEXT_DUP_MS = 6000;
+
+  const toneHz = (k) => 3000 + 250 * k;
+  const round = (x) => Math.round(x);
+
+  function crc16(bytes) {
+    let c = 0xFFFF;
+    for (let i = 0; i < bytes.length; i++) {
+      c ^= (bytes[i] & 255) << 8;
+      for (let b = 0; b < 8; b++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
+    }
+    return c;
+  }
+  function parity7(v) { v ^= v >> 4; v ^= v >> 2; v ^= v >> 1; return v & 1; }
+  function convEncode(bits) {
+    const out = new Uint8Array(2 * bits.length);
+    let st = 0;
+    for (let t = 0; t < bits.length; t++) {
+      const reg = ((bits[t] & 1) << 6) | st;
+      out[2 * t] = parity7(reg & 0x79);
+      out[2 * t + 1] = parity7(reg & 0x5B);
+      st = reg >> 1;
+    }
+    return out;
+  }
+  /* Soft Viterbi, llr > 0 means bit 0; ends in state 0 (zero tail). */
+  function viterbi(llr, n) {
+    const dec = new Uint8Array(n * 64);
+    let pm = new Float64Array(64).fill(-1e30), npm = new Float64Array(64);
+    pm[0] = 0;
+    for (let t = 0; t < n; t++) {
+      const l0 = llr[2 * t], l1 = llr[2 * t + 1];
+      for (let ns = 0; ns < 64; ns++) {
+        const u = ns >> 5;
+        let best = -1e30, bestb = 0;
+        for (let b = 0; b < 2; b++) {
+          const ps = ((ns & 31) << 1) | b;
+          const reg = (u << 6) | ps;
+          const m = pm[ps] + (parity7(reg & 0x79) ? -l0 : l0) + (parity7(reg & 0x5B) ? -l1 : l1);
+          if (m > best) { best = m; bestb = b; }
+        }
+        npm[ns] = best;
+        dec[t * 64 + ns] = bestb;
+      }
+      const tmp = pm; pm = npm; npm = tmp;
+    }
+    const bits = new Uint8Array(n);
+    let s = 0;
+    for (let t = n - 1; t >= 0; t--) {
+      bits[t] = s >> 5;
+      s = ((s & 31) << 1) | dec[t * 64 + s];
+    }
+    return bits;
+  }
+  const interleave = (c) => 2 * ((37 * c) % DATA_SLOTS) + (c >= DATA_SLOTS ? 1 : 0);
+
+  function pack(p) {
+    const f = [((p.dst & 15) << 4) | (p.src & 15), ((p.seq & 15) << 4) | (p.flags & 15), p.cmd & 255, p.arg & 255];
+    const c = crc16(f);
+    return f.concat([c >> 8, c & 255]);
+  }
+  function unpack(f) {
+    const c = crc16(f.slice(0, PAYLOAD_BYTES));
+    const p = { dst: f[0] >> 4, src: f[0] & 15, seq: f[1] >> 4, flags: f[1] & 15, cmd: f[2], arg: f[3] };
+    return { p, ok: f[4] === (c >> 8) && f[5] === (c & 255) };
+  }
+  /* am_tx_build(): packet -> 64 tone indexes */
+  function txBuild(p) {
+    const frame = pack(p);
+    const info = new Uint8Array(INFO_BITS);
+    for (let i = 0; i < FRAME_BYTES * 8; i++) info[i] = (frame[i >> 3] >> (7 - (i & 7))) & 1;
+    const coded = convEncode(info);
+    const stream = new Uint8Array(CODED_BITS);
+    for (let c = 0; c < CODED_BITS; c++) stream[interleave(c)] = coded[c];
+    const t = PREAMBLE.slice();
+    for (let k = 0; k < DATA_SLOTS; k++) t.push((k % NSETS) + NSETS * ((stream[2 * k] << 1) | stream[2 * k + 1]));
+    return t;
+  }
+
+  /* ---------------------------------------------------------------- receiver */
+  const ST_SEARCH = 0, ST_PEAK = 1, ST_DECODE = 2;
+
+  class Rx {
+    constructor(fs, mode) {
+      this.ring = new Float64Array(RING);
+      this.win = new Float64Array(4096);
+      this.xw = new Float64Array(4096);
+      this.coef = new Float64Array(NTONES);
+      this.noise = new Float64Array(NTONES);
+      this.scope = new Float64Array(NTONES);
+      this.histFrac = new Float64Array(HIST * PRE_LEN);
+      this.histAmax = new Uint8Array(HIST);
+      this.pkScore = new Float64Array(24);
+      this.pkEnd = new Float64Array(24);
+      this.llr = new Float64Array(CODED_BITS);
+      this.slotQ = new Float64Array(DATA_SLOTS);
+      this.preOff = new Int32Array(PRE_LEN);
+      this.n = 0; this.dc = -1; this.noiseInit = 0;
+      this.out = [];
+      this.stats = { preambles: 0, packets_ok: 0, crc_fail: 0, clipped: 0, last_q_db: 0, last_timing_adj: 0 };
+      this.muteUntil = 0; this.muted = false;
+      this.mode = MODES[mode] ? mode : "water";
+      this._timing();
+      this._configure(fs);
+      this._resetSearch();
+    }
+    _timing() { this.tSlot = MODES[this.mode].slot; this.tWin = MODES[this.mode].win; }
+    _configure(fs) {
+      this.fs = fs;
+      this.W = Math.min(round(this.tWin * fs), this.win.length);
+      this.H = round(T_HOP * fs);
+      this.D = round(T_TRACK * fs);
+      this.S = this.tSlot * fs;
+      for (let n = 0; n < this.W; n++) this.win[n] = 0.5 - 0.5 * Math.cos(2 * Math.PI * (n + 0.5) / this.W);
+      for (let k = 0; k < NTONES; k++) this.coef[k] = 2 * Math.cos(2 * Math.PI * toneHz(k) / fs);
+      for (let j = 0; j < PRE_LEN; j++) this.preOff[j] = round((PRE_LEN - 1 - j) * this.S / this.H);
+    }
+    _resetSearch() { this.state = ST_SEARCH; this.hopCount = 0; this.pkN = 0; this.nextHop = this.n + this.H; }
+    setMode(mode) {
+      if (this.state !== ST_SEARCH || !MODES[mode]) return false;
+      this.mode = mode; this._timing(); this._configure(this.fs);
+      this.noiseInit = 0; this.noise.fill(0);
+      this._resetSearch();
+      return true;
+    }
+    mute(samples) { this.muteUntil = this.n + samples; this.muted = true; this.state = ST_SEARCH; }
+    pop() { return this.out.shift() || null; }
+
+    _energies(end, tones, E) {
+      const W = this.W, start = end - W, ring = this.ring, win = this.win, xw = this.xw;
+      for (let i = 0; i < W; i++) xw[i] = ring[(start + i) & RING_MASK] * win[i];
+      for (let t = 0; t < tones.length; t++) {
+        const c = this.coef[tones[t]];
+        let s1 = 0, s2 = 0;
+        for (let i = 0; i < W; i++) { const s0 = xw[i] + c * s1 - s2; s2 = s1; s1 = s0; }
+        E[t] = s1 * s1 + s2 * s2 - c * s1 * s2 + 1e-3;
+      }
+    }
+    _slotEnd(slot) { return this.syncBase + round(this.syncFrac + this.trackAdj + (slot + 1) * this.S); }
+
+    _hop() {
+      const E = new Float64Array(NTONES), z = new Float64Array(NTONES);
+      this._energies(this.n, ALL_TONES, E);
+      if (this.state === ST_SEARCH) {
+        if (this.noiseInit < NOISE_INIT_HOPS) {
+          const k = 1 / (this.noiseInit + 1);
+          for (let i = 0; i < NTONES; i++) this.noise[i] += (E[i] - this.noise[i]) * k;
+          this.noiseInit++;
+          this.nextHop += this.H;
+          return;
+        }
+        for (let i = 0; i < NTONES; i++) {
+          let e = E[i];
+          if (e > NOISE_CLIP * this.noise[i]) e = NOISE_CLIP * this.noise[i];
+          this.noise[i] += (e - this.noise[i]) * NOISE_ALPHA;
+        }
+      }
+      let sum = 0, zmax = 0, amax = 0;
+      for (let i = 0; i < NTONES; i++) {
+        z[i] = E[i] / this.noise[i];
+        this.scope[i] = 10 * Math.log10(z[i]);
+        sum += z[i];
+        if (z[i] > zmax) { zmax = z[i]; amax = i; }
+      }
+      const hi = this.hopCount % HIST;
+      for (let j = 0; j < PRE_LEN; j++) this.histFrac[hi * PRE_LEN + j] = z[PREAMBLE[j]] / sum;
+      this.histAmax[hi] = amax;
+      if (this.hopCount >= this.preOff[0]) {
+        let score = 0, match = 0;
+        for (let j = 0; j < PRE_LEN; j++) {
+          const h = (this.hopCount - this.preOff[j]) % HIST;
+          score += this.histFrac[h * PRE_LEN + j];
+          match += this.histAmax[h] === PREAMBLE[j] ? 1 : 0;
+        }
+        score /= PRE_LEN;
+        if (this.state === ST_SEARCH && score >= DET_SCORE_MIN && match >= DET_MATCH_MIN) {
+          this.state = ST_PEAK; this.pkN = 0;
+        }
+        if (this.state === ST_PEAK) {
+          this.pkScore[this.pkN] = score; this.pkEnd[this.pkN] = this.n; this.pkN++;
+        }
+      }
+      this.hopCount++;
+      this.nextHop += this.H;
+      if (this.state === ST_PEAK && this.pkN >= PEAK_HOPS) this._finishPeak();
+    }
+    _finishPeak() {
+      let m = 0;
+      for (let i = 1; i < this.pkN; i++) if (this.pkScore[i] > this.pkScore[m]) m = i;
+      const top = this.pkScore[m], lim = 0.85 * top;
+      let l = m, r = m;
+      while (l > 0 && this.pkScore[l - 1] >= lim) l--;
+      while (r < this.pkN - 1 && this.pkScore[r + 1] >= lim) r++;
+      const base = 0.7 * top;
+      let wsum = 0, isum = 0;
+      for (let i = l; i <= r; i++) { const w = this.pkScore[i] - base; wsum += w; isum += w * (i - l); }
+      const c = wsum > 0 ? isum / wsum : 0;
+      this.syncBase = this.pkEnd[l];
+      this.syncFrac = c * this.H;
+      this.trackAdj = 0;
+      this.slot = 0;
+      this.state = ST_DECODE;
+      this.stats.preambles++;
+      this.nextHop = this._slotEnd(0) + this.D;
+    }
+    _finishPacket() {
+      const cl = new Float64Array(CODED_BITS);
+      for (let c = 0; c < CODED_BITS; c++) cl[c] = this.llr[interleave(c)];
+      const info = viterbi(cl, INFO_BITS);
+      const frame = [0, 0, 0, 0, 0, 0];
+      for (let i = 0; i < FRAME_BYTES * 8; i++) frame[i >> 3] |= info[i] << (7 - (i & 7));
+      const q = Array.from(this.slotQ).sort((a, b) => a - b);
+      const qmed = 0.5 * (q[DATA_SLOTS / 2 - 1] + q[DATA_SLOTS / 2]);
+      const u = unpack(frame);
+      if (u.ok) {
+        this.stats.packets_ok++;
+        this.stats.last_q_db = qmed;
+        this.stats.last_timing_adj = this.trackAdj;
+        if (this.out.length < OUTQ) this.out.push({ pkt: u.p, q_db: qmed, at: this.n });
+      } else {
+        this.stats.crc_fail++;
+      }
+      this._resetSearch();
+    }
+    _decodeSlot() {
+      const i = this.slot, set = i % NSETS;
+      const tones = [set, set + NSETS, set + 2 * NSETS, set + 3 * NSETS];
+      const Ec = new Float64Array(M), z = new Float64Array(M), lz = new Float64Array(M);
+      const e = this._slotEnd(i);
+      this._energies(e, tones, Ec);
+      let vhat = 0;
+      for (let v = 0; v < M; v++) {
+        z[v] = Ec[v] / this.noise[tones[v]];
+        lz[v] = Math.log(z[v]);
+        if (z[v] > z[vhat]) vhat = v;
+      }
+      const clamp = (x) => Math.max(-LLR_CLAMP, Math.min(LLR_CLAMP, x));
+      this.llr[2 * i] = clamp(Math.max(lz[0], lz[1]) - Math.max(lz[2], lz[3]));
+      this.llr[2 * i + 1] = clamp(Math.max(lz[0], lz[2]) - Math.max(lz[1], lz[3]));
+      this.slotQ[i] = 10 * Math.log10(Math.max(z[vhat] - 1, 1e-3));
+      if (z[vhat] > 4) {                       /* early/late timing tracking */
+        const tv = [tones[vhat]], Ee = new Float64Array(1), El = new Float64Array(1);
+        this._energies(e - this.D, tv, Ee);
+        this._energies(e + this.D, tv, El);
+        const err = (El[0] - Ee[0]) / (El[0] + Ee[0]);
+        this.trackAdj += 0.25 * this.D * err;
+        const lim = 0.25 * this.S;
+        if (this.trackAdj > lim) this.trackAdj = lim;
+        if (this.trackAdj < -lim) this.trackAdj = -lim;
+      }
+      this.slot++;
+      if (this.slot >= DATA_SLOTS) this._finishPacket();
+      else this.nextHop = this._slotEnd(this.slot) + this.D;
+    }
+    /* x: samples in ESP32 ADC counts (0..4095, any offset; floats allowed) */
+    process(x) {
+      for (let k = 0; k < x.length; k++) {
+        const xf = x[k];
+        if (xf <= 8 || xf >= 4087) this.stats.clipped++;
+        if (this.dc < 0) this.dc = xf;
+        this.dc += (xf - this.dc) * (1 / 1024);
+        this.ring[this.n & RING_MASK] = xf - this.dc;
+        this.n++;
+        if (this.muted) {
+          if (this.n < this.muteUntil) continue;
+          this.muted = false; this._resetSearch(); continue;
+        }
+        while (this.n >= this.nextHop) {
+          if (this.state === ST_DECODE) this._decodeSlot();
+          else this._hop();
+        }
+      }
+    }
+  }
+  const ALL_TONES = Array.from({ length: NTONES }, (_, i) => i);
+
+  /* ------------------------------------------------------------ text layer */
+  function textPacket(msg, i, dst, src, seq0) {
+    const n = Math.ceil(msg.length / 2);
+    let flags = F_TEXT;
+    if (i === 0) flags |= F_FIRST;
+    if (i === n - 1) flags |= F_LAST;
+    return { dst: dst & 15, src: src & 15, seq: (seq0 + i) & 15, flags, cmd: msg[2 * i], arg: 2 * i + 1 < msg.length ? msg[2 * i + 1] : 0 };
+  }
+  const isText = (p) => (p.flags & F_TEXT) !== 0;
+
+  class TextRx {
+    constructor() { this.s = Array.from({ length: 16 }, () => ({ active: false, haveSeq: false, lastSeq: 0, lastMs: 0 })); }
+    _start(s, p, started) {
+      s.active = true; s.started = started; s.qSum = 0; s.qN = 0;
+      s.msg = { src: p.src, dst: p.dst, ok: 0, lost: 0, data: [], lostmask: [], q_db: 0 };
+    }
+    _put(s, b, lost) { if (s.msg.data.length < TEXT_MAX) { s.msg.data.push(lost ? 0 : b); s.msg.lostmask.push(lost ? 1 : 0); } }
+    _lostPk(s, n) { for (let k = 0; k < n; k++) { this._put(s, 0, 1); this._put(s, 0, 1); } s.msg.lost += n; }
+    _finish(s) {
+      s.msg.ok = s.started && s.msg.lost === 0 ? 1 : 0;
+      s.msg.q_db = s.qN ? s.qSum / s.qN : 0;
+      s.active = false;
+      return s.msg;
+    }
+    /* returns -1 for a repeat, else a list of finished messages (0..2) */
+    feed(p, q, now) {
+      if (!isText(p)) return [];
+      const s = this.s[p.src & 15], seq = p.seq & 15, out = [];
+      const recent = s.haveSeq && now - s.lastMs < TEXT_TIMEOUT_MS;
+      if (s.haveSeq && seq === s.lastSeq && now - s.lastMs < TEXT_DUP_MS) return -1;
+      if (p.flags & F_FIRST) {
+        if (s.active) { const miss = (seq - s.lastSeq - 1) & 15; this._lostPk(s, miss < 1 ? 1 : miss); out.push(this._finish(s)); }
+        this._start(s, p, true);
+      } else if (!s.active) {
+        this._start(s, p, false);
+        let miss = recent ? ((seq - s.lastSeq - 1) & 15) : 1;
+        if (miss < 1) miss = 1;
+        this._lostPk(s, miss);
+      } else {
+        const miss = (seq - ((s.lastSeq + 1) & 15)) & 15;
+        if (miss) this._lostPk(s, miss);
+      }
+      this._put(s, p.cmd, 0);
+      if (!((p.flags & F_LAST) && p.arg === 0)) this._put(s, p.arg, 0);
+      s.qSum += q; s.qN++;
+      s.lastSeq = seq; s.haveSeq = true; s.lastMs = now;
+      if (p.flags & F_LAST) out.push(this._finish(s));
+      return out;
+    }
+    poll(now) {
+      for (const s of this.s) {
+        if (s.active && now - s.lastMs > TEXT_TIMEOUT_MS) { this._lostPk(s, 1); return this._finish(s); }
+      }
+      return null;
+    }
+  }
+  const HX = "0123456789ABCDEF";
+  function formatMsg(m) {
+    let hex = "", text = "";
+    for (let i = 0; i < m.data.length; i++) {
+      hex += m.lostmask[i] ? "__" : HX[m.data[i] >> 4] + HX[m.data[i] & 15];
+    }
+    const bytes = m.data.map((b, i) => (m.lostmask[i] ? 0x3F : b < 0x20 || b === 0x7F ? 0x2E : b));
+    try { text = new TextDecoder().decode(new Uint8Array(bytes)); } catch (_) { text = ""; }
+    return `MSG src=${m.src} dst=${m.dst} ok=${m.ok} lost=${m.lost} len=${m.data.length} q=${m.q_db.toFixed(1)} hex=${hex} text=${text}`;
+  }
+
+  /* ---------------------------------------------------- audio for a laptop */
+  /* One packet as audio: a phase-continuous sine, one tone per slot, with a
+   * 3 ms fade at the very start and end (no clicks). */
+  function renderPacket(tones, fs, slotS, amp) {
+    const n = Math.round(tones.length * slotS * fs);
+    const out = new Float32Array(n), fade = Math.round(0.003 * fs);
+    let ph = 0;
+    for (let i = 0; i < n; i++) {
+      const k = Math.min(tones.length - 1, Math.floor(i / (slotS * fs)));
+      ph += 2 * Math.PI * toneHz(tones[k]) / fs;
+      if (ph > 2 * Math.PI) ph -= 2 * Math.PI;
+      let g = amp;
+      if (i < fade) g *= i / fade;
+      if (i > n - fade) g *= (n - i) / fade;
+      out[i] = g * Math.sin(ph);
+    }
+    return out;
+  }
+
+  return {
+    NTONES, PRE_LEN, TOTAL_SLOTS, DATA_SLOTS, PREAMBLE, MODES, TEXT_MAX,
+    F_TEXT, F_FIRST, F_LAST, F_ACK_REQ, F_IS_ACK,
+    toneHz, crc16, convEncode, viterbi, interleave, pack, unpack, txBuild,
+    Rx, textPacket, isText, TextRx, formatMsg, renderPacket,
+  };
+})();
+if (typeof module !== "undefined" && module.exports) module.exports = AMCore;
+/* ===== AMCORE END ===== */
+/* ===== COMMON JS START (keep identical in sender.html and receiver.html) ===== */
+const AM = {
+  PRE: [0, 14, 6, 22, 9, 17, 4, 21, 5, 11],
+  NTONES: 24, F_TEXT: 0x2, F_FIRST: 0x8, F_LAST: 0x1, TEXT_MAX: 64, GAP_S: 0.40,
+  toneHz: (k) => 3000 + 250 * k,
+  /* default timing of each medium (the board's INFO line always wins) */
+  MODES: {
+    air: { slot_ms: 40, pkt_ms: 2560, duty: 0.75, burst_s: 10.0, label: "AIR", what: "room: speaker → microphone" },
+    water: { slot_ms: 20, pkt_ms: 1280, duty: 0.50, burst_s: 6.0, label: "WATER", what: "pool: speaker box → hydrophone" },
+  },
+};
+/* Timing from the board's INFO line. Before INFO arrives the mode is unknown and
+   AIR timing is assumed (assumed = true). */
+function linkParams(info) {
+  const mode = info && AM.MODES[info.mode] ? info.mode : null;
+  const d = AM.MODES[mode || "air"];
+  const num = (k) => (info && info[k] !== undefined && !isNaN(parseFloat(info[k])) ? parseFloat(info[k]) : d[k]);
+  return { mode, assumed: !info, slot: num("slot_ms"), pkt: num("pkt_ms"), duty: num("duty"), burst: num("burst_s"), gap: AM.GAP_S };
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const $ = (id) => document.getElementById(id);
+const hex2 = (b) => (b & 255).toString(16).toUpperCase().padStart(2, "0");
+const bin8 = (b) => (b & 255).toString(2).padStart(8, "0");
+const utf8 = (s) => new TextEncoder().encode(s);
+function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function crc16(bytes) {            /* CRC-16/CCITT-FALSE, same as am_crc16() */
+  let c = 0xFFFF;
+  for (const b of bytes) {
+    c ^= (b & 255) << 8;
+    for (let i = 0; i < 8; i++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
+  }
+  return c;
+}
+function amFrame(dst, src, seq, flags, b0, b1) {
+  const f = [((dst & 15) << 4) | (src & 15), ((seq & 15) << 4) | (flags & 15), b0 & 255, b1 & 255];
+  const c = crc16(f);
+  return f.concat([c >> 8, c & 255]);
+}
+function parity7(v) { v ^= v >> 4; v ^= v >> 2; v ^= v >> 1; return v & 1; }
+/* Same as am_tx_build(): frame -> K=7 conv code -> interleave -> 64 tone indexes */
+function amTones(frame) {
+  const info = [];
+  for (const b of frame) for (let i = 7; i >= 0; i--) info.push((b >> i) & 1);
+  for (let i = 0; i < 6; i++) info.push(0);
+  const coded = [];
+  let st = 0;
+  for (const bit of info) {
+    const reg = (bit << 6) | st;
+    coded.push(parity7(reg & 0x79), parity7(reg & 0x5B));
+    st = reg >> 1;
+  }
+  const stream = new Array(108).fill(0);
+  coded.forEach((v, c) => { stream[2 * ((37 * c) % 54) + (c >= 54 ? 1 : 0)] = v; });
+  const t = AM.PRE.slice();
+  for (let k = 0; k < 54; k++) t.push((k % 6) + 6 * ((stream[2 * k] << 1) | stream[2 * k + 1]));
+  return t;
+}
+/* Cut a message into text packets exactly like the firmware does. */
+function textPackets(bytes, dst, src, seq0) {
+  const n = Math.ceil(bytes.length / 2), out = [];
+  for (let i = 0; i < n; i++) {
+    const has1 = 2 * i + 1 < bytes.length;
+    const b0 = bytes[2 * i], b1 = has1 ? bytes[2 * i + 1] : 0;
+    const flags = AM.F_TEXT | (i === 0 ? AM.F_FIRST : 0) | (i === n - 1 ? AM.F_LAST : 0);
+    const seq = (seq0 + i) & 15;
+    const frame = amFrame(dst, src, seq, flags, b0, b1);
+    out.push({ i: i + 1, seq, flags, b0, b1, nb: has1 ? 2 : 1, frame, crc: (frame[4] << 8) | frame[5], idx0: 2 * i });
+  }
+  return out;
+}
+function flagNames(f) {
+  const n = [];
+  if (f & AM.F_TEXT) n.push("TEXT");
+  if (f & AM.F_FIRST) n.push("FIRST");
+  if (f & AM.F_LAST) n.push("LAST");
+  return n.join("+") || "-";
+}
+/* Leaky-bucket heat guard (MAX_TX_DUTY, TX_BURST_S) + gap between packets. */
+function heatPlan(nSends, pktS, duty, burstS, gapS) {
+  const B = burstS * (1 - duty);
+  let heat = 0, total = 0, rest = 0;
+  for (let k = 0; k < nSends; k++) {
+    if (k > 0) { total += gapS; heat = Math.max(0, heat - gapS * duty); }
+    const need = heat + pktS * (1 - duty) - B;
+    if (need > 0) { const w = need / duty; rest += w; total += w; heat -= w * duty; }
+    heat += pktS * (1 - duty);
+    total += pktS;
+  }
+  return { total, rest };
+}
+function hexToBytes(h) {          /* "48__6C" -> [0x48, null, 0x6C] */
+  const out = [];
+  for (let i = 0; i + 1 < h.length; i += 2) {
+    const p = h.substr(i, 2);
+    out.push(p === "__" ? null : parseInt(p, 16));
+  }
+  return out;
+}
+/* Split a board line into kind + key=value fields. "text=" runs to end of line. */
+function parseLine(raw) {
+  const line = raw.replace(/\s+$/, "");
+  const m = { raw: line, kind: "", f: {}, text: null, rest: "" };
+  if (!line) return m;
+  if (line.startsWith("RX (not for me)")) { m.kind = "RXOTHER"; }
+  let body = line;
+  const ti = line.indexOf(" text=");
+  if (ti >= 0) { m.text = line.slice(ti + 6); body = line.slice(0, ti); }
+  const sp = body.indexOf(" ");
+  if (!m.kind) m.kind = sp < 0 ? body : body.slice(0, sp);
+  m.rest = sp < 0 ? "" : body.slice(sp + 1);
+  for (const tok of m.rest.split(/\s+/)) {
+    const eq = tok.indexOf("=");
+    if (eq > 0 && /^[a-z_]+$/.test(tok.slice(0, eq))) m.f[tok.slice(0, eq)] = tok.slice(eq + 1);
+  }
+  if (m.kind === "HEAT-GUARD") { const w = /wait\s+(\d+)\s*ms/.exec(line); m.f.ms = w ? w[1] : "0"; }
+  if (m.kind === "SCOPE") m.vals = m.rest.split(/\s+/).filter((t) => /^-?\d+(\.\d+)?$/.test(t)).map(Number).slice(0, 24);
+  return m;
+}
+const STATUS_KINDS = new Set(["SCOPE", "STATS", "ADC", "LEVEL"]);
+const qBand = (q) => (q >= 10 ? "good" : q >= 7 ? "warn" : "bad");
+const qWord = (q) => (q >= 10 ? "good" : q >= 7 ? "OK" : "weak");
+
+/* ---------- Real board over Web Serial ---------- */
+class SerialLink {
+  constructor(onLine, onClose) {
+    this.onLine = onLine; this.onClose = onClose; this.isDemo = false;
+    this.port = null; this.buf = ""; this.alive = false; this.wq = Promise.resolve();
+  }
+  async connect() {
+    const port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+    this.port = port; this.alive = true;
+    this.writer = port.writable.getWriter();
+    this.enc = new TextEncoder();
+    this._onDisc = () => this._lost("The board was unplugged.");
+    if (port.addEventListener) port.addEventListener("disconnect", this._onDisc);
+    this._readLoop();
+  }
+  async _readLoop() {
+    const port = this.port;
+    while (this.alive && port.readable) {
+      const dec = new TextDecoderStream();
+      this.pipe = port.readable.pipeTo(dec.writable).catch(() => {});
+      this.reader = dec.readable.getReader();
+      try {
+        for (;;) {
+          const { value, done } = await this.reader.read();
+          if (done) break;
+          if (value) this._feed(value);
+        }
+      } catch (e) {
+        if (this.alive && !port.readable) { this._lost("Lost the board (" + (e && e.message ? e.message : e) + ")."); return; }
+      } finally {
+        try { this.reader.releaseLock(); } catch (_) { /* already released */ }
+      }
+      await this.pipe;
+    }
+    if (this.alive) this._lost("The board stopped answering.");
+  }
+  _feed(chunk) {
+    this.buf += chunk;
+    let i;
+    while ((i = this.buf.indexOf("\n")) >= 0) {
+      const line = this.buf.slice(0, i).replace(/\r/g, "");
+      this.buf = this.buf.slice(i + 1);
+      this.onLine(line);
+    }
+    if (this.buf.length > 8192) { this.onLine(this.buf); this.buf = ""; }
+  }
+  send(line) {
+    if (!this.alive) return Promise.resolve();
+    const data = this.enc.encode(line + "\n");
+    this.wq = this.wq.then(() => this.writer.write(data)).catch((e) => {
+      if (this.alive) this._lost("Could not write to the board (" + (e && e.message ? e.message : e) + ").");
+    });
+    return this.wq;
+  }
+  async reset() {             /* esptool-style: EN low pulse while IO0 stays high */
+    if (!this.port) return;
+    await this.port.setSignals({ dataTerminalReady: false, requestToSend: true });
+    await sleep(100);
+    await this.port.setSignals({ requestToSend: false });
+  }
+  async _cleanup() {
+    this.alive = false;
+    const port = this.port;
+    if (port && port.removeEventListener) port.removeEventListener("disconnect", this._onDisc);
+    try { if (this.reader) await this.reader.cancel(); } catch (_) { /* ignore */ }
+    try { if (this.pipe) await this.pipe; } catch (_) { /* ignore */ }
+    try { if (this.writer) this.writer.releaseLock(); } catch (_) { /* ignore */ }
+    try { if (port) await port.close(); } catch (_) { /* ignore */ }
+    this.port = null;
+  }
+  async disconnect() { await this._cleanup(); }
+  _lost(reason) {
+    if (!this.alive) return;
+    this._cleanup().then(() => this.onClose(reason));
+  }
+}
+
+/* ---------- Pretend board for Demo mode (speaks the same protocol) ---------- */
+const DEMO_HEARD = ["Hello from ROV 1", "LED on please", "ডুবুরি", "Depth 2.5 m, all OK", "আমি শুনছি", "Testing 1 2 3", "Turn left", "SOS"];
+class FakeBoard {
+  constructor(opts) {
+    this.node = opts.node; this.peer = opts.peer; this.autoHear = !!opts.autoHear;
+    this.emit = null; this.seq = 5; this.rxSeq = 9; this.mode = opts.mode || "air";
+    this.heat = 0; this.heatT = 0; this.busy = false; this.abort = false;
+    this.scopeTimer = null; this.hearing = false;
+    this.st = { pre: 0, ok: 0, crc: 0, q: 0 };
+  }
+  speed() { return window.__demoSpeed || 1; }
+  wait(ms) { return new Promise((r) => setTimeout(r, ms / this.speed())); }
+  now() { return performance.now() / 1000 * this.speed(); }
+  out(line) { if (this.emit) this.emit(line); }
+  start(emit) {
+    this.emit = emit; this.heatT = this.now();
+    this.boot();
+    if (this.autoHear) this.hearLoop();
+  }
+  stop() { this.emit = null; this.abort = true; clearInterval(this.scopeTimer); this.scopeTimer = null; }
+  P() { return AM.MODES[this.mode]; }
+  info() { const p = this.P(); return `INFO node=${this.node} peer=${this.peer} fw=2.0 mode=${this.mode} text_max=64 slot_ms=${p.slot_ms} pkt_ms=${p.pkt_ms} duty=${p.duty.toFixed(2)} burst_s=${p.burst_s.toFixed(1)}`; }
+  boot() {
+    this.out(`DUBURI modem node ${this.node} ready (${this.mode} mode). Tones 3000..8750 Hz, packet ${(this.P().pkt_ms / 1000).toFixed(2)} s`);
+    this.out("Commands: on|off|toggle|ping [id] ; send <cmd> <arg> [id] ; msg <text> ; sweep ; tone <Hz> <ms> ; scope ; stats ; info ; help");
+    this.out(this.info());
+  }
+  handle(line) {
+    if (!this.emit) return;
+    if (this.busy) { if (line.includes("!")) this.abort = true; return; }
+    const w = line.trim().split(/\s+/);
+    const c = (w[0] || "").toLowerCase();
+    if (c === "info") this.out(this.info());
+    else if (c === "mode") {
+      const m = (w[1] || "").toLowerCase();
+      if (m !== "air" && m !== "water") { this.out(`ERR usage: mode air|water (now ${this.mode})`); return; }
+      if (this.hearing) this.out("ERR busy receiving, try again");
+      else { this.mode = m; this.out(`MODE ${m} saved`); }
+      this.out(this.info());
+    } else if (c === "msghex") {
+      const dst = +w[1], rep = +w[2], h = w[3] || "";
+      if (!(dst >= 1 && dst <= 15) || !(rep >= 1 && rep <= 3) || !/^([0-9a-fA-F]{2})+$/.test(h)) { this.out("ERR usage: msghex <dst 1..15> <repeats 1..3> <hex>"); return; }
+      const bytes = hexToBytes(h);
+      if (bytes.length > 64) { this.out("ERR too long (max 64 bytes)"); return; }
+      if (bytes.includes(0)) { this.out("ERR byte 00 is not allowed"); return; }
+      this.sendText(dst, rep, bytes);
+    } else if (c === "msg") {
+      const t = line.replace(/^\s*msg\s?/, "");
+      const bytes = Array.from(utf8(t));
+      if (!bytes.length) { this.out("ERR empty message"); return; }
+      if (bytes.length > 64) { this.out("ERR too long (max 64 bytes)"); return; }
+      this.sendText(this.peer, 1, bytes);
+    } else if (c === "scope") {
+      const on = w[1] === "on" ? true : w[1] === "off" ? false : !this.scopeTimer;
+      clearInterval(this.scopeTimer); this.scopeTimer = null;
+      if (on) this.scopeTimer = setInterval(() => this.scopeLine(), 250 / this.speed());
+    } else if (c === "stats") {
+      const s = this.st, loud = this.hearing;
+      this.out(`STATS node=${this.node} preambles=${s.pre} ok=${s.ok} crc_fail=${s.crc} last_q=${s.q.toFixed(1)}dB timing_adj=0.4`);
+      this.out("ADC fs_measured=50612.3 fs_used=50612.0 overflows=0 clipped=0");
+      const rms = loud ? 140 + Math.random() * 40 : 35 + Math.random() * 10;
+      this.out(`LEVEL mean=1652 rms=${rms.toFixed(1)} min=${Math.round(1652 - rms * 3)} max=${Math.round(1652 + rms * 3)} (want rms 20..300, min>100, max<3900)`);
+    } else if (c === "tone") {
+      const hz = +w[1], ms = +w[2];
+      if (!(hz >= 100 && hz <= 20000 && ms >= 1 && ms <= 5000)) { this.out("usage: tone <100..20000 Hz> <1..5000 ms>"); return; }
+      this.out(`TONE ${hz} Hz (real ${hz} Hz) for ${ms} ms`);
+    } else if (c === "sweep") {
+      this.out("SWEEP: each tone 300 ms. Watch 'scope' on the other vehicle.");
+      (async () => { this.busy = true; for (let i = 0; i < 24 && this.emit && !this.abort; i++) { this.out(`SWEEP tone ${i} = ${AM.toneHz(i)} Hz`); await this.wait(450); } this.busy = false; this.abort = false; })();
+    } else if (["on", "off", "toggle", "ping"].includes(c)) {
+      const id = w[1] ? +w[1] : this.peer;
+      (async () => { this.busy = true; for (let t = 1; t <= 3 && this.emit; t++) { this.out(`TX to=${id} seq=${this.seq} cmd=1 arg=0 (try ${t}/3)`); await this.wait(1500); this.out("   no reply"); } this.out(`FAIL no reply from ${id}`); this.busy = false; })();
+    } else this.out("Commands: on|off|toggle|ping [id] ; send <cmd> <arg> [id] ; msg <text> ; sweep ; tone <Hz> <ms> ; scope ; stats ; info ; help");
+  }
+  scopeLine() {
+    const v = [];
+    for (let i = 0; i < 24; i++) v.push(Math.round(Math.random() * 4 - 1));
+    if (this.hearing) { const k = Math.floor(Math.random() * 24); v[k] = 14 + Math.round(Math.random() * 10); }
+    this.out(`SCOPE ${v.join(" ")}  rms=${this.hearing ? 150 : 38}`);
+  }
+  async heatGuard(T) {
+    const d = this.P().duty, B = this.P().burst_s * (1 - d), t = this.now();
+    this.heat = Math.max(0, this.heat - (t - this.heatT) * d); this.heatT = t;
+    const need = this.heat + T * (1 - d) - B;
+    if (need > 0) {
+      const ms = Math.round(need / d * 1000);
+      this.out(`HEAT-GUARD wait ${ms} ms`);
+      await this.wait(ms);
+      this.heat = Math.max(0, this.heat - need);
+    }
+  }
+  heatAdd(T) { this.heat += T * (1 - this.P().duty); this.heatT = this.now(); }
+  async sendText(dst, rep, bytes) {
+    this.busy = true; this.abort = false;
+    const pk = textPackets(bytes, dst, this.node, this.seq);
+    const t0 = this.now();
+    this.out(`TXMSG dst=${dst} len=${bytes.length} n=${pk.length} rep=${rep}`);
+    for (const p of pk) {
+      for (let tr = 1; tr <= rep; tr++) {
+        if (this.abort || !this.emit) { this.out(`TXABORT i=${p.i} n=${pk.length}`); this.busy = false; this.abort = false; return; }
+        const T = this.P().pkt_ms / 1000;
+        await this.heatGuard(T);
+        const data = hex2(p.b0) + (p.nb === 2 ? hex2(p.b1) : "");
+        this.out(`TXPKT i=${p.i} n=${pk.length} try=${tr} seq=${p.seq} flags=${(p.flags).toString(16).toUpperCase()} data=${data} tones=${amTones(p.frame).join(",")}`);
+        await this.wait(T * 1000);
+        this.heatAdd(T);
+        if (!(p.i === pk.length && tr === rep)) await this.wait(AM.GAP_S * 1000);
+      }
+    }
+    this.seq = (this.seq + pk.length) & 15;
+    this.out(`TXDONE n=${pk.length} ms=${Math.round((this.now() - t0) * 1000)}`);
+    this.busy = false;
+  }
+  async hearLoop() {
+    await this.wait(2500);
+    while (this.emit) {
+      if (this.busy) { await this.wait(1000); continue; }
+      const text = DEMO_HEARD[Math.floor(Math.random() * DEMO_HEARD.length)];
+      const bytes = Array.from(utf8(text));
+      const pk = textPackets(bytes, this.node, this.peer, this.rxSeq);
+      this.rxSeq = (this.rxSeq + pk.length) & 15;
+      const got = [], qs = [];
+      const rep = Math.random() < 0.3 ? 2 : 1;               /* sometimes the sender repeats each packet */
+      let lost = 0, heat = 0;
+      for (const p of pk) {
+        let have = false;
+        for (let tr = 1; tr <= rep; tr++) {
+          if (!this.emit) return;
+          const P = this.P(), T = P.pkt_ms / 1000;
+          this.hearing = true;
+          await this.wait(10 * P.slot_ms);
+          this.st.pre++; this.out(`DET n=${this.st.pre}`);
+          await this.wait(54 * P.slot_ms);
+          this.hearing = false;
+          const middle = p.i > 1 && p.i < pk.length;
+          if (middle && Math.random() < (rep > 1 ? 0.3 : 0.12)) {
+            this.st.crc++; this.out(`CRCFAIL n=${this.st.crc}`);
+          } else if (have) {
+            this.st.ok++; this.out(`REPEAT src=${this.peer} seq=${p.seq} (dropped)`);
+          } else {
+            const q = Math.max(4, 12 + (Math.random() + Math.random() + Math.random() - 1.5) * 5);
+            this.st.ok++; this.st.q = q; qs.push(q); have = true;
+            const data = hex2(p.b0) + (p.nb === 2 ? hex2(p.b1) : "");
+            this.out(`TXT src=${this.peer} dst=${this.node} seq=${p.seq} first=${p.i === 1 ? 1 : 0} last=${p.i === pk.length ? 1 : 0} data=${data} q=${q.toFixed(1)}`);
+            got.push(p.b0); if (p.nb === 2) got.push(p.b1);
+          }
+          heat = Math.max(0, heat - AM.GAP_S * P.duty) + T * (1 - P.duty);
+          const lim = (P.burst_s - T) * (1 - P.duty);
+          const rest = heat > lim ? (heat - lim) / P.duty : 0;
+          heat -= rest * P.duty;
+          await this.wait((AM.GAP_S + rest) * 1000);
+        }
+        if (!have) { lost++; got.push(null, null); }
+      }
+      const hex = got.map((b) => (b === null ? "__" : hex2(b))).join("");
+      const human = got.map((b) => (b === null ? 63 : b < 32 ? 46 : b));
+      const txt = new TextDecoder().decode(new Uint8Array(human));
+      const qa = qs.length ? qs.reduce((a, b) => a + b, 0) / qs.length : 0;
+      this.out(`MSG src=${this.peer} dst=${this.node} ok=${lost ? 0 : 1} lost=${lost} len=${got.length} q=${qa.toFixed(1)} hex=${hex} text=${txt}`);
+      await this.wait(5000 + Math.random() * 4000);
+    }
+  }
+}
+class DemoLink {
+  constructor(onLine, onClose, opts) { this.onLine = onLine; this.onClose = onClose; this.isDemo = true; this.board = new FakeBoard(opts); }
+  async connect() { this.board.start((l) => setTimeout(() => this.onLine(l), 0)); }
+  send(line) { setTimeout(() => this.board.handle(line), 5); return Promise.resolve(); }
+  async reset() { const b = this.board; b.stop(); await sleep(300); this.board = new FakeBoard({ node: b.node, peer: b.peer, autoHear: b.autoHear, mode: b.mode }); this.board.start((l) => setTimeout(() => this.onLine(l), 0)); }
+  async disconnect() { this.board.stop(); }
+}
+
+/* ---------- This computer's speaker + microphone instead of a board ----------
+   Runs the same modem as the ESP32 (AMCore, a port of am_core.c / am_text.c)
+   inside the page and speaks the same serial protocol, so the rest of the page
+   cannot tell the difference. Sender: tones go out of the speaker. Receiver:
+   the microphone is decoded. Works between two computers, between two windows
+   on one computer, and with a real ESP32 board on the other side. */
+class AudioBoard {
+  constructor(opts) {
+    this.node = opts.node; this.peer = opts.peer; this.mic = !!opts.mic; this.mode = opts.mode || "air";
+    this.emit = null; this.seq = Math.floor(Math.random() * 16); this.scopeOn = false;
+    this.tx = null; this.sent = []; this.timers = new Set();
+    this.lv = { n: 0, s: 0, s2: 0, mn: 4095, mx: 0, out: { mean: 0, rms: 0, min: 0, max: 0 } };
+    this.ev = { pre: 0, crc: 0 }; this.amp = 0.5;
+  }
+  async start(emit) {
+    this.emit = emit;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) throw new Error("this browser has no Web Audio");
+    this.ctx = new AC();
+    try { if (this.ctx.state === "suspended") await this.ctx.resume(); } catch (_) { /* resumes on next click */ }
+    this.fs = this.ctx.sampleRate;
+    if (this.mic) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("no microphone access in this browser");
+      /* The browser's echo cancelling / noise removal / auto gain would eat our tones. */
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+      this.src = this.ctx.createMediaStreamSource(this.stream);
+      this.proc = this.ctx.createScriptProcessor(2048, 1, 1);
+      this.sink = this.ctx.createGain(); this.sink.gain.value = 0;
+      this.src.connect(this.proc); this.proc.connect(this.sink); this.sink.connect(this.ctx.destination);
+      this.rx = new AMCore.Rx(this.fs, this.mode); this.trx = new AMCore.TextRx();
+      this.proc.onaudioprocess = (e) => this._audio(e.inputBuffer.getChannelData(0));
+      this.pollT = setInterval(() => { const m = this.trx.poll(performance.now()); if (m) this.emit(AMCore.formatMsg(m)); }, 250);
+      const tr = this.stream.getAudioTracks()[0];
+      this.micName = tr ? tr.label : "";
+    }
+    this.scopeT = setInterval(() => { if (this.scopeOn && this.rx) this._scope(); }, 250);
+    this.emit(`DUBURI laptop modem node ${this.node} ready. Mode ${this.mode}, ${this.fs} Hz${this.mic ? ", microphone: " + (this.micName || "default") : ", speaker only"}`);
+    this.info();
+  }
+  stop() {
+    this._abortTx(true);
+    clearInterval(this.pollT); clearInterval(this.scopeT);
+    for (const t of this.timers) clearTimeout(t);
+    this.timers.clear();
+    if (this.proc) this.proc.onaudioprocess = null;
+    if (this.stream) this.stream.getTracks().forEach((t) => t.stop());
+    if (this.ctx) this.ctx.close().catch(() => {});
+  }
+  _later(ms, fn) { const t = setTimeout(() => { this.timers.delete(t); fn(); }, Math.max(0, ms)); this.timers.add(t); return t; }
+  info() {
+    const m = AMCore.MODES[this.mode];
+    this.emit(`INFO node=${this.node} peer=${this.peer} fw=laptop mode=${this.mode} text_max=${AMCore.TEXT_MAX} slot_ms=${Math.round(m.slot * 1000)} pkt_ms=${Math.round(m.slot * 64000)} duty=1.00 burst_s=999.0 fs=${this.fs}`);
+  }
+  /* ---- receiving ---- */
+  _audio(f) {
+    if (!this.buf || this.buf.length !== f.length) this.buf = new Float32Array(f.length);
+    const x = this.buf, L = this.lv;
+    for (let i = 0; i < f.length; i++) {
+      const v = 2048 + 2047 * f[i];                 /* same units as the ESP32 ADC */
+      x[i] = v; L.n++; L.s += v; L.s2 += v * v;
+      if (v < L.mn) L.mn = v;
+      if (v > L.mx) L.mx = v;
+    }
+    if (L.n >= this.fs / 2) {
+      const mean = L.s / L.n;
+      L.out = { mean, rms: Math.sqrt(Math.max(0, L.s2 / L.n - mean * mean)), min: L.mn, max: L.mx };
+      L.n = 0; L.s = 0; L.s2 = 0; L.mn = 4095; L.mx = 0;
+    }
+    this.rx.process(x);
+    const st = this.rx.stats;
+    if (st.preambles !== this.ev.pre) { this.ev.pre = st.preambles; this.emit(`DET n=${st.preambles}`); }
+    if (st.crc_fail !== this.ev.crc) { this.ev.crc = st.crc_fail; this.emit(`CRCFAIL n=${st.crc_fail}`); }
+    let r;
+    while ((r = this.rx.pop())) this._packet(r);
+  }
+  _packet(r) {
+    const p = r.pkt, q = r.q_db.toFixed(1);
+    if (p.dst !== this.node && p.dst !== 15) { this.emit(`RX (not for me) src=${p.src} dst=${p.dst} q=${q}dB`); return; }
+    if (AMCore.isText(p)) {
+      const out = this.trx.feed(p, r.q_db, performance.now());
+      if (out === -1) { this.emit(`REPEAT src=${p.src} seq=${p.seq} (dropped)`); return; }
+      const first = !!(p.flags & AMCore.F_FIRST), last = !!(p.flags & AMCore.F_LAST);
+      const before = first && (out.length === 2 || (out.length === 1 && !last)) ? 1 : 0;
+      for (let i = 0; i < before; i++) this.emit(AMCore.formatMsg(out[i]));
+      const data = hex2(p.cmd) + (last && p.arg === 0 ? "" : hex2(p.arg));
+      this.emit(`TXT src=${p.src} dst=${p.dst} seq=${p.seq} first=${first ? 1 : 0} last=${last ? 1 : 0} data=${data} q=${q}`);
+      for (let i = before; i < out.length; i++) this.emit(AMCore.formatMsg(out[i]));
+    } else if (p.flags & AMCore.F_IS_ACK) {
+      this.emit(`ACK src=${p.src} seq=${p.seq} cmd=${p.cmd} state=${p.arg} q=${q}dB`);
+    } else {
+      this.emit(`RX src=${p.src} dst=${p.dst} seq=${p.seq} cmd=${p.cmd} arg=${p.arg} flags=${p.flags.toString(16).toUpperCase()} q=${q}dB`);
+    }
+  }
+  _scope() { this.emit("SCOPE " + Array.from(this.rx.scope, (v) => Math.round(v)).join(" ") + "  rms=" + Math.round(this.lv.out.rms)); }
+  _stats() {
+    const s = this.rx ? this.rx.stats : { preambles: 0, packets_ok: 0, crc_fail: 0, clipped: 0, last_q_db: 0, last_timing_adj: 0 };
+    const o = this.lv.out;
+    this.emit(`STATS node=${this.node} preambles=${s.preambles} ok=${s.packets_ok} crc_fail=${s.crc_fail} last_q=${s.last_q_db.toFixed(1)}dB timing_adj=${s.last_timing_adj.toFixed(1)}`);
+    this.emit(`ADC fs_measured=${this.fs.toFixed(1)} fs_used=${this.fs.toFixed(1)} overflows=0 clipped=${s.clipped}`);
+    if (this.rx) this.emit(`LEVEL mean=${o.mean.toFixed(0)} rms=${o.rms.toFixed(1)} min=${Math.round(o.min)} max=${Math.round(o.max)} (want rms 20..300, min>100, max<3900)`);
+  }
+  /* ---- sending ---- */
+  _play(samples, at) {
+    const b = this.ctx.createBuffer(1, samples.length, this.fs);
+    b.copyToChannel(samples, 0);
+    const n = this.ctx.createBufferSource();
+    n.buffer = b; n.connect(this.ctx.destination); n.start(at);
+    return n;
+  }
+  _sendText(dst, rep, bytes) {
+    if (this.tx) return;
+    if (bytes.length < 1 || bytes.length > AMCore.TEXT_MAX) { this.emit(`ERR message must be 1..${AMCore.TEXT_MAX} bytes (got ${bytes.length})`); return; }
+    if (bytes.some((b) => b === 0)) { this.emit("ERR message may not contain byte 00"); return; }
+    if (!(dst >= 1 && dst <= 15)) { this.emit("ERR destination must be 1..15 (15 = all)"); return; }
+    if (!(rep >= 1 && rep <= 3)) { this.emit("ERR repeats must be 1..3"); return; }
+    if (this.ctx.state === "suspended") this.ctx.resume();
+    const slot = AMCore.MODES[this.mode].slot, pkt = 64 * slot, gap = 0.4;
+    const n = Math.ceil(bytes.length / 2), seq0 = this.seq, t0 = performance.now();
+    this.tx = { nodes: [], i: 0, n };
+    this.sent = [];
+    this.emit(`TXMSG dst=${dst} len=${bytes.length} n=${n} rep=${rep}`);
+    let at = this.ctx.currentTime + 0.25;
+    for (let i = 0; i < n; i++) {
+      const p = AMCore.textPacket(bytes, i, dst, this.node, seq0);
+      const tones = AMCore.txBuild(p), audio = AMCore.renderPacket(tones, this.fs, slot, this.amp);
+      this.sent.push(audio);
+      const data = hex2(p.cmd) + ((p.flags & AMCore.F_LAST) && p.arg === 0 ? "" : hex2(p.arg));
+      for (let k = 1; k <= rep; k++) {
+        this.tx.nodes.push(this._play(audio, at));
+        const line = `TXPKT i=${i + 1} n=${n} try=${k} seq=${p.seq} flags=${p.flags.toString(16).toUpperCase()} data=${data} tones=${tones.join(",")}`;
+        this._later((at - this.ctx.currentTime) * 1000 - 15, () => { if (this.tx) { this.tx.i = i + 1; this.emit(line); } });
+        at += pkt + (i < n - 1 || k < rep ? gap : 0);
+      }
+    }
+    this.seq = (seq0 + n) & 15;
+    this._later((at - this.ctx.currentTime) * 1000 + 30, () => {
+      if (!this.tx) return;
+      this.tx = null;
+      this.emit(`TXDONE n=${n} ms=${Math.round(performance.now() - t0)}`);
+    });
+  }
+  _abortTx(quiet) {
+    if (!this.tx) return;
+    for (const nd of this.tx.nodes) { try { nd.stop(); } catch (_) { /* not started */ } }
+    if (!quiet) this.emit(`TXABORT i=${Math.max(1, this.tx.i)} n=${this.tx.n}`);
+    this.tx = null;
+  }
+  _tone(hz, ms) {
+    const fs = this.fs, n = Math.round(fs * ms / 1000), a = new Float32Array(n), fade = Math.round(0.005 * fs);
+    for (let i = 0; i < n; i++) a[i] = this.amp * Math.sin(2 * Math.PI * hz * i / fs) * Math.min(1, i / fade, (n - i) / fade);
+    return a;
+  }
+  handle(line) {
+    line = line.trim();
+    if (line === "!") { this._abortTx(false); return; }
+    if (this.tx) return;                            /* like the board: busy while sending */
+    if (line.startsWith("msg ")) { this._sendText(this.peer, 1, Array.from(new TextEncoder().encode(line.slice(4)))); return; }
+    const w = line.split(/\s+/), cmd = w[0];
+    if (cmd === "info") this.info();
+    else if (cmd === "msghex") {
+      const h = w[3] || "";
+      if (w.length < 4 || h.length % 2 || /[^0-9a-fA-F]/.test(h) || h.length > 2 * AMCore.TEXT_MAX) { this.emit(`ERR usage: msghex <dst> <repeats> <hex, up to ${AMCore.TEXT_MAX} bytes>`); return; }
+      const bytes = [];
+      for (let i = 0; i < h.length; i += 2) bytes.push(parseInt(h.substr(i, 2), 16));
+      this._sendText(parseInt(w[1], 10), parseInt(w[2], 10), bytes);
+    } else if (cmd === "mode") {
+      if (!AMCore.MODES[w[1]]) this.emit(`ERR usage: mode air|water (now ${this.mode})`);
+      else if (this.rx && !this.rx.setMode(w[1])) this.emit("ERR busy receiving, try again");
+      else this.mode = w[1];
+      this.info();
+    } else if (cmd === "scope") this.scopeOn = w[1] ? w[1] === "on" : !this.scopeOn;
+    else if (cmd === "stats") this._stats();
+    else if (cmd === "tone" && w.length >= 3) {
+      const hz = +w[1], ms = +w[2];
+      if (!(hz >= 100 && hz <= 20000 && ms >= 1 && ms <= 5000)) { this.emit("ERR usage: tone <100..20000 Hz> <1..5000 ms>"); return; }
+      if (this.ctx.state === "suspended") this.ctx.resume();
+      this._play(this._tone(hz, ms), this.ctx.currentTime + 0.05);
+      this.emit(`TONE ${hz} Hz (real ${hz} Hz) for ${ms} ms`);
+    } else if (cmd === "sweep") {
+      this.emit("SWEEP: each tone ~300 ms. Watch 'scope' on the other side.");
+      let at = this.ctx.currentTime + 0.1;
+      for (let k = 0; k < AMCore.NTONES; k++) {
+        this._play(this._tone(AMCore.toneHz(k), 300), at);
+        const kk = k;
+        this._later((at - this.ctx.currentTime) * 1000, () => this.emit(`SWEEP tone ${kk} = ${AMCore.toneHz(kk)} Hz`));
+        at += 0.45;
+      }
+    } else if (["on", "off", "toggle", "ping", "send"].includes(cmd)) {
+      this.emit("ERR LED commands need two ESP32 boards (they wait for a reply). Send a text message instead.");
+    } else {
+      this.emit("Commands: msg <text> ; msghex <dst> <rep> <hex> ; ! ; mode air|water ; info ; tone <Hz> <ms> ; sweep ; scope [on|off] ; stats");
+    }
+  }
+}
+class AudioLink {
+  constructor(onLine, onClose, opts) { this.onLine = onLine; this.onClose = onClose; this.isDemo = false; this.isAudio = true; this.board = new AudioBoard(opts); }
+  async connect() { await this.board.start((l) => setTimeout(() => this.onLine(l), 0)); }
+  send(line) { setTimeout(() => this.board.handle(line), 0); return Promise.resolve(); }
+  async reset() { this.board.info(); }
+  async disconnect() { this.board.stop(); }
+}
+
+/* ---------- Log panel ---------- */
+class LogPanel {
+  constructor() {
+    this.box = $("logBox"); this.count = 0; this.max = 600;
+    $("logClear").onclick = () => { this.box.textContent = ""; this.count = 0; this._n(); };
+  }
+  _n() { $("logCount").textContent = this.count + (this.count === 1 ? " line" : " lines"); }
+  add(text, cls) {
+    const isStatus = cls === "s";
+    if (isStatus && !$("logStatus").checked) return;
+    const d = document.createElement("div");
+    if (cls) d.className = cls;
+    const t = new Date();
+    d.innerHTML = `<span class="t">${t.toTimeString().slice(0, 8)}</span>` + esc(text);
+    this.box.appendChild(d);
+    this.count++;
+    while (this.box.childNodes.length > this.max) this.box.removeChild(this.box.firstChild);
+    if ($("logScroll").checked) this.box.scrollTop = this.box.scrollHeight;
+    this._n();
+  }
+}
+
+/* ---------- Connection controller (header buttons, banners, link) ---------- */
+class Conn {
+  constructor({ demoOpts, audioOpts, onLine, onState, errBanner }) {
+    this.demoOpts = demoOpts; this.audioOpts = audioOpts || demoOpts; this.onLineCb = onLine; this.onState = onState; this.errBanner = !!errBanner;
+    this.link = null; this.state = "off"; this.node = null; this.log = new LogPanel();
+    this.mode = null; this.info = null; this.pendingMode = null; this.busy = false; this.errT = null;
+    for (const b of document.querySelectorAll(".segbtn")) b.onclick = () => this.askMode(b.dataset.mode);
+    this.hasSerial = "serial" in navigator;
+    $("noSerialBanner").hidden = this.hasSerial;
+    $("btnConnect").onclick = () => this.connectReal();
+    $("btnDisconnect").onclick = () => this.disconnect();
+    $("btnReset").onclick = () => this.reset();
+    $("btnAudio").onclick = () => this.setAudio();
+    $("demoToggle").onchange = (e) => this.setDemo(e.target.checked);
+    $("cmdForm").onsubmit = (e) => { e.preventDefault(); const v = $("cmdInput").value.trim(); if (v) { this.send(v); $("cmdInput").value = ""; } };
+    if (!this.hasSerial) $("btnConnect").disabled = true;
+    this._render(true);
+  }
+  get connected() { return this.state === "on" || this.state === "demo" || this.state === "audio"; }
+  _err(msg) { const b = $("connError"); b.innerHTML = msg; b.hidden = !msg; }
+  _render(skipCallback) {
+    const p = $("connPill");
+    p.className = "pill" + (this.state === "off" ? "" : " " + this.state);
+    p.textContent = this.state === "on" ? "Connected" + (this.node != null ? " · node " + this.node : "")
+      : this.state === "demo" ? "Demo board" + (this.node != null ? " · node " + this.node : "")
+      : this.state === "audio" ? "Computer audio" + (this.node != null ? " · node " + this.node : "")
+      : this.state === "lost" ? "Board disconnected" : "Not connected";
+    $("btnConnect").hidden = this.connected;
+    $("btnAudio").hidden = this.connected;
+    $("btnDisconnect").hidden = this.state !== "on" && this.state !== "audio";
+    $("audioBanner").hidden = this.state !== "audio";
+    $("btnReset").hidden = !this.connected || this.state === "audio";
+    $("demoBanner").hidden = this.state !== "demo";
+    $("demoToggle").checked = this.state === "demo";
+    $("btnConnect").disabled = !this.hasSerial;
+    this._renderMode();
+    if (!skipCallback) this.onState(this.state);
+  }
+  setNode(n) { this.node = n; this._render(); }
+  setBusy(b) { this.busy = b; this._renderMode(); }
+  askMode(m) {
+    if (!this.connected || this.busy || m === this.mode) return;
+    this.pendingMode = m; this._renderMode();
+    this.send("mode " + m);
+    clearTimeout(this.modeT);
+    this.modeT = setTimeout(() => { this.pendingMode = null; this._renderMode(); }, 4000);
+  }
+  _renderMode() {
+    const c = this.connected;
+    for (const b of document.querySelectorAll(".segbtn")) {
+      b.disabled = !c || this.busy;
+      b.classList.toggle("active", c && b.dataset.mode === this.mode);
+      b.classList.toggle("pending", b.dataset.mode === this.pendingMode);
+    }
+    const lp = linkParams(this.info);
+    const d = $("modeDesc");
+    if (!c) d.innerHTML = "Mode unknown · connect the board (or use this computer's audio) to see it.";
+    else if (this.pendingMode) d.innerHTML = `Switching to <b>${AM.MODES[this.pendingMode].label}</b>…`;
+    else if (!this.mode) d.innerHTML = "Mode unknown · waiting for the board's INFO line.";
+    else d.innerHTML = `${this.state === "audio" ? "This computer is" : "Board is"} in <b>${AM.MODES[this.mode].label}</b> mode (${AM.MODES[this.mode].what}) · ${lp.slot} ms per tone · ${(lp.pkt / 1000).toFixed(2)} s per packet`;
+  }
+  _line(line) {
+    const m = parseLine(line);
+    this.log.add(line, m.kind === "ERR" ? "e" : STATUS_KINDS.has(m.kind) ? "s" : "");
+    if (m.kind === "INFO") {
+      this.info = m.f; this.mode = AM.MODES[m.f.mode] ? m.f.mode : null;
+      this.pendingMode = null; clearTimeout(this.modeT);
+      if (m.f.node !== undefined) this.setNode(+m.f.node); else this._renderMode();
+    }
+    if (m.kind === "ERR") {
+      if (this.pendingMode) { this.pendingMode = null; this._renderMode(); }
+      if (this.errBanner) {
+        const b = $("boardErr"); b.textContent = "Board says: " + (m.rest || m.raw); b.hidden = false;
+        clearTimeout(this.errT); this.errT = setTimeout(() => { b.hidden = true; }, 10000);
+      }
+    }
+    this.onLineCb(m);
+  }
+  _closed(reason) {
+    this.link = null; this.node = null; this.info = null; this.mode = null; this.pendingMode = null; this.state = "lost"; this._render();
+    this._err("<b>Board disconnected.</b> " + esc(reason) + " Plug it in again and press <b>Connect board</b>.");
+  }
+  async connectReal() {
+    this._err("");
+    if (this.link) await this.disconnect();
+    const link = new SerialLink((l) => this._line(l), (r) => this._closed(r));
+    try {
+      await link.connect();
+    } catch (e) {
+      if (e && e.name === "NotFoundError") return;           /* user closed the port chooser */
+      this._err("<b>Could not open the board.</b> Close the Arduino IDE Serial Monitor (or any other program using the port) and try again. " +
+        "If the board is not in the list, install the USB driver (CP210x or CH340) and use a data USB cable. <span class=\"mono\">(" + esc(e && e.message ? e.message : e) + ")</span>");
+      return;
+    }
+    this.link = link; this.state = "on"; this._render();
+    this.log.add("connected to USB serial port at 115200 baud", "o");
+    this._askInfo();
+  }
+  async _askInfo() {
+    await sleep(300); this.send("info");
+    await sleep(1700); if (this.connected && this.node == null) this.send("info");
+  }
+  async setDemo(on) {
+    this._err("");
+    if (this.link) await this.disconnect(true);
+    if (!on) { this.state = "off"; this._render(); return; }
+    this.link = new DemoLink((l) => this._line(l), (r) => this._closed(r), this.demoOpts);
+    await this.link.connect();
+    this.state = "demo"; this._render();
+    this.log.add("demo board started (pretend ESP32)", "o");
+  }
+  async setAudio() {
+    this._err("");
+    if (this.link) await this.disconnect(true);
+    const link = new AudioLink((l) => this._line(l), (r) => this._closed(r), this.audioOpts);
+    try {
+      await link.connect();
+    } catch (e) {
+      try { await link.disconnect(); } catch (_) { /* ignore */ }
+      const denied = e && (e.name === "NotAllowedError" || e.name === "SecurityError");
+      this.state = "off"; this._render();
+      this._err(denied
+        ? "<b>The microphone was blocked.</b> Click the camera/microphone icon in the address bar, choose <b>Allow</b>, and press the button again."
+        : "<b>Could not use this computer's audio.</b> " + esc(e && e.message ? e.message : e));
+      return;
+    }
+    this.link = link; this.state = "audio"; this._render();
+    this.log.add("using this computer's " + (this.audioOpts.mic ? "microphone" : "speaker") + " (no board)", "o");
+  }
+  async disconnect(quiet) {
+    const l = this.link;
+    this.link = null; this.node = null; this.info = null; this.mode = null; this.pendingMode = null;
+    if (l) await l.disconnect();
+    this.state = "off";
+    if (!quiet) this._render();
+  }
+  async reset() {
+    if (!this.link) return;
+    this.node = null; this.info = null; this.mode = null; this._render();
+    this.log.add("reset board", "o");
+    try { await this.link.reset(); } catch (e) { this._err("Reset failed: " + esc(e.message || e)); }
+    this._askInfo();
+  }
+  send(line, quiet) {
+    if (!this.link) return false;
+    this.log.add("› " + line, quiet ? "s" : "o");
+    this.link.send(line);
+    return true;
+  }
+}
+function scopeLabelsHtml() {
+  let h = "";
+  for (let i = 0; i < 24; i++) h += `<span>${i % 4 === 0 ? (AM.toneHz(i) / 1000).toFixed(0) + "k" : ""}</span>`;
+  return h;
+}
+function renderScope(container, vals) {
+  if (container.children.length !== 24) container.innerHTML = Array.from({ length: 24 }, (_, i) => `<div class="bar" title="${AM.toneHz(i)} Hz"></div>`).join("");
+  for (let i = 0; i < 24; i++) {
+    const v = vals[i] === undefined ? 0 : vals[i];
+    const b = container.children[i];
+    const pct = Math.max(2, Math.min(100, (v + 5) / 35 * 100));
+    b.style.height = pct + "%";
+    b.classList.toggle("hot", v >= 10);
+    b.title = `${AM.toneHz(i)} Hz: ${v} dB above noise`;
+  }
+}
+/* ===== COMMON JS END ===== */
+
+/* =================== Receiver page =================== */
+const R = {
+  info: null, partial: null, msgs: [], c: { msgs: 0, ok: 0, bad: 0, det: 0 },
+  pts: [], scopeOn: false, flashT: null, poll: null, lastTxt: null,
+};
+const LP = () => linkParams(R.info);
+const dataMs = () => 54 * LP().slot;                         /* data part of a packet */
+
+const conn = new Conn({ demoOpts: { node: 2, peer: 1, autoHear: true }, audioOpts: { node: 2, peer: 1, mic: true }, onLine, onState, errBanner: true });
+$("scopeLabels").innerHTML = scopeLabelsHtml();
+renderScope($("scopeBars"), []);
+$("btnScope").onclick = () => setScope(!R.scopeOn, true);
+$("btnCsv").onclick = downloadCsv;
+
+function setScope(on, send) {
+  R.scopeOn = on;
+  if (send) conn.send(on ? "scope on" : "scope off");
+  $("btnScope").textContent = on ? "Stop live tone bars" : "Show live tone bars";
+  if (!on) renderScope($("scopeBars"), []);
+}
+
+function onState(st) {
+  const c = st === "on" || st === "demo" || st === "audio";
+  $("btnScope").disabled = !c;
+  clearInterval(R.poll); R.poll = null;
+  if (c) {
+    R.poll = setInterval(() => { if (conn.connected) conn.send("stats", true); }, 3000);
+    setTimeout(() => { if (conn.connected) conn.send("stats", true); }, 800);
+    $("listenChip").className = "chip good"; $("listenChip").textContent = "listening";
+    setArrive("Listening… waiting for the sender.", "live");
+  } else {
+    R.info = null; setScope(false, false);
+    $("pktSub").textContent = "Each packet is a short burst of 64 tones and carries 2 bytes of text.";
+    $("listenChip").className = "chip"; $("listenChip").textContent = st === "lost" ? "disconnected" : "not connected";
+    setArrive("Connect the board to start listening.", "");
+  }
+}
+
+function setArrive(text, dot, barMs) {
+  $("arriveText").textContent = text;
+  $("arriveDot").className = "dot" + (dot ? " " + dot : "");
+  const bar = $("arriveBar");
+  bar.style.transition = "none"; bar.style.width = "0";
+  if (barMs) { void bar.offsetWidth; bar.style.transition = `width ${barMs}ms linear`; bar.style.width = "100%"; }
+}
+function flash(cls) {
+  const a = $("arrive");
+  a.classList.remove("flash", "okflash"); void a.offsetWidth; a.classList.add(cls);
+  clearTimeout(R.flashT); R.flashT = setTimeout(() => a.classList.remove(cls), 1200);
+}
+
+/* How many bytes at the end of `b` are an unfinished UTF-8 letter (0..3)? */
+function utf8TailCut(b) {
+  for (let k = 1; k <= Math.min(3, b.length); k++) {
+    const x = b[b.length - k];
+    if (x === null || x < 0x80) return 0;
+    if (x >= 0xC0) { const need = x >= 0xF0 ? 4 : x >= 0xE0 ? 3 : 2; return need > k ? k : 0; }
+  }
+  return 0;
+}
+/* bytes (null = lost) -> HTML: decode runs of real bytes as UTF-8, lost bytes as red "?".
+   holdTail: keep back an unfinished letter (its next byte is still on the way). */
+function bytesHtml(bytes, holdTail) {
+  const cut = holdTail ? utf8TailCut(bytes) : 0;
+  if (cut) bytes = bytes.slice(0, bytes.length - cut);
+  let h = "", run = [];
+  const flush = () => { if (run.length) { h += esc(new TextDecoder("utf-8").decode(new Uint8Array(run))); run = []; } };
+  for (const b of bytes) {
+    if (b === null) { flush(); h += '<span class="lost" title="lost byte">?</span>'; }
+    else run.push(b);
+  }
+  flush();
+  return h;
+}
+function bytesPlain(bytes) {
+  let s = "", run = [];
+  const flush = () => { if (run.length) { s += new TextDecoder("utf-8").decode(new Uint8Array(run)); run = []; } };
+  for (const b of bytes) { if (b === null) { flush(); s += "?"; } else run.push(b); }
+  flush();
+  return s;
+}
+
+function counters() {
+  const c = R.c;
+  $("cMsgs").textContent = c.msgs; $("cOk").textContent = c.ok; $("cBad").textContent = c.bad; $("cDet").textContent = c.det;
+  const tot = c.ok + c.bad;
+  const pct = tot ? Math.round(c.ok / tot * 100) : null;
+  const el = $("cPct");
+  el.innerHTML = pct === null ? "—" : pct + "<small> %</small>";
+  el.className = "val" + (pct === null ? "" : pct >= 90 ? " good" : pct >= 70 ? " warn" : " bad");
+}
+
+function renderPartial() {
+  const p = R.partial;
+  if (!p) { $("partialLabel").textContent = "Message being received"; $("partialText").innerHTML = '<span class="empty">Nothing yet.</span>'; return; }
+  const n = p.pkts, lostN = p.bytes.filter((b) => b === null).length;
+  $("partialLabel").innerHTML = `From node ${p.src} · ${n} packet${n > 1 ? "s" : ""} so far` +
+    (lostN ? ` · <span class="chip bad">${lostN} bytes lost</span>` : "") +
+    (p.startLost ? ' <span class="chip warn">start missed</span>' : "") +
+    (p.done ? ' <span class="chip good">last packet in</span>' : "");
+  $("partialText").innerHTML = bytesHtml(p.bytes, !p.done) + (p.done ? "" : '<span class="cursor"></span>');
+}
+
+function onTxt(m) {
+  const src = +m.f.src, seq = +m.f.seq, q = parseFloat(m.f.q);
+  const data = hexToBytes(m.f.data || "").filter((b) => b !== null);
+  const now = performance.now();
+  const dup = R.lastTxt && R.lastTxt.src === src && R.lastTxt.seq === seq && now - R.lastTxt.t < 6000;
+  R.lastTxt = { src, seq, t: now };
+  if (dup) return false;                                   /* a repeated copy of the same packet */
+  let p = R.partial;
+  if (m.f.first === "1" || !p || p.src !== src || p.done) {
+    p = R.partial = { src, bytes: [], exp: seq, pkts: 0, startLost: m.f.first !== "1", done: false };
+  }
+  if (seq !== p.exp) { const gap = (seq - p.exp) & 15; for (let i = 0; i < 2 * gap; i++) p.bytes.push(null); }
+  p.bytes.push(...data);
+  p.exp = (seq + 1) & 15; p.pkts++;
+  if (m.f.last === "1") p.done = true;
+  renderPartial();
+  const bits = data.map((b) => `<b>${hex2(b)}</b> ${bin8(b)}`).join(" &nbsp; ");
+  $("lastPkt").innerHTML = `<span>Last packet:</span><span class="chip ${qBand(q)}">q ${isNaN(q) ? "?" : q.toFixed(1)} dB · ${qWord(q)}</span>` +
+    `<span>seq ${seq}${m.f.first === "1" ? " · first" : ""}${m.f.last === "1" ? " · last" : ""}</span><span class="mono">${bits}</span>`;
+  return true;
+}
+
+function addMessage(m) {
+  const bytes = hexToBytes(m.f.hex || "");
+  const msg = {
+    t: new Date(), src: +m.f.src, dst: +m.f.dst, ok: m.f.ok === "1", lost: +m.f.lost || 0,
+    q: parseFloat(m.f.q), bytes, hex: m.f.hex || "", text: bytesPlain(bytes),
+  };
+  R.msgs.push(msg); R.c.msgs++;
+  $("msgCount").textContent = R.msgs.length;
+  $("btnCsv").disabled = false;
+  const list = $("msgList");
+  if (list.querySelector(".emptybig")) list.innerHTML = "";
+  const d = document.createElement("div");
+  d.className = "msg new";
+  const status = msg.ok ? '<span class="chip good">complete</span>'
+    : `<span class="chip warn">${msg.lost ? msg.lost + " packet" + (msg.lost > 1 ? "s" : "") + " lost" : "incomplete"}</span>`;
+  const qc = isNaN(msg.q) ? "" : `<span class="chip ${qBand(msg.q)}">q ${msg.q.toFixed(1)} dB · ${qWord(msg.q)}</span>`;
+  d.innerHTML = `<div class="mhead"><span class="time">${msg.t.toTimeString().slice(0, 8)}</span><span>from node ${msg.src} → ${msg.dst}</span>${status}${qc}` +
+    `<button class="btn small copy">Copy</button></div><div class="mtext">${bytesHtml(bytes) || '<span class="empty">(empty)</span>'}</div>` +
+    `<details class="mhex"><summary>show bytes (${bytes.length})</summary><div class="mono">${bytes.map((b) => (b === null ? "__" : hex2(b))).join(" ")}</div></details>`;
+  d.querySelector(".copy").onclick = (e) => copyText(msg.text, e.target);
+  list.prepend(d);
+}
+
+async function copyText(text, btn) {
+  try { await navigator.clipboard.writeText(text); }
+  catch (_) {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (__) { /* ignore */ }
+    ta.remove();
+  }
+  const old = btn.textContent; btn.textContent = "Copied"; setTimeout(() => { btn.textContent = old; }, 1200);
+}
+
+function csvCell(v) { const s = String(v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function downloadCsv() {
+  const rows = [["time", "from", "to", "complete", "lost_packets", "bytes", "q_db", "text", "hex"]];
+  for (const m of R.msgs) rows.push([m.t.toISOString(), m.src, m.dst, m.ok ? 1 : 0, m.lost, m.bytes.length, isNaN(m.q) ? "" : m.q.toFixed(1), m.text, m.hex]);
+  const csv = "﻿" + rows.map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = "duburi_messages_" + new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-") + ".csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+function onLevel(f) {
+  const mean = +f.mean, rms = parseFloat(f.rms), mn = +f.min, mx = +f.max;
+  if ([mean, rms, mn, mx].some((v) => isNaN(v))) return;
+  const pct = (v) => Math.max(0, Math.min(100, v / 4095 * 100));
+  $("lvRange").hidden = false; $("lvMean").hidden = false;
+  $("lvRange").style.left = pct(mn) + "%"; $("lvRange").style.width = Math.max(0.6, pct(mx) - pct(mn)) + "%";
+  $("lvMean").style.left = pct(mean) + "%";
+  $("levelNums").textContent = `average ${mean} · swing rms ${rms.toFixed(1)} · min ${mn} · max ${mx}  (good: rms 20–300, min above 100, max below 3900)`;
+  let cls, word, adv;
+  if (mx >= 3900 || mn <= 100) { cls = "bad"; word = "clipping"; adv = "Too loud: the signal hits the top or bottom of the ADC. Turn down the sender volume or the microphone gain, or move the speaker further away."; }
+  else if (rms < 20) { cls = "warn"; word = "too quiet"; adv = "Very quiet. That is normal when nothing is playing. If a packet is playing now, move closer, turn up the sender volume, or raise the microphone gain."; }
+  else if (rms > 300) { cls = "warn"; word = "very loud"; adv = "Loud but not clipping yet. Lower the volume a little if packets fail."; }
+  else { cls = "good"; word = "OK"; adv = "Level is fine."; }
+  $("levelStatus").className = "chip " + cls; $("levelStatus").textContent = word;
+  $("levelAdvice").className = "hint " + cls; $("levelAdvice").textContent = adv;
+}
+
+function onLine(m) {
+  switch (m.kind) {
+    case "INFO": {
+      R.info = m.f;
+      const lp = LP();
+      $("pktSub").textContent = `Each packet is ${(lp.pkt / 1000).toFixed(2)} s of tones (64 tones × ${lp.slot} ms) and carries 2 bytes of text.`;
+      break;
+    }
+    case "REPEAT":
+      R.c.ok++;
+      setArrive(`Repeated copy of packet seq ${m.f.seq} from node ${m.f.src}: already have it, ignored. Listening…`, "live");
+      $("listenChip").className = "chip good"; $("listenChip").textContent = "listening";
+      break;
+    case "DET":
+      R.c.det++;
+      setArrive("Packet arriving… (tones are coming in)", "rx", dataMs());
+      $("listenChip").className = "chip warn"; $("listenChip").textContent = "receiving";
+      break;
+    case "CRCFAIL":
+      R.c.bad++; R.pts.push({ bad: true });
+      setArrive("Damaged packet: it failed the CRC check. Its 2 bytes will show as lost (red ?).", "live");
+      flash("flash");
+      $("listenChip").className = "chip good"; $("listenChip").textContent = "listening";
+      drawChart();
+      break;
+    case "TXT": {
+      const fresh = onTxt(m);
+      const q = parseFloat(m.f.q);
+      R.c.ok++; R.pts.push({ q });
+      setArrive(`Packet received ✓ seq ${m.f.seq}, q ${isNaN(q) ? "?" : q.toFixed(1)} dB (${qWord(q)})${fresh ? "" : " (repeat copy)"}. Listening…`, "live");
+      flash("okflash");
+      $("listenChip").className = "chip good"; $("listenChip").textContent = "listening";
+      drawChart();
+      break;
+    }
+    case "MSG":
+      addMessage(m);
+      if (R.partial && R.partial.src === +m.f.src) R.partial = null;
+      renderPartial();
+      setArrive(`Message from node ${m.f.src} finished` + (m.f.ok === "1" ? " ✓" : ` (${m.f.lost} packet${+m.f.lost === 1 ? "" : "s"} lost)`) + ". Listening…", "live");
+      break;
+    case "RX": case "ACK": case "RXOTHER": {
+      const q = parseFloat(m.f.q);
+      R.c.ok++; if (!isNaN(q)) R.pts.push({ q });
+      const what = m.kind === "ACK" ? `ACK from node ${m.f.src}` : m.kind === "RXOTHER" ? `packet for node ${m.f.dst} (not this board)` : `command packet from node ${m.f.src}: cmd ${m.f.cmd}, arg ${m.f.arg}`;
+      setArrive(`Received ${what}. Listening…`, "live");
+      $("listenChip").className = "chip good"; $("listenChip").textContent = "listening";
+      drawChart();
+      break;
+    }
+    case "SCOPE":
+      if (m.vals && m.vals.length) { if (!R.scopeOn) setScope(true, false); renderScope($("scopeBars"), m.vals); }
+      break;
+    case "LEVEL": onLevel(m.f); break;
+    case "STATS":
+      $("boardTotals").textContent = `Board totals since power-on: ${m.f.preambles} heard, ${m.f.ok} OK, ${m.f.crc_fail} damaged, last q ${m.f.last_q || "—"}.`;
+      break;
+    default: break;
+  }
+  counters();
+}
+
+/* ---------- link-quality chart ---------- */
+function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function drawChart() {
+  const cv = $("qChart"), dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth, H = cv.clientHeight;
+  if (!W || !H) return;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  const g = cv.getContext("2d");
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, W, H);
+  const L = 40, Rr = 58, T = 10, B = 24;
+  const pts = R.pts.slice(-60);
+  const qmax = Math.max(25, ...pts.filter((p) => !p.bad).map((p) => Math.ceil(p.q / 5) * 5));
+  const y = (q) => T + (H - T - B) * (1 - Math.max(0, Math.min(qmax, q)) / qmax);
+  const band = (a, b, col) => { g.fillStyle = col; g.fillRect(L, y(b), W - L - Rr, y(a) - y(b)); };
+  band(10, qmax, cssVar("--good-soft")); band(7, 10, cssVar("--warn-soft")); band(0, 7, cssVar("--bad-soft"));
+  g.font = "11px system-ui, sans-serif"; g.textBaseline = "middle"; g.textAlign = "left";
+  g.fillStyle = cssVar("--good"); g.fillText("good ≥10", W - Rr + 6, y((10 + qmax) / 2));
+  g.fillStyle = cssVar("--warn"); g.fillText("OK 7–10", W - Rr + 6, y(8.5));
+  g.fillStyle = cssVar("--bad"); g.fillText("weak <7", W - Rr + 6, y(3.5));
+  g.strokeStyle = cssVar("--line"); g.lineWidth = 1; g.fillStyle = cssVar("--muted"); g.textAlign = "right";
+  for (let q = 0; q <= qmax; q += 5) { const yy = Math.round(y(q)) + 0.5; g.beginPath(); g.moveTo(L, yy); g.lineTo(W - Rr, yy); g.stroke(); g.fillText(q + "", L - 6, yy); }
+  g.save(); g.translate(11, (H - B + T) / 2); g.rotate(-Math.PI / 2); g.textAlign = "center"; g.fillText("q (dB)", 0, 0); g.restore();
+  g.textAlign = "center"; g.fillStyle = cssVar("--muted");
+  g.fillText(pts.length ? `last ${pts.length} packet${pts.length > 1 ? "s" : ""} →` : "", L + (W - L - Rr) / 2, H - 9);
+  if (!pts.length) { g.font = "13px system-ui, sans-serif"; g.fillText("No packets yet", L + (W - L - Rr) / 2, (H - B + T) / 2); return; }
+  const step = (W - L - Rr) / 60;
+  const x = (i) => L + step * (i + 0.5);
+  g.strokeStyle = cssVar("--accent"); g.lineWidth = 2; g.beginPath();
+  let started = false;
+  pts.forEach((p, i) => { if (p.bad) { started = false; return; } if (!started) { g.moveTo(x(i), y(p.q)); started = true; } else g.lineTo(x(i), y(p.q)); });
+  g.stroke();
+  pts.forEach((p, i) => {
+    if (p.bad) {
+      g.strokeStyle = cssVar("--bad"); g.lineWidth = 2; const cx = x(i), cy = y(1.5), r = 4;
+      g.beginPath(); g.moveTo(cx - r, cy - r); g.lineTo(cx + r, cy + r); g.moveTo(cx + r, cy - r); g.lineTo(cx - r, cy + r); g.stroke();
+    } else {
+      g.fillStyle = cssVar("--" + (p.q >= 10 ? "good" : p.q >= 7 ? "warn" : "bad"));
+      g.beginPath(); g.arc(x(i), y(p.q), 3.5, 0, Math.PI * 2); g.fill();
+    }
+  });
+}
+window.addEventListener("resize", drawChart);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawChart);
+drawChart();
+counters();
+</script>
+</body>
+</html>

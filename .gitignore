@@ -1,5 +1,7 @@
 __pycache__/
 *.so
 tests/test_core
+tests/test_text
 sim/results_log.txt
 docs/_build_guide.html
+pc/test/vectors/

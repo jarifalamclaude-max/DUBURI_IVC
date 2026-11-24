@@ -139,17 +139,20 @@ static void test_tx_build(void)
 }
 
 /* ---- loopback: synthesise the waveform the ESP32 would receive ---------- */
+static double g_tx_slot = AM_T_SLOT;      /* slot length the "sender" uses   */
+static int    g_rx_mode = AM_MODE_WATER;  /* mode the receiver is set to     */
+
 static void synth(const uint8_t *tones, int nslots, double fs_true, double amp, double noise,
                   int lead, int tail, uint16_t **out, int *n_out, int square)
 {
-    int n = lead + (int)(nslots * (double)AM_T_SLOT * fs_true) + tail;
+    int n = lead + (int)(nslots * g_tx_slot * fs_true) + tail;
     uint16_t *x = malloc(sizeof(uint16_t) * n);
     double ph = 0;
     for (int i = 0; i < n; i++) {
         double t = (i - lead) / fs_true;
         double s = 0;
         if (i >= lead) {
-            int k = (int)floor(t / (double)AM_T_SLOT);
+            int k = (int)floor(t / g_tx_slot);
             if (k < nslots) {
                 ph += 2 * 3.141592653589793 * (double)am_tone_hz(tones[k]) / fs_true;
                 s = square ? (sin(ph) >= 0 ? 1.0 : -1.0) * 0.785 : sin(ph);
@@ -168,6 +171,7 @@ static int run_loopback(double fs_true, double fs_rx, double amp, double noise, 
 {
     static am_rx_t rx;
     am_rx_init(&rx, (float)fs_rx);
+    if (g_rx_mode != AM_MODE_WATER) CHECK(am_rx_set_mode(&rx, g_rx_mode) == 1, "set mode");
     am_packet_t p = {1, 2, 9, AM_FLAG_ACK_REQ, 1, 77};
     uint8_t t[AM_TOTAL_SLOTS];
     am_tx_build(&p, t);
@@ -197,6 +201,40 @@ int main(void)
     CHECK(run_loopback(48000, 48000, 300, 3, 512, 0), "Fs 48 kHz");
     CHECK(run_loopback(50000, 50000, 20, 60, 512, 0), "noisy loopback (~0 dB wideband SNR)");
 
+    /* AIR mode: longer slots; same tones and coding */
+    {
+        const am_mode_info_t *w = am_mode_info(AM_MODE_WATER), *a = am_mode_info(AM_MODE_AIR);
+        CHECK(w->t_slot == AM_T_SLOT && w->t_win == AM_T_WIN, "water timing");
+        CHECK(a->t_slot > w->t_slot && a->t_win < a->t_slot, "air timing");
+        CHECK(am_mode_info(7) == w, "unknown mode -> water");
+        printf("modes: %s %.0f/%.0f ms, %s %.0f/%.0f ms\n", w->name, (double)w->t_slot * 1e3, (double)w->t_win * 1e3,
+               a->name, (double)a->t_slot * 1e3, (double)a->t_win * 1e3);
+        g_tx_slot = (double)a->t_slot;
+        g_rx_mode = AM_MODE_AIR;
+        CHECK(run_loopback(50000, 50000, 300, 3, 512, 0), "AIR clean loopback");
+        CHECK(run_loopback(50000, 50000, 300, 3, 1, 1), "AIR square, 1-sample chunks");
+        CHECK(run_loopback(61000, 61000, 300, 3, 512, 0), "AIR Fs 61 kHz (longest window)");
+        CHECK(run_loopback(50750, 50750 * 1.0005, 300, 3, 512, 0), "AIR Fs estimate 0.05%% off");
+        CHECK(run_loopback(50000, 50000, 20, 60, 512, 0), "AIR noisy loopback");
+        /* mismatched modes must not decode */
+        g_rx_mode = AM_MODE_WATER;
+        CHECK(!run_loopback(50000, 50000, 300, 3, 512, 0), "AIR sender, WATER receiver: no decode");
+        g_tx_slot = AM_T_SLOT;
+        g_rx_mode = AM_MODE_AIR;
+        CHECK(!run_loopback(50000, 50000, 300, 3, 512, 0), "WATER sender, AIR receiver: no decode");
+        g_rx_mode = AM_MODE_WATER;
+        /* switching back and forth works, and is refused mid-packet */
+        static am_rx_t rx;
+        am_rx_init(&rx, 50000);
+        CHECK(am_rx_mode(&rx) == AM_MODE_WATER, "default mode");
+        CHECK(am_rx_set_mode(&rx, AM_MODE_AIR) == 1 && am_rx_mode(&rx) == AM_MODE_AIR, "to air");
+        CHECK(rx.W == 1600, "air window samples %d", rx.W);
+        CHECK(am_rx_set_mode(&rx, 5) == 0, "bad mode refused");
+        CHECK(am_rx_set_mode(&rx, AM_MODE_WATER) == 1 && rx.W == 800, "back to water");
+        rx.state = AM_ST_DECODE;
+        CHECK(am_rx_set_mode(&rx, AM_MODE_AIR) == 0, "refused while decoding");
+    }
+
     /* sanity: no packet out of pure noise */
     {
         static am_rx_t rx;
@@ -211,6 +249,21 @@ int main(void)
         }
         CHECK(bad == 0, "packets out of noise: %d", bad);
         printf("noise-only 60 s: %u preamble triggers (CRC rejected all)\n", rx.stats.preambles);
+    }
+    {
+        static am_rx_t rx;
+        am_rx_init(&rx, 50000);
+        am_rx_set_mode(&rx, AM_MODE_AIR);
+        uint16_t buf[1000];
+        int bad = 0;
+        for (int s = 0; s < 50000 * 60 / 1000; s++) {
+            for (int i = 0; i < 1000; i++) buf[i] = (uint16_t)lrint(1600 + 40 * grand());
+            am_rx_process(&rx, buf, 1000);
+            am_rx_result_t r;
+            while (am_rx_pop(&rx, &r)) bad++;
+        }
+        CHECK(bad == 0, "AIR packets out of noise: %d", bad);
+        printf("AIR noise-only 60 s: %u preamble triggers (CRC rejected all)\n", rx.stats.preambles);
     }
 
     printf("sizeof(am_rx_t) = %d bytes\n", am_rx_sizeof());

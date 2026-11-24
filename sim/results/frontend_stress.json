@@ -1,0 +1,146 @@
+[
+ {
+  "noise": "thrusters on",
+  "sl": 132.6,
+  "d": 32,
+  "fe": "LM358 2-stage",
+  "ok": 20,
+  "n": 20
+ },
+ {
+  "noise": "thrusters on",
+  "sl": 132.6,
+  "d": 32,
+  "fe": "MAX9814, 2.2k kept",
+  "ok": 20,
+  "n": 20
+ },
+ {
+  "noise": "thrusters on",
+  "sl": 132.6,
+  "d": 32,
+  "fe": "MAX9814, 2.2k removed",
+  "ok": 20,
+  "n": 20
+ },
+ {
+  "noise": "thrusters on",
+  "sl": 122.6,
+  "d": 32,
+  "fe": "LM358 2-stage",
+  "ok": 13,
+  "n": 20
+ },
+ {
+  "noise": "thrusters on",
+  "sl": 122.6,
+  "d": 32,
+  "fe": "MAX9814, 2.2k kept",
+  "ok": 13,
+  "n": 20
+ },
+ {
+  "noise": "thrusters on",
+  "sl": 122.6,
+  "d": 32,
+  "fe": "MAX9814, 2.2k removed",
+  "ok": 13,
+  "n": 20
+ },
+ {
+  "noise": "thrusters on",
+  "sl": 117.6,
+  "d": 32,
+  "fe": "LM358 2-stage",
+  "ok": 0,
+  "n": 20
+ },
+ {
+  "noise": "thrusters on",
+  "sl": 117.6,
+  "d": 32,
+  "fe": "MAX9814, 2.2k kept",
+  "ok": 0,
+  "n": 20
+ },
+ {
+  "noise": "thrusters on",
+  "sl": 117.6,
+  "d": 32,
+  "fe": "MAX9814, 2.2k removed",
+  "ok": 0,
+  "n": 20
+ },
+ {
+  "noise": "quiet pool",
+  "sl": 107.6,
+  "d": 32,
+  "fe": "LM358 2-stage",
+  "ok": 20,
+  "n": 20
+ },
+ {
+  "noise": "quiet pool",
+  "sl": 107.6,
+  "d": 32,
+  "fe": "MAX9814, 2.2k kept",
+  "ok": 20,
+  "n": 20
+ },
+ {
+  "noise": "quiet pool",
+  "sl": 107.6,
+  "d": 32,
+  "fe": "MAX9814, 2.2k removed",
+  "ok": 20,
+  "n": 20
+ },
+ {
+  "noise": "quiet pool",
+  "sl": 102.6,
+  "d": 32,
+  "fe": "LM358 2-stage",
+  "ok": 19,
+  "n": 20
+ },
+ {
+  "noise": "quiet pool",
+  "sl": 102.6,
+  "d": 32,
+  "fe": "MAX9814, 2.2k kept",
+  "ok": 19,
+  "n": 20
+ },
+ {
+  "noise": "quiet pool",
+  "sl": 102.6,
+  "d": 32,
+  "fe": "MAX9814, 2.2k removed",
+  "ok": 19,
+  "n": 20
+ },
+ {
+  "noise": "quiet pool",
+  "sl": 97.6,
+  "d": 32,
+  "fe": "LM358 2-stage",
+  "ok": 8,
+  "n": 20
+ },
+ {
+  "noise": "quiet pool",
+  "sl": 97.6,
+  "d": 32,
+  "fe": "MAX9814, 2.2k kept",
+  "ok": 13,
+  "n": 20
+ },
+ {
+  "noise": "quiet pool",
+  "sl": 97.6,
+  "d": 32,
+  "fe": "MAX9814, 2.2k removed",
+  "ok": 15,
+  "n": 20
+ }
+]

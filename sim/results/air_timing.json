@@ -1,0 +1,272 @@
+[
+ {
+  "room": "furnished room",
+  "rt60": 0.44,
+  "snr": 6.0,
+  "slot_ms": 20,
+  "win_ms": 16,
+  "ok": 30,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "furnished room",
+  "rt60": 0.44,
+  "snr": 6.0,
+  "slot_ms": 30,
+  "win_ms": 24,
+  "ok": 30,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "furnished room",
+  "rt60": 0.44,
+  "snr": 6.0,
+  "slot_ms": 40,
+  "win_ms": 32,
+  "ok": 30,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "furnished room",
+  "rt60": 0.44,
+  "snr": 0.0,
+  "slot_ms": 20,
+  "win_ms": 16,
+  "ok": 29,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "furnished room",
+  "rt60": 0.44,
+  "snr": 0.0,
+  "slot_ms": 30,
+  "win_ms": 24,
+  "ok": 30,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "furnished room",
+  "rt60": 0.44,
+  "snr": 0.0,
+  "slot_ms": 40,
+  "win_ms": 32,
+  "ok": 30,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "furnished room",
+  "rt60": 0.44,
+  "snr": -4.0,
+  "slot_ms": 20,
+  "win_ms": 16,
+  "ok": 17,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "furnished room",
+  "rt60": 0.44,
+  "snr": -4.0,
+  "slot_ms": 30,
+  "win_ms": 24,
+  "ok": 26,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "furnished room",
+  "rt60": 0.44,
+  "snr": -4.0,
+  "slot_ms": 40,
+  "win_ms": 32,
+  "ok": 30,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "bare tiled room",
+  "rt60": 0.8,
+  "snr": 6.0,
+  "slot_ms": 20,
+  "win_ms": 16,
+  "ok": 29,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "bare tiled room",
+  "rt60": 0.8,
+  "snr": 6.0,
+  "slot_ms": 30,
+  "win_ms": 24,
+  "ok": 30,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "bare tiled room",
+  "rt60": 0.8,
+  "snr": 6.0,
+  "slot_ms": 40,
+  "win_ms": 32,
+  "ok": 29,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "bare tiled room",
+  "rt60": 0.8,
+  "snr": 0.0,
+  "slot_ms": 20,
+  "win_ms": 16,
+  "ok": 25,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "bare tiled room",
+  "rt60": 0.8,
+  "snr": 0.0,
+  "slot_ms": 30,
+  "win_ms": 24,
+  "ok": 29,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "bare tiled room",
+  "rt60": 0.8,
+  "snr": 0.0,
+  "slot_ms": 40,
+  "win_ms": 32,
+  "ok": 30,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "bare tiled room",
+  "rt60": 0.8,
+  "snr": -4.0,
+  "slot_ms": 20,
+  "win_ms": 16,
+  "ok": 4,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "bare tiled room",
+  "rt60": 0.8,
+  "snr": -4.0,
+  "slot_ms": 30,
+  "win_ms": 24,
+  "ok": 18,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "bare tiled room",
+  "rt60": 0.8,
+  "snr": -4.0,
+  "slot_ms": 40,
+  "win_ms": 32,
+  "ok": 26,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "hall",
+  "rt60": 1.26,
+  "snr": 6.0,
+  "slot_ms": 20,
+  "win_ms": 16,
+  "ok": 29,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "hall",
+  "rt60": 1.26,
+  "snr": 6.0,
+  "slot_ms": 30,
+  "win_ms": 24,
+  "ok": 30,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "hall",
+  "rt60": 1.26,
+  "snr": 6.0,
+  "slot_ms": 40,
+  "win_ms": 32,
+  "ok": 30,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "hall",
+  "rt60": 1.26,
+  "snr": 0.0,
+  "slot_ms": 20,
+  "win_ms": 16,
+  "ok": 24,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "hall",
+  "rt60": 1.26,
+  "snr": 0.0,
+  "slot_ms": 30,
+  "win_ms": 24,
+  "ok": 29,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "hall",
+  "rt60": 1.26,
+  "snr": 0.0,
+  "slot_ms": 40,
+  "win_ms": 32,
+  "ok": 29,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "hall",
+  "rt60": 1.26,
+  "snr": -4.0,
+  "slot_ms": 20,
+  "win_ms": 16,
+  "ok": 8,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "hall",
+  "rt60": 1.26,
+  "snr": -4.0,
+  "slot_ms": 30,
+  "win_ms": 24,
+  "ok": 20,
+  "n": 30,
+  "wrong": 0
+ },
+ {
+  "room": "hall",
+  "rt60": 1.26,
+  "snr": -4.0,
+  "slot_ms": 40,
+  "win_ms": 32,
+  "ok": 27,
+  "n": 30,
+  "wrong": 0
+ }
+]

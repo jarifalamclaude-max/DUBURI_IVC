@@ -15,6 +15,12 @@
 #define AM_NOISE_ALPHA (1.0f / 256.0f)
 #define AM_NOISE_CLIP  8.0f        /* a hop may raise the floor by at most x8  */
 #define AM_LLR_CLAMP   20.0f
+#ifndef AM_AIR_T_SLOT
+#define AM_AIR_T_SLOT  0.040f      /* AIR mode slot (s), see sim/air_sim.py     */
+#endif
+#ifndef AM_AIR_T_WIN
+#define AM_AIR_T_WIN   0.032f      /* AIR mode analysis window (s)             */
+#endif
 
 /* Preamble: 10 different tones, chosen so that
  *  1. neighbouring slots are far apart in frequency;
@@ -25,6 +31,19 @@
 const uint8_t am_preamble[AM_PRE_LEN] = {0, 14, 6, 22, 9, 17, 4, 21, 5, 11};
 
 static int32_t sdiff(uint32_t a, uint32_t b) { return (int32_t)(a - b); }
+
+/* Mode timing. WATER is the original, simulation-validated design. AIR was
+ * chosen with sim/air_sim.py (rooms with 0.3-1 s reverberation). */
+static const am_mode_info_t am_modes[AM_NMODES] = {
+    {"water", 0.020f, 0.016f},
+    {"air",   AM_AIR_T_SLOT, AM_AIR_T_WIN},
+};
+
+const am_mode_info_t *am_mode_info(int mode)
+{
+    if (mode < 0 || mode >= AM_NMODES) mode = AM_MODE_WATER;
+    return &am_modes[mode];
+}
 
 float am_tone_hz(int tone_index)
 {
@@ -178,11 +197,11 @@ void am_tx_build(const am_packet_t *p, uint8_t tones[AM_TOTAL_SLOTS])
 static void rx_configure(am_rx_t *rx, float fs)
 {
     rx->fs = fs;
-    rx->W = (int)lrintf(AM_T_WIN * fs);
+    rx->W = (int)lrintf(rx->t_win * fs);
     if (rx->W > AM_W_MAX) rx->W = AM_W_MAX;
     rx->H = (int)lrintf(AM_T_HOP * fs);
     rx->D = (int)lrintf(AM_T_TRACK * fs);
-    rx->S = AM_T_SLOT * fs;
+    rx->S = rx->t_slot * fs;
     for (int n = 0; n < rx->W; n++)
         rx->win[n] = 0.5f - 0.5f * cosf(2.0f * AM_PI_F * ((float)n + 0.5f) / (float)rx->W);
     for (int k = 0; k < AM_NTONES; k++)
@@ -199,9 +218,18 @@ static void rx_reset_search(am_rx_t *rx)
     rx->next_hop = rx->n + (uint32_t)rx->H;
 }
 
+static void rx_set_timing(am_rx_t *rx, int mode)
+{
+    const am_mode_info_t *mi = am_mode_info(mode);
+    rx->mode = (mode == AM_MODE_AIR) ? AM_MODE_AIR : AM_MODE_WATER;
+    rx->t_slot = mi->t_slot;
+    rx->t_win = mi->t_win;
+}
+
 void am_rx_init(am_rx_t *rx, float fs)
 {
     memset(rx, 0, sizeof(*rx));
+    rx_set_timing(rx, AM_MODE_WATER);
     rx_configure(rx, fs);
     rx->dc = -1.0f;                 /* "not started": first sample sets it */
     rx_reset_search(rx);
@@ -216,6 +244,19 @@ int am_rx_set_fs(am_rx_t *rx, float fs)
     return 1;
 }
 
+int am_rx_set_mode(am_rx_t *rx, int mode)
+{
+    if (rx->state != AM_ST_SEARCH || mode < 0 || mode >= AM_NMODES)
+        return 0;
+    rx_set_timing(rx, mode);
+    rx_configure(rx, rx->fs);
+    rx->noise_init = 0;             /* window length changed: relearn floor */
+    memset(rx->noise, 0, sizeof(rx->noise));
+    rx_reset_search(rx);
+    return 1;
+}
+
+int am_rx_mode(const am_rx_t *rx) { return rx->mode; }
 int am_rx_sizeof(void) { return (int)sizeof(am_rx_t); }
 int am_rx_state(const am_rx_t *rx) { return rx->state; }
 void am_rx_get_stats(const am_rx_t *rx, am_stats_t *out) { *out = rx->stats; }
@@ -243,7 +284,31 @@ static void rx_energies(am_rx_t *rx, uint32_t end, const uint8_t *tones, int nt,
     uint32_t start = end - (uint32_t)W;
     for (int i = 0; i < W; i++)
         rx->xw[i] = rx->ring[(start + (uint32_t)i) & AM_RING_MASK] * rx->win[i];
-    for (int t = 0; t < nt; t++) {
+    /* Four tones per pass: the same arithmetic per tone as the loop below, but
+     * four independent recursions let the ESP32's FPU overlap them instead of
+     * waiting on each multiply-add, and each sample is loaded once for four. */
+    int t = 0;
+    for (; t + 4 <= nt; t += 4) {
+        const float c0 = rx->coef[tones[t]], c1 = rx->coef[tones[t + 1]];
+        const float c2 = rx->coef[tones[t + 2]], c3 = rx->coef[tones[t + 3]];
+        float a1 = 0.0f, a2 = 0.0f, b1 = 0.0f, b2 = 0.0f, d1 = 0.0f, d2 = 0.0f, e1 = 0.0f, e2 = 0.0f;
+        for (int i = 0; i < W; i++) {
+            const float x = rx->xw[i];
+            const float a0 = x + c0 * a1 - a2;
+            const float b0 = x + c1 * b1 - b2;
+            const float d0 = x + c2 * d1 - d2;
+            const float e0 = x + c3 * e1 - e2;
+            a2 = a1; a1 = a0;
+            b2 = b1; b1 = b0;
+            d2 = d1; d1 = d0;
+            e2 = e1; e1 = e0;
+        }
+        E[t] = a1 * a1 + a2 * a2 - c0 * a1 * a2 + 1e-3f;
+        E[t + 1] = b1 * b1 + b2 * b2 - c1 * b1 * b2 + 1e-3f;
+        E[t + 2] = d1 * d1 + d2 * d2 - c2 * d1 * d2 + 1e-3f;
+        E[t + 3] = e1 * e1 + e2 * e2 - c3 * e1 * e2 + 1e-3f;
+    }
+    for (; t < nt; t++) {
         const float c = rx->coef[tones[t]];
         float s1 = 0.0f, s2 = 0.0f;
         for (int i = 0; i < W; i++) {
@@ -373,7 +438,7 @@ static void rx_finish_packet(am_rx_t *rx)
     for (int i = 0; i < AM_FRAME_BYTES * 8; i++)
         frame[i >> 3] |= (uint8_t)(info[i] << (7 - (i & 7)));
 
-    /* median of per-slot quality (insertion sort, 48 values) */
+    /* median of per-slot quality (insertion sort, 54 values) */
     float q[AM_DATA_SLOTS];
     memcpy(q, rx->slot_q, sizeof(q));
     for (int i = 1; i < AM_DATA_SLOTS; i++) {
