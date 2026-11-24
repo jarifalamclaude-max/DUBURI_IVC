@@ -69,13 +69,16 @@ RX src=2 dst=1 seq=3 cmd=1 arg=0 flags=8 q=18.5dB
 ACK src=2 seq=3 cmd=1 state=1 q=18.5dB
 SCOPE 3 5 0 -1 ... (24 numbers, dB above each tone's noise floor)  rms=40
 STATS node=1 preambles=12 ok=10 crc_fail=2 last_q=12.3dB timing_adj=0.4
-ADC fs_measured=50612.3 fs_used=50612.0 overflows=0 clipped=0
+ADC fs_measured=50612.3 fs_used=50612.0 overflows=0 clipped=0 rx_cpu=31% peak=34% (want overflows=0, rx_cpu<70%)
 LEVEL mean=1650 rms=42.0 min=1400 max=1900 (want rms 20..300, min>100, max<3900)
 ```
 * `DET`: a preamble was heard, a packet is coming (its data part lasts 54 slots:
   2.16 s in AIR, 1.08 s in WATER).
   `n` is the running count of preambles.
 * `CRCFAIL`: a packet arrived but was damaged; `n` is the running count.
+* `ADC ... rx_cpu`: share of ESP32 core 0 the receiver used over the last ~2 s
+  (`peak` = highest since power-on). `overflows` counts ADC samples lost because
+  the receiver fell behind; it must stay 0. Older firmware prints no `rx_cpu`.
 * `TXT`: one text packet decoded correctly. `q` is link quality in dB
   (≥ 10 good, 7–10 OK, < 7 weak).
 * `REPEAT`: a packet the sender repeated (`rep` > 1) was dropped; adds no bytes.

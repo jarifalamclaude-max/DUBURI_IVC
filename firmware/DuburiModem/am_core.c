@@ -284,7 +284,31 @@ static void rx_energies(am_rx_t *rx, uint32_t end, const uint8_t *tones, int nt,
     uint32_t start = end - (uint32_t)W;
     for (int i = 0; i < W; i++)
         rx->xw[i] = rx->ring[(start + (uint32_t)i) & AM_RING_MASK] * rx->win[i];
-    for (int t = 0; t < nt; t++) {
+    /* Four tones per pass: the same arithmetic per tone as the loop below, but
+     * four independent recursions let the ESP32's FPU overlap them instead of
+     * waiting on each multiply-add, and each sample is loaded once for four. */
+    int t = 0;
+    for (; t + 4 <= nt; t += 4) {
+        const float c0 = rx->coef[tones[t]], c1 = rx->coef[tones[t + 1]];
+        const float c2 = rx->coef[tones[t + 2]], c3 = rx->coef[tones[t + 3]];
+        float a1 = 0.0f, a2 = 0.0f, b1 = 0.0f, b2 = 0.0f, d1 = 0.0f, d2 = 0.0f, e1 = 0.0f, e2 = 0.0f;
+        for (int i = 0; i < W; i++) {
+            const float x = rx->xw[i];
+            const float a0 = x + c0 * a1 - a2;
+            const float b0 = x + c1 * b1 - b2;
+            const float d0 = x + c2 * d1 - d2;
+            const float e0 = x + c3 * e1 - e2;
+            a2 = a1; a1 = a0;
+            b2 = b1; b1 = b0;
+            d2 = d1; d1 = d0;
+            e2 = e1; e1 = e0;
+        }
+        E[t] = a1 * a1 + a2 * a2 - c0 * a1 * a2 + 1e-3f;
+        E[t + 1] = b1 * b1 + b2 * b2 - c1 * b1 * b2 + 1e-3f;
+        E[t + 2] = d1 * d1 + d2 * d2 - c2 * d1 * d2 + 1e-3f;
+        E[t + 3] = e1 * e1 + e2 * e2 - c3 * e1 * e2 + 1e-3f;
+    }
+    for (; t < nt; t++) {
         const float c = rx->coef[tones[t]];
         float s1 = 0.0f, s2 = 0.0f;
         for (int i = 0; i < W; i++) {

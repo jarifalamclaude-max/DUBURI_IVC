@@ -76,6 +76,8 @@ static volatile float g_fs_measured = AM_FS_NOMINAL;
 /* ADC level (raw counts) over the last ~0.5 s */
 static volatile float g_lvl_rms = 0, g_lvl_mean = 0;
 static volatile uint16_t g_lvl_min = 0, g_lvl_max = 0;
+/* share of core 0 spent in the modem (last ~2 s, and the highest seen) */
+static volatile float g_rx_cpu = 0, g_rx_cpu_peak = 0;
 
 static bool IRAM_ATTR onAdcOverflow(adc_continuous_handle_t, const adc_continuous_evt_data_t *, void *) {
   g_adc_overflows = g_adc_overflows + 1;
@@ -124,6 +126,7 @@ static void rxTask(void *) {
   double acc = 0, acc2 = 0;
   uint32_t accn = 0;
   uint16_t mn = 4095, mx = 0;
+  int64_t busy_us = 0, t_cpu = 0;
 
   for (;;) {
     uint32_t got = 0;
@@ -149,6 +152,15 @@ static void rxTask(void *) {
     am_rx_result_t res;
     while (am_rx_pop(&g_rx, &res)) xQueueSend(g_pkt_queue, &res, 0);
     xSemaphoreGive(g_rx_lock);
+    int64_t done = esp_timer_get_time();
+    busy_us += done - now;
+    if (t_cpu == 0) { t_cpu = done; busy_us = 0; }
+    else if (done - t_cpu > 2000000) {
+      g_rx_cpu = 100.0f * (float)busy_us / (float)(done - t_cpu);
+      if (g_rx_cpu > g_rx_cpu_peak) g_rx_cpu_peak = g_rx_cpu;
+      t_cpu = done;
+      busy_us = 0;
+    }
 
     /* Measure the real ADC rate against the CPU clock. The longer we run
      * the more exact it gets (DMA timing jitter / elapsed time). */
@@ -472,8 +484,9 @@ static void printStats() {
   Serial.printf("STATS node=%d preambles=%lu ok=%lu crc_fail=%lu last_q=%.1fdB timing_adj=%.1f\n",
                 NODE_ID, (unsigned long)s.preambles, (unsigned long)s.packets_ok,
                 (unsigned long)s.crc_fail, s.last_q_db, s.last_timing_adj);
-  Serial.printf("ADC fs_measured=%.1f fs_used=%.1f overflows=%lu clipped=%lu\n",
-                g_fs_measured, fs_used, (unsigned long)g_adc_overflows, (unsigned long)s.clipped);
+  Serial.printf("ADC fs_measured=%.1f fs_used=%.1f overflows=%lu clipped=%lu rx_cpu=%.0f%% peak=%.0f%% (want overflows=0, rx_cpu<70%%)\n",
+                g_fs_measured, fs_used, (unsigned long)g_adc_overflows, (unsigned long)s.clipped,
+                g_rx_cpu, g_rx_cpu_peak);
   Serial.printf("LEVEL mean=%.0f rms=%.1f min=%u max=%u (want rms 20..300, min>100, max<3900)\n",
                 g_lvl_mean, g_lvl_rms, g_lvl_min, g_lvl_max);
 }
